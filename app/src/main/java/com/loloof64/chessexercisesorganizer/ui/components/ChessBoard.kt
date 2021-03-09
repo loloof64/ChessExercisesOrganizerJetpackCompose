@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.loloof64.chessexercisesorganizer.R
 import com.netsensia.rivalchess.model.Board
+import com.netsensia.rivalchess.model.Colour
 import com.netsensia.rivalchess.model.Square
 import com.netsensia.rivalchess.model.SquareOccupant
 
@@ -45,6 +46,11 @@ fun ChessBoard(size: Dp, position: String) {
         .background(Color(214, 59, 96))
         .drawBehind {
             drawCells(cellsSize)
+            val whiteTurn = positionState.sideToMove == Colour.WHITE
+            val turnRadius = cellsSize * 0.25f
+            val turnColor = if (whiteTurn) Color.White else Color.Black
+            val location = cellsSize * 8.75f
+            drawCircle(color = turnColor, radius = turnRadius, center = Offset(location, location))
         }
     ) {
         FilesCoordinates(cellsSize, textSize)
