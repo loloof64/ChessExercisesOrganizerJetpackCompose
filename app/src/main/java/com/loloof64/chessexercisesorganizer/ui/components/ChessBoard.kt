@@ -46,11 +46,7 @@ fun ChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = fa
         .background(Color(214, 59, 96))
         .drawBehind {
             drawCells(cellsSize)
-            val whiteTurn = positionState.sideToMove == Colour.WHITE
-            val turnRadius = cellsSize * 0.25f
-            val turnColor = if (whiteTurn) Color.White else Color.Black
-            val location = cellsSize * 8.75f
-            drawCircle(color = turnColor, radius = turnRadius, center = Offset(location, location))
+            drawPlayerTurn(cellsSize, positionState)
         }
     ) {
         FilesCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
@@ -180,6 +176,17 @@ private fun DrawScope.drawCells(cellsSize: Float) {
             )
         }
     }
+}
+
+private fun DrawScope.drawPlayerTurn(
+    cellsSize: Float,
+    positionState: Board
+) {
+    val whiteTurn = positionState.sideToMove == Colour.WHITE
+    val turnRadius = cellsSize * 0.25f
+    val turnColor = if (whiteTurn) Color.White else Color.Black
+    val location = cellsSize * 8.75f
+    drawCircle(color = turnColor, radius = turnRadius, center = Offset(location, location))
 }
 
 @Preview
