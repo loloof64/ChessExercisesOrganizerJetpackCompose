@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChessExercisesOrganizerJetpackCompose</string>
+    <string name="white_pawn">Pion blanc</string>
+    <string name="white_knight">Cavalier blanc</string>
+    <string name="white_bishop">Fou blanc</string>
+    <string name="white_rook">Tour blanche</string>
+    <string name="white_queen">Dame blanche</string>
+    <string name="white_king">Roi blanc</string>
+    <string name="black_pawn">Pion noir</string>
+    <string name="black_knight">Cavalier noir</string>
+    <string name="black_bishop">Fou noir</string>
+    <string name="black_rook">Tour noire</string>
+    <string name="black_queen">Dame noire</string>
+    <string name="black_king">Roi noir</string>
+</resources>

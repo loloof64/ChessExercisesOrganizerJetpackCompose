@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">ChessExercisesOrganizerJetpackCompose</string>
+    <string name="white_pawn">White pawn</string>
+    <string name="white_knight">White knight</string>
+    <string name="white_bishop">White bishop</string>
+    <string name="white_rook">White rook</string>
+    <string name="white_queen">White queen</string>
+    <string name="white_king">White king</string>
+    <string name="black_pawn">Black pawn</string>
+    <string name="black_knight">Black knight</string>
+    <string name="black_bishop">Black bishop</string>
+    <string name="black_rook">Black rook</string>
+    <string name="black_queen">Black queen</string>
+    <string name="black_king">Black king</string>
 </resources>
