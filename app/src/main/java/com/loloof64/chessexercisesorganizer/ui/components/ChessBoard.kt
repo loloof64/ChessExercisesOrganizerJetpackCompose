@@ -31,7 +31,7 @@ import com.netsensia.rivalchess.model.SquareOccupant
 const val STANDARD_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 @Composable
-fun ChessBoard(size: Dp, position: String) {
+fun ChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
     val positionState = remember { Board.fromFen(position) }
     val globalSize = with(LocalDensity.current) {
         size.toPx()
@@ -53,17 +53,18 @@ fun ChessBoard(size: Dp, position: String) {
             drawCircle(color = turnColor, radius = turnRadius, center = Offset(location, location))
         }
     ) {
-        FilesCoordinates(cellsSize, textSize)
-        RanksCoordinates(cellsSize, textSize)
+        FilesCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
+        RanksCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
 
-        Pieces(cellsSize, positionState)
+        Pieces(cellsSize = cellsSize, position = positionState, reversed = reversed)
     }
 }
 
 @Composable
-private fun FilesCoordinates(cellsSize: Float, textSize: TextUnit) {
+private fun FilesCoordinates(cellsSize: Float, textSize: TextUnit, reversed: Boolean) {
     repeat(8) { col ->
-        val coordinateText = "${('A'.toInt() + col).toChar()}"
+        val file = if (reversed) 7-col else col
+        val coordinateText = "${('A'.toInt() + file).toChar()}"
         val x = with(LocalDensity.current) { (cellsSize * (0.90f + col)).toDp() }
         val y1 = with(LocalDensity.current) { (cellsSize * 0.025f).toDp() }
         val y2 = with(
@@ -83,9 +84,10 @@ private fun FilesCoordinates(cellsSize: Float, textSize: TextUnit) {
 }
 
 @Composable
-private fun RanksCoordinates(cellsSize: Float, textSize: TextUnit) {
+private fun RanksCoordinates(cellsSize: Float, textSize: TextUnit, reversed: Boolean) {
     repeat(8) { row ->
-        val coordinateText = "${('8'.toInt() - row).toChar()}"
+        val rank = if (reversed) row else 7-row
+        val coordinateText = "${('1'.toInt() + rank).toChar()}"
         val y = with(LocalDensity.current) { (cellsSize * (0.75f + row)).toDp() }
         val x1 = with(LocalDensity.current) { (cellsSize * 0.15f).toDp() }
         val x2 = with(LocalDensity.current) { (cellsSize * 8.65f).toDp() }
@@ -104,11 +106,11 @@ private fun RanksCoordinates(cellsSize: Float, textSize: TextUnit) {
 }
 
 @Composable
-private fun Pieces(cellsSize: Float, position: Board) {
+private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean) {
     repeat(8) { row ->
-        val rank = 7 - row
+        val rank = if (reversed) row else 7-row
         repeat(8) { col ->
-            val file = col
+            val file = if (reversed) 7-col else col
 
             val square = Square.fromBitRef((7 - file) + 8 * rank)
             val piece = position.getSquareOccupant(square)
@@ -183,5 +185,11 @@ private fun DrawScope.drawCells(cellsSize: Float) {
 @Preview
 @Composable
 fun ChessBoardPreview() {
-    ChessBoard(size = 300.dp, position = STANDARD_FEN)
+    ChessBoard(size = 60.dp)
+}
+
+@Preview
+@Composable
+fun ReversedChessBoardPreview() {
+    ChessBoard(size = 60.dp, reversed = true)
 }
