@@ -29,6 +29,7 @@ import com.netsensia.rivalchess.model.Board
 import com.netsensia.rivalchess.model.Colour
 import com.netsensia.rivalchess.model.Square
 import com.netsensia.rivalchess.model.SquareOccupant
+import com.netsensia.rivalchess.model.util.FenUtils.getFen
 import kotlin.math.floor
 
 const val STANDARD_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -36,19 +37,60 @@ const val STANDARD_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 data class DndData(
     var pieceValue: SquareOccupant = SquareOccupant.NONE,
     var startFile: Int = Int.MIN_VALUE,
-    var startRank: Int = Int.MIN_VALUE
+    var startRank: Int = Int.MIN_VALUE,
+    var movedPieceX: Float = Float.MIN_VALUE,
+    var movedPieceY: Float = Float.MIN_VALUE,
 ) {
     fun reset() {
         pieceValue = SquareOccupant.NONE
         startFile = Int.MIN_VALUE
         startRank = Int.MIN_VALUE
+        movedPieceX = Float.MIN_VALUE
+        movedPieceY = Float.MIN_VALUE
     }
 }
 
 @Composable
-fun ChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
-    val positionState = remember { Board.fromFen(position) }
-    val dndState = remember { DndData() }
+fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
+    val positionState = remember { mutableStateOf(Board.fromFen(position)) }
+    val dndState = remember { mutableStateOf(DndData()) }
+
+    val cellsSize = with(LocalDensity.current) {
+        size.toPx() / 9f
+    }
+
+    StaticChessBoard(
+        size = size,
+        reversed = reversed,
+        position = positionState.value.getFen(),
+        dndData = dndState.value,
+        dndStartCallback = { file, rank, piece ->
+            dndState.value.startFile = file
+            dndState.value.startRank = rank
+            val col = if (reversed) 7 - file else file
+            val row = if (reversed) rank else 7 - rank
+            dndState.value.movedPieceX = cellsSize * (0.5f + col.toFloat())
+            dndState.value.movedPieceY = cellsSize * (0.5f + row.toFloat())
+            dndState.value.pieceValue = piece
+        },
+        dndMoveCallback = { xOffset, yOffset ->
+            dndState.value.movedPieceX += xOffset
+            dndState.value.movedPieceY += yOffset
+        },
+        dndCancelCallback = { dndState.value.reset() },
+    )
+}
+
+@Composable
+private fun StaticChessBoard(
+    size: Dp,
+    position: String = STANDARD_FEN,
+    reversed: Boolean = false,
+    dndData: DndData = DndData(),
+    dndStartCallback: (Int, Int, SquareOccupant) -> Unit = { _, _, _ -> },
+    dndMoveCallback: (Float, Float) -> Unit = { _, _ -> },
+    dndCancelCallback: () -> Unit = {}
+) {
     val globalSize = with(LocalDensity.current) {
         size.toPx()
     }
@@ -57,48 +99,54 @@ fun ChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = fa
         (cellsSize * 0.3f).toSp()
     }
 
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    val boardLogic = Board.fromFen(position)
 
-    Box(modifier = Modifier
-        .size(size)
-        .background(Color(214, 59, 96))
-        .drawBehind {
-            drawCells(cellsSize)
-            drawPlayerTurn(cellsSize, positionState)
-        }
-        .pointerInput(Unit) {
-            detectDragGestures(onDragStart = { offset ->
-                val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
-                val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
-                val outOfBounds = col < 0 || col > 7 || col < 0 || col < 7
-                if (!outOfBounds) {
-                    val file = if (reversed) 7-col else col
-                    val rank = if (reversed) row else 7-row
-                    val square = Square.fromBitRef((7-file) + 8*rank)
-                    val piece = positionState.getSquareOccupant(square)
-                    if (piece != SquareOccupant.NONE) {
-                        dndState.startFile = file
-                        dndState.startRank = rank
-                    }
-                }
-            }, onDragCancel = { dndState.reset() }) { change, dragAmount ->
-                change.consumeAllChanges()
-                offsetX += dragAmount.x
-                offsetY += dragAmount.y
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(Color(214, 59, 96))
+            .drawBehind {
+                drawCells(cellsSize)
+                drawPlayerTurn(cellsSize, boardLogic)
             }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
+                        val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
 
-        }
+                        val outOfBounds = col < 0 || col > 7 || row < 0 || row > 7
+                        if (!outOfBounds) {
+                            val file = if (reversed) 7 - col else col
+                            val rank = if (reversed) row else 7 - row
+                            val square = getSquareFromCellCoordinates(file, rank)
+                            val piece = boardLogic.getSquareOccupant(square)
+                            dndStartCallback(file, rank, piece)
+                        }
+                    },
+                    onDragCancel = { dndCancelCallback() },
+                    onDrag = { change, dragAmount ->
+                        change.consumeAllChanges()
+                        dndMoveCallback(dragAmount.x, dragAmount.y)
+                    })
+            },
     ) {
         FilesCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
         RanksCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
 
         Pieces(
             cellsSize = cellsSize,
-            position = positionState,
+            position = boardLogic,
             reversed = reversed,
-            dndData = dndState
+            dndData = dndData
         )
+
+        MovedPiece(
+            cellsSize = cellsSize,
+            dndData = dndData,
+            positionFen = position,
+        )
+
     }
 }
 
@@ -154,11 +202,11 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
         repeat(8) { col ->
             val file = if (reversed) 7 - col else col
 
-            val square = Square.fromBitRef((7-file) + 8*rank)
+            val square = getSquareFromCellCoordinates(file, rank)
             val piece = position.getSquareOccupant(square)
             if (piece != SquareOccupant.NONE) {
                 val isDraggedPiece = (dndData.startFile == file) && (dndData.startRank == rank)
-                if (! isDraggedPiece) {
+                if (!isDraggedPiece) {
                     val x = with(
                         LocalDensity.current
                     ) { (cellsSize * (0.5f + col)).toDp() }
@@ -166,36 +214,10 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
                     val imageSize = with(LocalDensity.current) {
                         cellsSize.toDp()
                     }
-                    val imageRef = when (piece) {
-                        SquareOccupant.WP -> R.drawable.ic_chess_plt45
-                        SquareOccupant.WN -> R.drawable.ic_chess_nlt45
-                        SquareOccupant.WB -> R.drawable.ic_chess_blt45
-                        SquareOccupant.WR -> R.drawable.ic_chess_rlt45
-                        SquareOccupant.WQ -> R.drawable.ic_chess_qlt45
-                        SquareOccupant.WK -> R.drawable.ic_chess_klt45
-                        SquareOccupant.BP -> R.drawable.ic_chess_pdt45
-                        SquareOccupant.BN -> R.drawable.ic_chess_ndt45
-                        SquareOccupant.BB -> R.drawable.ic_chess_bdt45
-                        SquareOccupant.BR -> R.drawable.ic_chess_rdt45
-                        SquareOccupant.BQ -> R.drawable.ic_chess_qdt45
-                        SquareOccupant.BK -> R.drawable.ic_chess_kdt45
-                        else -> throw RuntimeException("wrong piece value")
-                    }
-                    val contentDescription = when (piece) {
-                        SquareOccupant.WP -> R.string.white_pawn
-                        SquareOccupant.WN -> R.string.white_knight
-                        SquareOccupant.WB -> R.string.white_bishop
-                        SquareOccupant.WR -> R.string.white_rook
-                        SquareOccupant.WQ -> R.string.white_queen
-                        SquareOccupant.WK -> R.string.white_king
-                        SquareOccupant.BP -> R.string.black_pawn
-                        SquareOccupant.BN -> R.string.black_knight
-                        SquareOccupant.BB -> R.string.black_bishop
-                        SquareOccupant.BR -> R.string.black_rook
-                        SquareOccupant.BQ -> R.string.black_queen
-                        SquareOccupant.BK -> R.string.black_king
-                        else -> throw RuntimeException("wrong piece value")
-                    }
+                    val imageRef =
+                        piece.getPieceImageID() ?: throw RuntimeException("wrong piece value")
+                    val contentDescription = piece.getPieceImageDescriptionID()
+                        ?: throw RuntimeException("wrong piece value")
                     Image(
                         painter = painterResource(id = imageRef),
                         contentDescription = stringResource(contentDescription),
@@ -206,6 +228,74 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
                 }
             }
         }
+    }
+}
+
+    @Composable
+    private fun MovedPiece(cellsSize: Float, positionFen: String, dndData: DndData) {
+        val boardLogic = Board.fromFen(positionFen)
+        val square = getSquareFromCellCoordinates(dndData.startFile, dndData.startRank)
+        val piece = boardLogic.getSquareOccupant(square)
+        val imageRef = piece.getPieceImageID()
+        val imageDescription =
+            piece.getPieceImageDescriptionID()
+
+        val x = with(LocalDensity.current) { dndData.movedPieceX.toDp() }
+        val y = with(
+            LocalDensity.current
+        ) { dndData.movedPieceY.toDp() }
+        val imageSize = with(LocalDensity.current) {
+            cellsSize.toDp()
+        }
+
+        if (imageRef != null && imageDescription != null) {
+            Image(
+                painter = painterResource(id = imageRef),
+                contentDescription = stringResource(imageDescription),
+                modifier = Modifier
+                    .size(imageSize)
+                    .offset(x, y)
+            )
+        }
+    }
+
+private fun getSquareFromCellCoordinates(file: Int, rank: Int): Square {
+    return Square.fromBitRef((7 - file) + 8 * rank)
+}
+
+private fun SquareOccupant.getPieceImageID(): Int? {
+    return when (this) {
+        SquareOccupant.WP -> R.drawable.ic_chess_plt45
+        SquareOccupant.WN -> R.drawable.ic_chess_nlt45
+        SquareOccupant.WB -> R.drawable.ic_chess_blt45
+        SquareOccupant.WR -> R.drawable.ic_chess_rlt45
+        SquareOccupant.WQ -> R.drawable.ic_chess_qlt45
+        SquareOccupant.WK -> R.drawable.ic_chess_klt45
+        SquareOccupant.BP -> R.drawable.ic_chess_pdt45
+        SquareOccupant.BN -> R.drawable.ic_chess_ndt45
+        SquareOccupant.BB -> R.drawable.ic_chess_bdt45
+        SquareOccupant.BR -> R.drawable.ic_chess_rdt45
+        SquareOccupant.BQ -> R.drawable.ic_chess_qdt45
+        SquareOccupant.BK -> R.drawable.ic_chess_kdt45
+        else -> null
+    }
+}
+
+private fun SquareOccupant.getPieceImageDescriptionID(): Int? {
+    return when (this) {
+        SquareOccupant.WP -> R.string.white_pawn
+        SquareOccupant.WN -> R.string.white_knight
+        SquareOccupant.WB -> R.string.white_bishop
+        SquareOccupant.WR -> R.string.white_rook
+        SquareOccupant.WQ -> R.string.white_queen
+        SquareOccupant.WK -> R.string.white_king
+        SquareOccupant.BP -> R.string.black_pawn
+        SquareOccupant.BN -> R.string.black_knight
+        SquareOccupant.BB -> R.string.black_bishop
+        SquareOccupant.BR -> R.string.black_rook
+        SquareOccupant.BQ -> R.string.black_queen
+        SquareOccupant.BK -> R.string.black_king
+        else -> null
     }
 }
 
@@ -240,18 +330,27 @@ private fun DrawScope.drawPlayerTurn(
 
 @Preview
 @Composable
-fun ChessBoardPreview() {
-    ChessBoard(size = 300.dp)
+fun DynamicChessBoardPreview() {
+    DynamicChessBoard(size = 300.dp)
 }
 
 @Preview
 @Composable
-fun ReversedChessBoardPreview() {
-    ChessBoard(size = 300.dp, reversed = true)
+fun DynamicReversedChessBoardPreview() {
+    DynamicChessBoard(size = 300.dp, reversed = true)
 }
 
 @Preview
 @Composable
-fun ChessBoardCustomPositionPreview() {
-    ChessBoard(size = 300.dp, position = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")
+fun DynamicChessBoardCustomPositionPreview() {
+    DynamicChessBoard(
+        size = 300.dp,
+        position = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+    )
+}
+
+@Preview
+@Composable
+fun StaticChessBoardPreview() {
+    StaticChessBoard(size = 300.dp)
 }
