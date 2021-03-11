@@ -141,11 +141,13 @@ private fun StaticChessBoard(
             dndData = dndData
         )
 
-        MovedPiece(
-            cellsSize = cellsSize,
-            dndData = dndData,
-            positionFen = position,
-        )
+        if (dndData.pieceValue != SquareOccupant.NONE) {
+            MovedPiece(
+                cellsSize = cellsSize,
+                dndData = dndData,
+                positionFen = position,
+            )
+        }
 
     }
 }
@@ -214,10 +216,8 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
                     val imageSize = with(LocalDensity.current) {
                         cellsSize.toDp()
                     }
-                    val imageRef =
-                        piece.getPieceImageID() ?: throw RuntimeException("wrong piece value")
+                    val imageRef = piece.getPieceImageID()
                     val contentDescription = piece.getPieceImageDescriptionID()
-                        ?: throw RuntimeException("wrong piece value")
                     Image(
                         painter = painterResource(id = imageRef),
                         contentDescription = stringResource(contentDescription),
@@ -231,39 +231,36 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
     }
 }
 
-    @Composable
-    private fun MovedPiece(cellsSize: Float, positionFen: String, dndData: DndData) {
-        val boardLogic = Board.fromFen(positionFen)
-        val square = getSquareFromCellCoordinates(dndData.startFile, dndData.startRank)
-        val piece = boardLogic.getSquareOccupant(square)
-        val imageRef = piece.getPieceImageID()
-        val imageDescription =
-            piece.getPieceImageDescriptionID()
+@Composable
+private fun MovedPiece(cellsSize: Float, positionFen: String, dndData: DndData) {
+    val boardLogic = Board.fromFen(positionFen)
+    val square = getSquareFromCellCoordinates(dndData.startFile, dndData.startRank)
+    val piece = boardLogic.getSquareOccupant(square)
+    val imageRef = piece.getPieceImageID()
+    val imageDescription =
+        piece.getPieceImageDescriptionID()
 
-        val x = with(LocalDensity.current) { dndData.movedPieceX.toDp() }
-        val y = with(
-            LocalDensity.current
-        ) { dndData.movedPieceY.toDp() }
-        val imageSize = with(LocalDensity.current) {
-            cellsSize.toDp()
-        }
-
-        if (imageRef != null && imageDescription != null) {
-            Image(
-                painter = painterResource(id = imageRef),
-                contentDescription = stringResource(imageDescription),
-                modifier = Modifier
-                    .size(imageSize)
-                    .offset(x, y)
-            )
-        }
+    val x = with(LocalDensity.current) { dndData.movedPieceX.toDp() }
+    val y = with(
+        LocalDensity.current
+    ) { dndData.movedPieceY.toDp() }
+    val imageSize = with(LocalDensity.current) {
+        cellsSize.toDp()
     }
+    Image(
+        painter = painterResource(id = imageRef),
+        contentDescription = stringResource(imageDescription),
+        modifier = Modifier
+            .size(imageSize)
+            .offset(x, y)
+    )
+}
 
 private fun getSquareFromCellCoordinates(file: Int, rank: Int): Square {
     return Square.fromBitRef((7 - file) + 8 * rank)
 }
 
-private fun SquareOccupant.getPieceImageID(): Int? {
+private fun SquareOccupant.getPieceImageID(): Int {
     return when (this) {
         SquareOccupant.WP -> R.drawable.ic_chess_plt45
         SquareOccupant.WN -> R.drawable.ic_chess_nlt45
@@ -277,11 +274,11 @@ private fun SquareOccupant.getPieceImageID(): Int? {
         SquareOccupant.BR -> R.drawable.ic_chess_rdt45
         SquareOccupant.BQ -> R.drawable.ic_chess_qdt45
         SquareOccupant.BK -> R.drawable.ic_chess_kdt45
-        else -> null
+        else -> throw RuntimeException("not a valid piece")
     }
 }
 
-private fun SquareOccupant.getPieceImageDescriptionID(): Int? {
+private fun SquareOccupant.getPieceImageDescriptionID(): Int {
     return when (this) {
         SquareOccupant.WP -> R.string.white_pawn
         SquareOccupant.WN -> R.string.white_knight
@@ -295,7 +292,7 @@ private fun SquareOccupant.getPieceImageDescriptionID(): Int? {
         SquareOccupant.BR -> R.string.black_rook
         SquareOccupant.BQ -> R.string.black_queen
         SquareOccupant.BK -> R.string.black_king
-        else -> null
+        else -> throw RuntimeException("not a valid piece")
     }
 }
 
