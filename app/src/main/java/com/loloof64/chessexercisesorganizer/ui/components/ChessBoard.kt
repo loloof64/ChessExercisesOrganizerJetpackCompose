@@ -35,25 +35,17 @@ import kotlin.math.floor
 const val STANDARD_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 data class DndData(
-    var pieceValue: SquareOccupant = SquareOccupant.NONE,
-    var startFile: Int = Int.MIN_VALUE,
-    var startRank: Int = Int.MIN_VALUE,
-    var movedPieceX: Float = Float.MIN_VALUE,
-    var movedPieceY: Float = Float.MIN_VALUE,
-) {
-    fun reset() {
-        pieceValue = SquareOccupant.NONE
-        startFile = Int.MIN_VALUE
-        startRank = Int.MIN_VALUE
-        movedPieceX = Float.MIN_VALUE
-        movedPieceY = Float.MIN_VALUE
-    }
-}
+    val pieceValue: SquareOccupant = SquareOccupant.NONE,
+    val startFile: Int = Int.MIN_VALUE,
+    val startRank: Int = Int.MIN_VALUE,
+    val movedPieceX: Float = Float.MIN_VALUE,
+    val movedPieceY: Float = Float.MIN_VALUE,
+)
 
 @Composable
 fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
-    val positionState = remember { mutableStateOf(Board.fromFen(position)) }
-    val dndState = remember { mutableStateOf(DndData()) }
+    val positionState by remember { mutableStateOf(Board.fromFen(position)) }
+    var dndState by remember { mutableStateOf(DndData()) }
 
     val cellsSize = with(LocalDensity.current) {
         size.toPx() / 9f
@@ -62,22 +54,29 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
     StaticChessBoard(
         size = size,
         reversed = reversed,
-        position = positionState.value.getFen(),
-        dndData = dndState.value,
+        position = positionState.getFen(),
+        dndData = dndState,
         dndStartCallback = { file, rank, piece ->
-            dndState.value.startFile = file
-            dndState.value.startRank = rank
             val col = if (reversed) 7 - file else file
             val row = if (reversed) rank else 7 - rank
-            dndState.value.movedPieceX = cellsSize * (0.5f + col.toFloat())
-            dndState.value.movedPieceY = cellsSize * (0.5f + row.toFloat())
-            dndState.value.pieceValue = piece
+            dndState = dndState.copy(
+                startFile = file,
+                startRank = rank,
+                movedPieceX = cellsSize * (0.5f + col.toFloat()),
+                movedPieceY = cellsSize * (0.5f + row.toFloat()),
+                pieceValue = piece
+            )
         },
         dndMoveCallback = { xOffset, yOffset ->
-            dndState.value.movedPieceX += xOffset
-            dndState.value.movedPieceY += yOffset
+            val newMovedPieceX = dndState.movedPieceX + xOffset
+            val newMovedPieceY = dndState.movedPieceY + yOffset
+            dndState = dndState.copy(
+                movedPieceX = newMovedPieceX,
+                movedPieceY = newMovedPieceY
+            )
         },
-        dndCancelCallback = { dndState.value.reset() },
+        dndCancelCallback = { dndState = DndData() },
+        dndValidatedCallback = { _, _ -> dndState = DndData()}
     )
 }
 
@@ -89,7 +88,8 @@ private fun StaticChessBoard(
     dndData: DndData = DndData(),
     dndStartCallback: (Int, Int, SquareOccupant) -> Unit = { _, _, _ -> },
     dndMoveCallback: (Float, Float) -> Unit = { _, _ -> },
-    dndCancelCallback: () -> Unit = {}
+    dndValidatedCallback: (Int, Int) -> Unit = { _, _ -> },
+    dndCancelCallback: () -> Unit = {},
 ) {
     val globalSize = with(LocalDensity.current) {
         size.toPx()
@@ -121,13 +121,31 @@ private fun StaticChessBoard(
                             val rank = if (reversed) row else 7 - row
                             val square = getSquareFromCellCoordinates(file, rank)
                             val piece = boardLogic.getSquareOccupant(square)
-                            dndStartCallback(file, rank, piece)
+                            if (piece != SquareOccupant.NONE) {
+                                dndStartCallback(file, rank, piece)
+                            }
                         }
                     },
                     onDragCancel = { dndCancelCallback() },
                     onDrag = { change, dragAmount ->
                         change.consumeAllChanges()
                         dndMoveCallback(dragAmount.x, dragAmount.y)
+                    },
+                    onDragEnd = {
+                        val x = dndData.movedPieceX
+                        val y = dndData.movedPieceY
+
+                        val col = floor((x - cellsSize * 0.5f) / cellsSize).toInt()
+                        val row = floor((y - cellsSize * 0.5f) / cellsSize).toInt()
+                        val outOfBounds = col < 0 || col > 7 || row < 0 || row > 7
+                        if (outOfBounds) {
+                            dndCancelCallback()
+                        }
+                        else {
+                            val file = if (reversed) 7 - col else col
+                            val rank = if (reversed) row else 7 - row
+                            dndValidatedCallback(file, rank)
+                        }
                     })
             },
     ) {
