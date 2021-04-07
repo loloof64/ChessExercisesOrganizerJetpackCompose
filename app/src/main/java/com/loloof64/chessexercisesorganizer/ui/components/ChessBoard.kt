@@ -38,6 +38,8 @@ data class DndData(
     val pieceValue: SquareOccupant = SquareOccupant.NONE,
     val startFile: Int = Int.MIN_VALUE,
     val startRank: Int = Int.MIN_VALUE,
+    val targetFile: Int = Int.MIN_VALUE,
+    val targetRank: Int = Int.MIN_VALUE,
     val movedPieceX: Float = Float.MIN_VALUE,
     val movedPieceY: Float = Float.MIN_VALUE,
 )
@@ -70,13 +72,24 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         dndMoveCallback = { xOffset, yOffset ->
             val newMovedPieceX = dndState.movedPieceX + xOffset
             val newMovedPieceY = dndState.movedPieceY + yOffset
+            val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
+            val newRow = floor((newMovedPieceY - cellsSize * 0.5f) / cellsSize).toInt()
+            val targetFile = if (reversed) 7 - newCol else newCol
+            val targetRank = if (reversed) newRow else 7 - newRow
             dndState = dndState.copy(
                 movedPieceX = newMovedPieceX,
-                movedPieceY = newMovedPieceY
+                movedPieceY = newMovedPieceY,
+                targetFile = targetFile,
+                targetRank = targetRank
             )
         },
-        dndCancelCallback = { dndState = DndData() },
-        dndValidatedCallback = { _, _ -> dndState = DndData()}
+        dndCancelCallback = {
+            dndState = DndData()
+        },
+        dndValidatedCallback = {
+            println("Validating : $dndState")
+            dndState = DndData()
+        }
     )
 }
 
@@ -88,7 +101,7 @@ private fun StaticChessBoard(
     dndData: DndData = DndData(),
     dndStartCallback: (Int, Int, SquareOccupant) -> Unit = { _, _, _ -> },
     dndMoveCallback: (Float, Float) -> Unit = { _, _ -> },
-    dndValidatedCallback: (Int, Int) -> Unit = { _, _ -> },
+    dndValidatedCallback: () -> Unit = {},
     dndCancelCallback: () -> Unit = {},
 ) {
     val globalSize = with(LocalDensity.current) {
@@ -106,7 +119,7 @@ private fun StaticChessBoard(
             .size(size)
             .background(Color(214, 59, 96))
             .drawBehind {
-                drawCells(cellsSize)
+                drawCells(cellsSize, reversed, dndData)
                 drawPlayerTurn(cellsSize, boardLogic)
             }
             .pointerInput(Unit) {
@@ -132,20 +145,7 @@ private fun StaticChessBoard(
                         dndMoveCallback(dragAmount.x, dragAmount.y)
                     },
                     onDragEnd = {
-                        val x = dndData.movedPieceX
-                        val y = dndData.movedPieceY
-
-                        val col = floor((x - cellsSize * 0.5f) / cellsSize).toInt()
-                        val row = floor((y - cellsSize * 0.5f) / cellsSize).toInt()
-                        val outOfBounds = col < 0 || col > 7 || row < 0 || row > 7
-                        if (outOfBounds) {
-                            dndCancelCallback()
-                        }
-                        else {
-                            val file = if (reversed) 7 - col else col
-                            val rank = if (reversed) row else 7 - row
-                            dndValidatedCallback(file, rank)
-                        }
+                        dndValidatedCallback()
                     })
             },
     ) {
@@ -314,13 +314,23 @@ private fun SquareOccupant.getPieceImageDescriptionID(): Int {
     }
 }
 
-private fun DrawScope.drawCells(cellsSize: Float) {
+private fun DrawScope.drawCells(cellsSize: Float, reversed: Boolean, dndData: DndData) {
     repeat(8) { row ->
+        val rank = if (reversed) row else 7 - row
         repeat(8) { col ->
+            val file = if (reversed) 7 - col else col
             val isWhiteCell = (row + col) % 2 == 0
+            val isDndStartCell = (file == dndData.startFile) && (rank == dndData.startRank)
+            val isDndTargetCell = (file == dndData.targetFile) && (rank == dndData.targetRank)
+            val isDndCrossCell = (file == dndData.targetFile) || (rank == dndData.targetRank)
             val backgroundColor =
-                if (isWhiteCell) Color(255, 206, 158)
-                else Color(209, 139, 71)
+                when {
+                    isDndTargetCell -> Color(112, 209, 35)
+                    isDndStartCell -> Color(214, 59, 96)
+                    isDndCrossCell -> Color(178, 46, 230)
+                    isWhiteCell -> Color(255, 206, 158)
+                    else -> Color(209, 139, 71)
+                }
             val x = cellsSize * (0.5f + col)
             val y = cellsSize * (0.5f + row)
             drawRect(
