@@ -70,24 +70,28 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             )
         },
         dndMoveCallback = { xOffset, yOffset ->
-            val newMovedPieceX = dndState.movedPieceX + xOffset
-            val newMovedPieceY = dndState.movedPieceY + yOffset
-            val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
-            val newRow = floor((newMovedPieceY - cellsSize * 0.5f) / cellsSize).toInt()
-            val targetFile = if (reversed) 7 - newCol else newCol
-            val targetRank = if (reversed) newRow else 7 - newRow
-            dndState = dndState.copy(
-                movedPieceX = newMovedPieceX,
-                movedPieceY = newMovedPieceY,
-                targetFile = targetFile,
-                targetRank = targetRank
-            )
+            if (dndState.pieceValue != SquareOccupant.NONE) {
+                val newMovedPieceX = dndState.movedPieceX + xOffset
+                val newMovedPieceY = dndState.movedPieceY + yOffset
+                val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
+                val newRow = floor((newMovedPieceY - cellsSize * 0.5f) / cellsSize).toInt()
+                val targetFile = if (reversed) 7 - newCol else newCol
+                val targetRank = if (reversed) newRow else 7 - newRow
+                dndState = dndState.copy(
+                    movedPieceX = newMovedPieceX,
+                    movedPieceY = newMovedPieceY,
+                    targetFile = targetFile,
+                    targetRank = targetRank
+                )
+            }
         },
         dndCancelCallback = {
             dndState = DndData()
         },
         dndValidatedCallback = {
-            println("Validating : $dndState")
+            if (dndState.pieceValue != SquareOccupant.NONE) {
+                println("Validating : $dndState")
+            }
             dndState = DndData()
         }
     )
