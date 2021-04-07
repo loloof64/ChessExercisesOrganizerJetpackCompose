@@ -59,15 +59,18 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         position = positionState.getFen(),
         dndData = dndState,
         dndStartCallback = { file, rank, piece ->
-            val col = if (reversed) 7 - file else file
-            val row = if (reversed) rank else 7 - rank
-            dndState = dndState.copy(
-                startFile = file,
-                startRank = rank,
-                movedPieceX = cellsSize * (0.5f + col.toFloat()),
-                movedPieceY = cellsSize * (0.5f + row.toFloat()),
-                pieceValue = piece
-            )
+            val isPieceOfSideToMove = piece.colour == positionState.sideToMove
+            if (isPieceOfSideToMove) {
+                val col = if (reversed) 7 - file else file
+                val row = if (reversed) rank else 7 - rank
+                dndState = dndState.copy(
+                    startFile = file,
+                    startRank = rank,
+                    movedPieceX = cellsSize * (0.5f + col.toFloat()),
+                    movedPieceY = cellsSize * (0.5f + row.toFloat()),
+                    pieceValue = piece
+                )
+            }
         },
         dndMoveCallback = { xOffset, yOffset ->
             if (dndState.pieceValue != SquareOccupant.NONE) {
@@ -374,6 +377,16 @@ fun DynamicReversedChessBoardPreview() {
 fun DynamicChessBoardCustomPositionPreview() {
     DynamicChessBoard(
         size = 300.dp,
+        position = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+    )
+}
+
+@Preview
+@Composable
+fun DynamicChessBoardCustomPositionReversedPreview() {
+    DynamicChessBoard(
+        size = 300.dp,
+        reversed = true,
         position = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }
