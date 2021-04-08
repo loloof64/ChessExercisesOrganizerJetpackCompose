@@ -103,7 +103,7 @@ fun Int.asFileChar(): Char {
         5 -> 'f'
         6 -> 'g'
         7 -> 'h'
-        else -> throw IllegalArgumentException("Not a valid file $this !")
+        else -> 'X'
     }
 }
 
@@ -117,7 +117,7 @@ fun Int.asRankChar(): Char {
         5 -> '6'
         6 -> '7'
         7 -> '8'
-        else -> throw IllegalArgumentException("Not a valid rank $this !")
+        else -> 'X'
     }
 }
 
@@ -126,7 +126,7 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
     var positionState by remember {
         mutableStateOf(position)
     }
-    var board = Board().apply {
+    val board = Board().apply {
         fen = positionState
     }
     var dndState by remember { mutableStateOf(DndData()) }
@@ -148,10 +148,6 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
         if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
 
-        /////////////////////////////////////////////////
-        println("Current board state : ${board.fen}")
-        /////////////////////////////////////////////////
-
         val promotionChar = if (dndMoveIsPromotion()) "Q" else ""
         val moveString =
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
@@ -172,10 +168,6 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         board.doMove(move, true, true)
 
         positionState = board.fen
-
-        //////////////////////////////////////////
-        println("New board state: ${board.fen}")
-        //////////////////////////////////////////
     }
 
     StaticChessBoard(
