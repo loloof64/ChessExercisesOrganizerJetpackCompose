@@ -1,5 +1,8 @@
 package com.loloof64.chessexercisesorganizer.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -28,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.floor
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
@@ -124,6 +129,7 @@ fun Int.asRankChar(): Char {
 
 @Composable
 fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
+    val composableScope = rememberCoroutineScope()
     var positionState by rememberSaveable {
         mutableStateOf(position)
     }
@@ -171,6 +177,56 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         positionState = board.fen
     }
 
+    fun cancelDragAndDrop() {
+        val initialX = dndState.movedPieceX
+        val initialY = dndState.movedPieceY
+
+        val startCol = if (reversed) 7 - dndState.startFile else dndState.startFile
+        val startRow = if (reversed) dndState.startRank else 7 - dndState.startRank
+
+        val targetX = cellsSize * (0.5f + startCol)
+        val targetY = cellsSize * (0.5f + startRow)
+
+        val animationDurationMillis = 150
+
+        dndState = dndState.copy(
+            targetFile = Int.MIN_VALUE,
+            targetRank = Int.MIN_VALUE
+        )
+
+        composableScope.launch {
+            animate(
+                initialValue = initialX,
+                targetValue = targetX,
+                animationSpec = tween(
+                    durationMillis = animationDurationMillis,
+                    easing = FastOutSlowInEasing
+                )
+            ) { value, _ ->
+                dndState = dndState.copy(movedPieceX = value)
+            }
+        }
+
+        composableScope.launch {
+            animate(
+                initialValue = initialY,
+                targetValue = targetY,
+                animationSpec = tween(
+                    durationMillis = animationDurationMillis,
+                    easing = FastOutSlowInEasing
+                )
+            ) { value, _ ->
+                dndState = dndState.copy(movedPieceY = value)
+            }
+        }
+
+
+        composableScope.launch {
+            delay(animationDurationMillis.toLong())
+            dndState = DndData()
+        }
+    }
+
     StaticChessBoard(
         size = size,
         reversed = reversed,
@@ -210,14 +266,14 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             }
         },
         dndCancelCallback = {
-            dndState = DndData()
+            cancelDragAndDrop()
         },
         dndValidatingCallback = {
             if (isValidDndMove()) {
                 commitDndMove()
                 dndState = DndData()
             } else {
-                dndState = DndData()
+                cancelDragAndDrop()
             }
         }
     )
@@ -294,7 +350,9 @@ private fun StaticChessBoard(
         if (dndData.pieceValue != NO_PIECE) {
             MovedPiece(
                 cellsSize = cellsSize,
-                dndData = dndData,
+                pieceValue = dndData.pieceValue,
+                x = dndData.movedPieceX,
+                y = dndData.movedPieceY,
                 positionFen = position,
             )
         }
@@ -382,19 +440,23 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
 }
 
 @Composable
-private fun MovedPiece(cellsSize: Float, positionFen: String, dndData: DndData) {
+private fun MovedPiece(
+    cellsSize: Float,
+    positionFen: String,
+    pieceValue: Char,
+    x: Float,
+    y: Float
+) {
     val boardLogic = Board()
     boardLogic.fen = positionFen
-    val square = getSquareFromCellCoordinates(dndData.startFile, dndData.startRank)
-    val piece = boardLogic.getPieceAt(square)
-    val imageRef = piece.getPieceImageID()
+    val imageRef = pieceValue.getPieceImageID()
     val imageDescription =
-        piece.getPieceImageDescriptionID()
+        pieceValue.getPieceImageDescriptionID()
 
-    val x = with(LocalDensity.current) { dndData.movedPieceX.toDp() }
-    val y = with(
+    val xDp = with(LocalDensity.current) { x.toDp() }
+    val yDp = with(
         LocalDensity.current
-    ) { dndData.movedPieceY.toDp() }
+    ) { y.toDp() }
     val imageSize = with(LocalDensity.current) {
         cellsSize.toDp()
     }
@@ -403,7 +465,7 @@ private fun MovedPiece(cellsSize: Float, positionFen: String, dndData: DndData) 
         contentDescription = stringResource(imageDescription),
         modifier = Modifier
             .size(imageSize)
-            .offset(x, y)
+            .offset(xDp, yDp)
     )
 }
 
