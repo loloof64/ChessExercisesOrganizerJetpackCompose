@@ -24,18 +24,53 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import com.alonsoruibal.chess.Board
+import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
-import com.netsensia.rivalchess.model.Board
-import com.netsensia.rivalchess.model.Colour
-import com.netsensia.rivalchess.model.Square
-import com.netsensia.rivalchess.model.SquareOccupant
-import com.netsensia.rivalchess.model.util.FenUtils.getFen
 import kotlin.math.floor
 
-const val STANDARD_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+const val STANDARD_FEN = Board.FEN_START_POSITION
+
+const val NO_PIECE = '.'
+
+fun Char.getPieceImageID(): Int {
+    return when (this) {
+        'P' -> R.drawable.ic_chess_plt45
+        'N' -> R.drawable.ic_chess_nlt45
+        'B' -> R.drawable.ic_chess_blt45
+        'R' -> R.drawable.ic_chess_rlt45
+        'Q' -> R.drawable.ic_chess_qlt45
+        'K' -> R.drawable.ic_chess_klt45
+        'p' -> R.drawable.ic_chess_pdt45
+        'n' -> R.drawable.ic_chess_ndt45
+        'b' -> R.drawable.ic_chess_bdt45
+        'r' -> R.drawable.ic_chess_rdt45
+        'q' -> R.drawable.ic_chess_qdt45
+        'k' -> R.drawable.ic_chess_kdt45
+        else -> throw RuntimeException("Not a valid piece: $this !")
+    }
+}
+
+fun Char.getPieceImageDescriptionID(): Int {
+    return when (this) {
+        'P' -> R.string.white_pawn
+        'N' -> R.string.white_knight
+        'B' -> R.string.white_bishop
+        'R' -> R.string.white_rook
+        'Q' -> R.string.white_queen
+        'K' -> R.string.white_king
+        'p' -> R.string.black_pawn
+        'n' -> R.string.black_knight
+        'b' -> R.string.black_bishop
+        'r' -> R.string.black_rook
+        'q' -> R.string.black_queen
+        'k' -> R.string.black_king
+        else -> throw RuntimeException("Not a valid piece: $this !")
+    }
+}
 
 data class DndData(
-    val pieceValue: SquareOccupant = SquareOccupant.NONE,
+    val pieceValue: Char = NO_PIECE,
     val startFile: Int = Int.MIN_VALUE,
     val startRank: Int = Int.MIN_VALUE,
     val targetFile: Int = Int.MIN_VALUE,
@@ -44,22 +79,115 @@ data class DndData(
     val movedPieceY: Float = Float.MIN_VALUE,
 )
 
+sealed class PromotionPiece(val fen: Char)
+object PromotionQueen : PromotionPiece('Q')
+object PromotionRook : PromotionPiece('R')
+object PromotionBishop : PromotionPiece('B')
+object PromotionKnight : PromotionPiece('N')
+
+fun Char.isWhitePiece(): Boolean {
+    return when (this) {
+        'P', 'N', 'B', 'R', 'Q', 'K' -> true
+        'p', 'n', 'b', 'r', 'q', 'k' -> false
+        else -> throw IllegalArgumentException("Not a valid piece : $this !")
+    }
+}
+
+fun Int.asFileChar(): Char {
+    return when (this) {
+        0 -> 'a'
+        1 -> 'b'
+        2 -> 'c'
+        3 -> 'd'
+        4 -> 'e'
+        5 -> 'f'
+        6 -> 'g'
+        7 -> 'h'
+        else -> throw IllegalArgumentException("Not a valid file $this !")
+    }
+}
+
+fun Int.asRankChar(): Char {
+    return when (this) {
+        0 -> '1'
+        1 -> '2'
+        2 -> '3'
+        3 -> '4'
+        4 -> '5'
+        5 -> '6'
+        6 -> '7'
+        7 -> '8'
+        else -> throw IllegalArgumentException("Not a valid rank $this !")
+    }
+}
+
 @Composable
 fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
-    val positionState by remember { mutableStateOf(Board.fromFen(position)) }
+    var positionState by remember {
+        mutableStateOf(position)
+    }
+    var board = Board().apply {
+        fen = positionState
+    }
     var dndState by remember { mutableStateOf(DndData()) }
 
     val cellsSize = with(LocalDensity.current) {
         size.toPx() / 9f
     }
 
+    fun dndMoveIsPromotion(): Boolean {
+        return (dndState.targetRank == 0 &&
+                dndState.pieceValue == 'P') ||
+                (dndState.targetRank == 7 && dndState.pieceValue == 'p')
+    }
+
+    fun isValidDndMove(): Boolean {
+        if (dndState.pieceValue == NO_PIECE) return false
+        if (dndState.startFile < 0 || dndState.startFile > 7) return false
+        if (dndState.startRank < 0 || dndState.startRank > 7) return false
+        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
+        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
+
+        /////////////////////////////////////////////////
+        println("Current board state : ${board.fen}")
+        /////////////////////////////////////////////////
+
+        val promotionChar = if (dndMoveIsPromotion()) "Q" else ""
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
+        val move = Move.getFromString(board, moveString, true)
+        val boardCopy = Board()
+        boardCopy.fen = positionState
+        return boardCopy.doMove(move, true, false)
+    }
+
+    fun commitDndMove(promotionPiece: PromotionPiece = PromotionQueen) {
+        if (!isValidDndMove()) return
+        val promotionChar = if (dndMoveIsPromotion()) promotionPiece.fen else ""
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
+        val move = Move.getFromString(board, moveString, true)
+        board.doMove(move, true, true)
+
+        positionState = board.fen
+
+        //////////////////////////////////////////
+        println("New board state: ${board.fen}")
+        //////////////////////////////////////////
+    }
+
     StaticChessBoard(
         size = size,
         reversed = reversed,
-        position = positionState.getFen(),
+        position = positionState,
         dndData = dndState,
         dndStartCallback = { file, rank, piece ->
-            val isPieceOfSideToMove = piece.colour == positionState.sideToMove
+            val whiteTurn = positionState.split(" ")[1] == "w"
+            val isPieceOfSideToMove =
+                (piece.isWhitePiece() && whiteTurn) ||
+                        (!piece.isWhitePiece() && !whiteTurn)
             if (isPieceOfSideToMove) {
                 val col = if (reversed) 7 - file else file
                 val row = if (reversed) rank else 7 - rank
@@ -73,7 +201,7 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             }
         },
         dndMoveCallback = { xOffset, yOffset ->
-            if (dndState.pieceValue != SquareOccupant.NONE) {
+            if (dndState.pieceValue != NO_PIECE) {
                 val newMovedPieceX = dndState.movedPieceX + xOffset
                 val newMovedPieceY = dndState.movedPieceY + yOffset
                 val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
@@ -91,11 +219,13 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         dndCancelCallback = {
             dndState = DndData()
         },
-        dndValidatedCallback = {
-            if (dndState.pieceValue != SquareOccupant.NONE) {
-                println("Validating : $dndState")
+        dndValidatingCallback = {
+            if (isValidDndMove()) {
+                commitDndMove()
+                dndState = DndData()
+            } else {
+                dndState = DndData()
             }
-            dndState = DndData()
         }
     )
 }
@@ -106,9 +236,9 @@ private fun StaticChessBoard(
     position: String = STANDARD_FEN,
     reversed: Boolean = false,
     dndData: DndData = DndData(),
-    dndStartCallback: (Int, Int, SquareOccupant) -> Unit = { _, _, _ -> },
+    dndStartCallback: (Int, Int, Char) -> Unit = { _, _, _ -> },
     dndMoveCallback: (Float, Float) -> Unit = { _, _ -> },
-    dndValidatedCallback: () -> Unit = {},
+    dndValidatingCallback: () -> Unit = {},
     dndCancelCallback: () -> Unit = {},
 ) {
     val globalSize = with(LocalDensity.current) {
@@ -119,7 +249,9 @@ private fun StaticChessBoard(
         (cellsSize * 0.3f).toSp()
     }
 
-    val boardLogic = Board.fromFen(position)
+    val boardLogic = Board().apply {
+        fen = position
+    }
 
     Box(
         modifier = Modifier
@@ -140,8 +272,8 @@ private fun StaticChessBoard(
                             val file = if (reversed) 7 - col else col
                             val rank = if (reversed) row else 7 - row
                             val square = getSquareFromCellCoordinates(file, rank)
-                            val piece = boardLogic.getSquareOccupant(square)
-                            if (piece != SquareOccupant.NONE) {
+                            val piece = boardLogic.getPieceAt(square)
+                            if (piece != NO_PIECE) {
                                 dndStartCallback(file, rank, piece)
                             }
                         }
@@ -152,7 +284,7 @@ private fun StaticChessBoard(
                         dndMoveCallback(dragAmount.x, dragAmount.y)
                     },
                     onDragEnd = {
-                        dndValidatedCallback()
+                        dndValidatingCallback()
                     })
             },
     ) {
@@ -166,7 +298,7 @@ private fun StaticChessBoard(
             dndData = dndData
         )
 
-        if (dndData.pieceValue != SquareOccupant.NONE) {
+        if (dndData.pieceValue != NO_PIECE) {
             MovedPiece(
                 cellsSize = cellsSize,
                 dndData = dndData,
@@ -230,8 +362,8 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
             val file = if (reversed) 7 - col else col
 
             val square = getSquareFromCellCoordinates(file, rank)
-            val piece = position.getSquareOccupant(square)
-            if (piece != SquareOccupant.NONE) {
+            val piece = position.getPieceAt(square)
+            if (piece != NO_PIECE) {
                 val isDraggedPiece = (dndData.startFile == file) && (dndData.startRank == rank)
                 if (!isDraggedPiece) {
                     val x = with(
@@ -258,9 +390,10 @@ private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData
 
 @Composable
 private fun MovedPiece(cellsSize: Float, positionFen: String, dndData: DndData) {
-    val boardLogic = Board.fromFen(positionFen)
+    val boardLogic = Board()
+    boardLogic.fen = positionFen
     val square = getSquareFromCellCoordinates(dndData.startFile, dndData.startRank)
-    val piece = boardLogic.getSquareOccupant(square)
+    val piece = boardLogic.getPieceAt(square)
     val imageRef = piece.getPieceImageID()
     val imageDescription =
         piece.getPieceImageDescriptionID()
@@ -281,44 +414,8 @@ private fun MovedPiece(cellsSize: Float, positionFen: String, dndData: DndData) 
     )
 }
 
-private fun getSquareFromCellCoordinates(file: Int, rank: Int): Square {
-    return Square.fromBitRef((7 - file) + 8 * rank)
-}
-
-private fun SquareOccupant.getPieceImageID(): Int {
-    return when (this) {
-        SquareOccupant.WP -> R.drawable.ic_chess_plt45
-        SquareOccupant.WN -> R.drawable.ic_chess_nlt45
-        SquareOccupant.WB -> R.drawable.ic_chess_blt45
-        SquareOccupant.WR -> R.drawable.ic_chess_rlt45
-        SquareOccupant.WQ -> R.drawable.ic_chess_qlt45
-        SquareOccupant.WK -> R.drawable.ic_chess_klt45
-        SquareOccupant.BP -> R.drawable.ic_chess_pdt45
-        SquareOccupant.BN -> R.drawable.ic_chess_ndt45
-        SquareOccupant.BB -> R.drawable.ic_chess_bdt45
-        SquareOccupant.BR -> R.drawable.ic_chess_rdt45
-        SquareOccupant.BQ -> R.drawable.ic_chess_qdt45
-        SquareOccupant.BK -> R.drawable.ic_chess_kdt45
-        else -> throw RuntimeException("not a valid piece")
-    }
-}
-
-private fun SquareOccupant.getPieceImageDescriptionID(): Int {
-    return when (this) {
-        SquareOccupant.WP -> R.string.white_pawn
-        SquareOccupant.WN -> R.string.white_knight
-        SquareOccupant.WB -> R.string.white_bishop
-        SquareOccupant.WR -> R.string.white_rook
-        SquareOccupant.WQ -> R.string.white_queen
-        SquareOccupant.WK -> R.string.white_king
-        SquareOccupant.BP -> R.string.black_pawn
-        SquareOccupant.BN -> R.string.black_knight
-        SquareOccupant.BB -> R.string.black_bishop
-        SquareOccupant.BR -> R.string.black_rook
-        SquareOccupant.BQ -> R.string.black_queen
-        SquareOccupant.BK -> R.string.black_king
-        else -> throw RuntimeException("not a valid piece")
-    }
+private fun getSquareFromCellCoordinates(file: Int, rank: Int): Long {
+    return 1L.shl(7 - file + 8 * rank)
 }
 
 private fun DrawScope.drawCells(cellsSize: Float, reversed: Boolean, dndData: DndData) {
@@ -353,7 +450,7 @@ private fun DrawScope.drawPlayerTurn(
     cellsSize: Float,
     positionState: Board
 ) {
-    val whiteTurn = positionState.sideToMove == Colour.WHITE
+    val whiteTurn = positionState.turn
     val turnRadius = cellsSize * 0.25f
     val turnColor = if (whiteTurn) Color.White else Color.Black
     val location = cellsSize * 8.75f
