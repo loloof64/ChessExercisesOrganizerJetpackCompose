@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -123,7 +124,7 @@ fun Int.asRankChar(): Char {
 
 @Composable
 fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
-    var positionState by remember {
+    var positionState by rememberSaveable {
         mutableStateOf(position)
     }
     val board = Board().apply {
