@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -83,6 +84,39 @@ data class DndData(
     val targetRank: Int = Int.MIN_VALUE,
     val movedPieceX: Float = Float.MIN_VALUE,
     val movedPieceY: Float = Float.MIN_VALUE,
+    val pendingPromotion: Boolean = false,
+) {
+    override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
+            "$movedPieceX|$movedPieceY|$pendingPromotion"
+
+    companion object {
+        fun parse(valueStr: String): DndData {
+            try {
+                val parts = valueStr.split("|")
+                return DndData(
+                    pieceValue = parts[0][0],
+                    startFile = parts[1].toInt(),
+                    startRank = parts[2].toInt(),
+                    targetFile = parts[3].toInt(),
+                    targetRank = parts[4].toInt(),
+                    movedPieceX = parts[5].toFloat(),
+                    movedPieceY = parts[6].toFloat(),
+                    pendingPromotion = parts[7].toBoolean()
+                )
+            } catch (ex: NumberFormatException) {
+                return DndData()
+            } catch (ex: ArrayIndexOutOfBoundsException) {
+                return DndData()
+            }
+        }
+    }
+}
+
+val DndDataStateSaver = Saver<DndData, String>(
+    save = { state -> state.toString() },
+    restore = { value ->
+        DndData.parse(value)
+    }
 )
 
 sealed class PromotionPiece(val fen: Char)
@@ -136,7 +170,8 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
     val board = Board().apply {
         fen = positionState
     }
-    var dndState by remember { mutableStateOf(DndData()) }
+
+    var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
 
     val cellsSize = with(LocalDensity.current) {
         size.toPx() / 9f
@@ -144,8 +179,8 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
 
     fun dndMoveIsPromotion(): Boolean {
         return (dndState.targetRank == 0 &&
-                dndState.pieceValue == 'P') ||
-                (dndState.targetRank == 7 && dndState.pieceValue == 'p')
+                dndState.pieceValue == 'p') ||
+                (dndState.targetRank == 7 && dndState.pieceValue == 'P')
     }
 
     fun isValidDndMove(): Boolean {
@@ -233,6 +268,7 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         position = positionState,
         dndData = dndState,
         dndStartCallback = { file, rank, piece ->
+            if (dndState.pendingPromotion) return@StaticChessBoard
             val whiteTurn = positionState.split(" ")[1] == "w"
             val isPieceOfSideToMove =
                 (piece.isWhitePiece() && whiteTurn) ||
@@ -250,6 +286,7 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             }
         },
         dndMoveCallback = { xOffset, yOffset ->
+            if (dndState.pendingPromotion) return@StaticChessBoard
             if (dndState.pieceValue != NO_PIECE) {
                 val newMovedPieceX = dndState.movedPieceX + xOffset
                 val newMovedPieceY = dndState.movedPieceY + yOffset
@@ -266,12 +303,18 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             }
         },
         dndCancelCallback = {
+            if (dndState.pendingPromotion) return@StaticChessBoard
             cancelDragAndDrop()
         },
         dndValidatingCallback = {
+            if (dndState.pendingPromotion) return@StaticChessBoard
             if (isValidDndMove()) {
-                commitDndMove()
-                dndState = DndData()
+                if (dndMoveIsPromotion()) {
+                    dndState = dndState.copy(pendingPromotion = true)
+                } else {
+                    commitDndMove()
+                    dndState = DndData()
+                }
             } else {
                 cancelDragAndDrop()
             }
