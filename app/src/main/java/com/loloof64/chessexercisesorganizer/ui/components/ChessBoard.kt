@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
+import com.alonsoruibal.chess.Piece
 import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -161,56 +162,29 @@ fun Int.asRankChar(): Char {
     }
 }
 
+fun String.toBoard(): Board {
+    val position = this
+    return Board().apply {
+        fen = position
+    }
+}
+
 @Composable
 fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
+    val globalSize = with(LocalDensity.current) {
+        size.toPx()
+    }
+    val cellsSize = globalSize / 9f
+    val textSize = with(LocalDensity.current) {
+        (cellsSize * 0.3f).toSp()
+    }
+
     val composableScope = rememberCoroutineScope()
     var positionState by rememberSaveable {
         mutableStateOf(position)
     }
-    val board = Board().apply {
-        fen = positionState
-    }
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
-
-    val cellsSize = with(LocalDensity.current) {
-        size.toPx() / 9f
-    }
-
-    fun dndMoveIsPromotion(): Boolean {
-        return (dndState.targetRank == 0 &&
-                dndState.pieceValue == 'p') ||
-                (dndState.targetRank == 7 && dndState.pieceValue == 'P')
-    }
-
-    fun isValidDndMove(): Boolean {
-        if (dndState.pieceValue == NO_PIECE) return false
-        if (dndState.startFile < 0 || dndState.startFile > 7) return false
-        if (dndState.startRank < 0 || dndState.startRank > 7) return false
-        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
-        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
-
-        val promotionChar = if (dndMoveIsPromotion()) "Q" else ""
-        val moveString =
-            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
-        val move = Move.getFromString(board, moveString, true)
-        val boardCopy = Board()
-        boardCopy.fen = positionState
-        return boardCopy.doMove(move, true, false)
-    }
-
-    fun commitDndMove(promotionPiece: PromotionPiece = PromotionQueen) {
-        if (!isValidDndMove()) return
-        val promotionChar = if (dndMoveIsPromotion()) promotionPiece.fen else ""
-        val moveString =
-            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
-        val move = Move.getFromString(board, moveString, true)
-        board.doMove(move, true, true)
-
-        positionState = board.fen
-    }
 
     fun cancelDragAndDrop() {
         val initialX = dndState.movedPieceX
@@ -262,64 +236,158 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         }
     }
 
-    StaticChessBoard(
-        size = size,
-        reversed = reversed,
-        position = positionState,
-        dndData = dndState,
-        dndStartCallback = { file, rank, piece ->
-            if (dndState.pendingPromotion) return@StaticChessBoard
-            val whiteTurn = positionState.split(" ")[1] == "w"
-            val isPieceOfSideToMove =
-                (piece.isWhitePiece() && whiteTurn) ||
-                        (!piece.isWhitePiece() && !whiteTurn)
-            if (isPieceOfSideToMove) {
-                val col = if (reversed) 7 - file else file
-                val row = if (reversed) rank else 7 - rank
-                dndState = dndState.copy(
-                    startFile = file,
-                    startRank = rank,
-                    movedPieceX = cellsSize * (0.5f + col.toFloat()),
-                    movedPieceY = cellsSize * (0.5f + row.toFloat()),
-                    pieceValue = piece
-                )
-            }
-        },
-        dndMoveCallback = { xOffset, yOffset ->
-            if (dndState.pendingPromotion) return@StaticChessBoard
-            if (dndState.pieceValue != NO_PIECE) {
-                val newMovedPieceX = dndState.movedPieceX + xOffset
-                val newMovedPieceY = dndState.movedPieceY + yOffset
-                val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
-                val newRow = floor((newMovedPieceY - cellsSize * 0.5f) / cellsSize).toInt()
-                val targetFile = if (reversed) 7 - newCol else newCol
-                val targetRank = if (reversed) newRow else 7 - newRow
-                dndState = dndState.copy(
-                    movedPieceX = newMovedPieceX,
-                    movedPieceY = newMovedPieceY,
-                    targetFile = targetFile,
-                    targetRank = targetRank
-                )
-            }
-        },
-        dndCancelCallback = {
-            if (dndState.pendingPromotion) return@StaticChessBoard
-            cancelDragAndDrop()
-        },
-        dndValidatingCallback = {
-            if (dndState.pendingPromotion) return@StaticChessBoard
-            if (isValidDndMove()) {
-                if (dndMoveIsPromotion()) {
-                    dndState = dndState.copy(pendingPromotion = true)
-                } else {
-                    commitDndMove()
-                    dndState = DndData()
-                }
+    fun dndStartCallback(file: Int, rank: Int, piece: Char) {
+        if (dndState.pendingPromotion) return
+
+        val whiteTurn = positionState.split(" ")[1] == "w"
+        val isPieceOfSideToMove =
+            (piece.isWhitePiece() && whiteTurn) ||
+                    (!piece.isWhitePiece() && !whiteTurn)
+        if (isPieceOfSideToMove) {
+            val col = if (reversed) 7 - file else file
+            val row = if (reversed) rank else 7 - rank
+            dndState = dndState.copy(
+                startFile = file,
+                startRank = rank,
+                movedPieceX = cellsSize * (0.5f + col.toFloat()),
+                movedPieceY = cellsSize * (0.5f + row.toFloat()),
+                pieceValue = piece
+            )
+        }
+    }
+
+    fun dndMoveCallback(xOffset: Float, yOffset: Float) {
+        if (dndState.pendingPromotion) return
+        if (dndState.pieceValue != NO_PIECE) {
+            val newMovedPieceX = dndState.movedPieceX + xOffset
+            val newMovedPieceY = dndState.movedPieceY + yOffset
+            val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
+            val newRow = floor((newMovedPieceY - cellsSize * 0.5f) / cellsSize).toInt()
+            val targetFile = if (reversed) 7 - newCol else newCol
+            val targetRank = if (reversed) newRow else 7 - newRow
+            dndState = dndState.copy(
+                movedPieceX = newMovedPieceX,
+                movedPieceY = newMovedPieceY,
+                targetFile = targetFile,
+                targetRank = targetRank
+            )
+        }
+    }
+
+    fun dndCancelCallback() {
+        if (dndState.pendingPromotion) return
+        cancelDragAndDrop()
+    }
+
+    fun dndMoveIsPromotion(): Boolean {
+        return (dndState.targetRank == 0 &&
+                dndState.pieceValue == 'p') ||
+                (dndState.targetRank == 7 && dndState.pieceValue == 'P')
+    }
+
+    fun isValidDndMove(): Boolean {
+        if (dndState.pieceValue == NO_PIECE) return false
+        if (dndState.startFile < 0 || dndState.startFile > 7) return false
+        if (dndState.startRank < 0 || dndState.startRank > 7) return false
+        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
+        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
+
+        val promotionChar = if (dndMoveIsPromotion()) "Q" else ""
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
+        val move = Move.getFromString(positionState.toBoard(), moveString, true)
+        val boardCopy = Board()
+        boardCopy.fen = positionState
+        return boardCopy.doMove(move, true, false)
+    }
+
+    fun commitDndMove(promotionPiece: PromotionPiece = PromotionQueen) {
+        if (!isValidDndMove()) return
+        val promotionChar = if (dndMoveIsPromotion()) promotionPiece.fen else ""
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
+        val board = positionState.toBoard()
+        val move = Move.getFromString(board, moveString, true)
+        board.doMove(move, true, true)
+
+        positionState = board.fen
+    }
+
+    fun dndValidatingCallback() {
+        if (dndState.pendingPromotion) return
+        if (isValidDndMove()) {
+            if (dndMoveIsPromotion()) {
+                dndState = dndState.copy(pendingPromotion = true)
             } else {
-                cancelDragAndDrop()
+                commitDndMove()
+                dndState = DndData()
+            }
+        } else {
+            cancelDragAndDrop()
+        }
+    }
+
+    fun handleDragStart(offset: Offset) {
+        val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
+        val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
+
+        val outOfBounds = col < 0 || col > 7 || row < 0 || row > 7
+        if (!outOfBounds) {
+            val file = if (reversed) 7 - col else col
+            val rank = if (reversed) row else 7 - row
+            val square = getSquareFromCellCoordinates(file, rank)
+            val piece = positionState.toBoard().getPieceAt(square)
+
+            if (piece != NO_PIECE) {
+                dndStartCallback(file, rank, piece)
             }
         }
-    )
+    }
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(Color(214, 59, 96))
+            .drawBehind {
+                drawCells(cellsSize, reversed, dndData = dndState)
+                drawPlayerTurn(cellsSize, positionState.toBoard())
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { handleDragStart(it) },
+                    onDragCancel = { dndCancelCallback() },
+                    onDrag = { change, dragAmount ->
+                        change.consumeAllChanges()
+                        dndMoveCallback(dragAmount.x, dragAmount.y)
+                    },
+                    onDragEnd = {
+                        dndValidatingCallback()
+                    })
+            },
+    ) {
+        FilesCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
+        RanksCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
+
+        Pieces(
+            cellsSize = cellsSize,
+            position = positionState.toBoard(),
+            reversed = reversed,
+            dndData = dndState,
+        )
+
+        if (dndState.pieceValue != NO_PIECE) {
+            MovedPiece(
+                cellsSize = cellsSize,
+                pieceValue = dndState.pieceValue,
+                x = dndState.movedPieceX,
+                y = dndState.movedPieceY,
+                positionFen = position,
+            )
+        }
+
+    }
 }
 
 @Composable
@@ -327,11 +395,6 @@ private fun StaticChessBoard(
     size: Dp,
     position: String = STANDARD_FEN,
     reversed: Boolean = false,
-    dndData: DndData = DndData(),
-    dndStartCallback: (Int, Int, Char) -> Unit = { _, _, _ -> },
-    dndMoveCallback: (Float, Float) -> Unit = { _, _ -> },
-    dndValidatingCallback: () -> Unit = {},
-    dndCancelCallback: () -> Unit = {},
 ) {
     val globalSize = with(LocalDensity.current) {
         size.toPx()
@@ -350,34 +413,8 @@ private fun StaticChessBoard(
             .size(size)
             .background(Color(214, 59, 96))
             .drawBehind {
-                drawCells(cellsSize, reversed, dndData)
+                drawCells(cellsSize, reversed)
                 drawPlayerTurn(cellsSize, boardLogic)
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
-                        val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
-
-                        val outOfBounds = col < 0 || col > 7 || row < 0 || row > 7
-                        if (!outOfBounds) {
-                            val file = if (reversed) 7 - col else col
-                            val rank = if (reversed) row else 7 - row
-                            val square = getSquareFromCellCoordinates(file, rank)
-                            val piece = boardLogic.getPieceAt(square)
-                            if (piece != NO_PIECE) {
-                                dndStartCallback(file, rank, piece)
-                            }
-                        }
-                    },
-                    onDragCancel = { dndCancelCallback() },
-                    onDrag = { change, dragAmount ->
-                        change.consumeAllChanges()
-                        dndMoveCallback(dragAmount.x, dragAmount.y)
-                    },
-                    onDragEnd = {
-                        dndValidatingCallback()
-                    })
             },
     ) {
         FilesCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
@@ -387,18 +424,7 @@ private fun StaticChessBoard(
             cellsSize = cellsSize,
             position = boardLogic,
             reversed = reversed,
-            dndData = dndData
         )
-
-        if (dndData.pieceValue != NO_PIECE) {
-            MovedPiece(
-                cellsSize = cellsSize,
-                pieceValue = dndData.pieceValue,
-                x = dndData.movedPieceX,
-                y = dndData.movedPieceY,
-                positionFen = position,
-            )
-        }
 
     }
 }
@@ -449,7 +475,12 @@ private fun RanksCoordinates(cellsSize: Float, textSize: TextUnit, reversed: Boo
 }
 
 @Composable
-private fun Pieces(cellsSize: Float, position: Board, reversed: Boolean, dndData: DndData) {
+private fun Pieces(
+    cellsSize: Float,
+    position: Board,
+    reversed: Boolean,
+    dndData: DndData = DndData()
+) {
     repeat(8) { row ->
         val rank = if (reversed) row else 7 - row
         repeat(8) { col ->
@@ -516,7 +547,7 @@ private fun getSquareFromCellCoordinates(file: Int, rank: Int): Long {
     return 1L.shl(7 - file + 8 * rank)
 }
 
-private fun DrawScope.drawCells(cellsSize: Float, reversed: Boolean, dndData: DndData) {
+private fun DrawScope.drawCells(cellsSize: Float, reversed: Boolean, dndData: DndData = DndData()) {
     repeat(8) { row ->
         val rank = if (reversed) row else 7 - row
         repeat(8) { col ->
@@ -590,4 +621,10 @@ fun DynamicChessBoardCustomPositionReversedPreview() {
 @Composable
 fun StaticChessBoardPreview() {
     StaticChessBoard(size = 300.dp)
+}
+
+@Preview
+@Composable
+fun StaticChessBoardReversedPreview() {
+    StaticChessBoard(size = 300.dp, reversed = true)
 }
