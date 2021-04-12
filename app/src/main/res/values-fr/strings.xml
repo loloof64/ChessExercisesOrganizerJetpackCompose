@@ -13,4 +13,5 @@
     <string name="black_rook">Tour noire</string>
     <string name="black_queen">Dame noire</string>
     <string name="black_king">Roi noir</string>
+    <string name="red_cross">Croix rouge</string>
 </resources>

@@ -12,4 +12,5 @@
     <string name="black_rook">Black rook</string>
     <string name="black_queen">Black queen</string>
     <string name="black_king">Black king</string>
+    <string name="red_cross">Red cross</string>
 </resources>

@@ -6,14 +6,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
-import com.alonsoruibal.chess.Piece
 import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -120,11 +119,16 @@ val DndDataStateSaver = Saver<DndData, String>(
     }
 )
 
-sealed class PromotionPiece(val fen: Char)
-object PromotionQueen : PromotionPiece('Q')
-object PromotionRook : PromotionPiece('R')
-object PromotionBishop : PromotionPiece('B')
-object PromotionKnight : PromotionPiece('N')
+sealed class PromotionPiece(val baseFen: Char, val isWhiteTurn: Boolean) {
+    val fen = if (isWhiteTurn) baseFen.toUpperCase() else baseFen.toLowerCase()
+}
+
+class PromotionQueen(isWhiteTurn: Boolean) :
+    PromotionPiece(baseFen = 'Q', isWhiteTurn = isWhiteTurn)
+
+class PromotionRook(isWhiteTurn: Boolean) : PromotionPiece('R', isWhiteTurn = isWhiteTurn)
+class PromotionBishop(isWhiteTurn: Boolean) : PromotionPiece('B', isWhiteTurn = isWhiteTurn)
+class PromotionKnight(isWhiteTurn: Boolean) : PromotionPiece('N', isWhiteTurn = isWhiteTurn)
 
 fun Char.isWhitePiece(): Boolean {
     return when (this) {
@@ -302,12 +306,11 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         return boardCopy.doMove(move, true, false)
     }
 
-    fun commitDndMove(promotionPiece: PromotionPiece = PromotionQueen) {
+    fun commitDndMove() {
         if (!isValidDndMove()) return
-        val promotionChar = if (dndMoveIsPromotion()) promotionPiece.fen else ""
         val moveString =
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}"
         val board = positionState.toBoard()
         val move = Move.getFromString(board, moveString, true)
         board.doMove(move, true, true)
@@ -318,11 +321,11 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
     fun dndValidatingCallback() {
         if (dndState.pendingPromotion) return
         if (isValidDndMove()) {
-            if (dndMoveIsPromotion()) {
-                dndState = dndState.copy(pendingPromotion = true)
+            dndState = if (dndMoveIsPromotion()) {
+                dndState.copy(pendingPromotion = true)
             } else {
                 commitDndMove()
-                dndState = DndData()
+                DndData()
             }
         } else {
             cancelDragAndDrop()
@@ -384,6 +387,25 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
                 x = dndState.movedPieceX,
                 y = dndState.movedPieceY,
                 positionFen = position,
+            )
+        }
+
+        if (dndState.pendingPromotion) {
+            val itemsZoneX = with(LocalDensity.current) {
+                (size.toPx() * 0.18f).toDp()
+            }
+            val itemsZoneY = with(LocalDensity.current) {
+                val promotionInBottomPart = dndState.movedPieceY > size.toPx() / 2
+                (size.toPx() * (if (promotionInBottomPart) 0.06f else 0.85f)).toDp()
+            }
+            val itemsSize = with(LocalDensity.current) {
+                cellsSize.toDp() * 1.15f
+            }
+
+            PromotionValidationZone(
+                modifier = Modifier.offset(itemsZoneX, itemsZoneY),
+                itemsSize = itemsSize,
+                isWhiteTurn = positionState.toBoard().turn
             )
         }
 
@@ -586,6 +608,73 @@ private fun DrawScope.drawPlayerTurn(
     drawCircle(color = turnColor, radius = turnRadius, center = Offset(location, location))
 }
 
+@Composable
+fun PromotionValidationZone(modifier: Modifier = Modifier, itemsSize: Dp, isWhiteTurn: Boolean) {
+    Row(modifier = modifier) {
+        PromotionValidationItem(
+            size = itemsSize,
+            pieceValue = PromotionQueen(isWhiteTurn = isWhiteTurn)
+        )
+        PromotionValidationItem(
+            size = itemsSize,
+            pieceValue = PromotionRook(isWhiteTurn = isWhiteTurn)
+        )
+        PromotionValidationItem(
+            size = itemsSize,
+            pieceValue = PromotionBishop(isWhiteTurn = isWhiteTurn)
+        )
+        PromotionValidationItem(
+            size = itemsSize,
+            pieceValue = PromotionKnight(isWhiteTurn = isWhiteTurn)
+        )
+        PromotionCancellationItem(size = itemsSize, isWhiteTurn = isWhiteTurn)
+    }
+}
+
+@Composable
+fun PromotionValidationItem(modifier: Modifier = Modifier, size: Dp, pieceValue: PromotionPiece) {
+    val backgroundColor = if (pieceValue.isWhiteTurn) Color.Black else Color.White
+    val padding = size / 10f
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(backgroundColor)
+            .padding(padding)
+    ) {
+        val imageRef = pieceValue.fen.getPieceImageID()
+        val contentDescription = pieceValue.fen.getPieceImageDescriptionID()
+        Image(
+            painter = painterResource(id = imageRef),
+            contentDescription = stringResource(contentDescription),
+            modifier = Modifier
+                .size(size)
+        )
+    }
+}
+
+@Composable
+fun PromotionCancellationItem(modifier: Modifier = Modifier, size: Dp, isWhiteTurn: Boolean) {
+    val backgroundColor = if (isWhiteTurn) Color.Black else Color.White
+    val padding = size / 4.5f
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(backgroundColor)
+            .padding(padding)
+    ) {
+        val imageRef = R.drawable.ic_red_cross
+        val contentDescription = R.string.red_cross
+        Image(
+            painter = painterResource(id = imageRef),
+            contentDescription = stringResource(contentDescription),
+            modifier = Modifier
+                .size(size)
+        )
+    }
+}
+
 @Preview
 @Composable
 fun DynamicChessBoardPreview() {
@@ -627,4 +716,28 @@ fun StaticChessBoardPreview() {
 @Composable
 fun StaticChessBoardReversedPreview() {
     StaticChessBoard(size = 300.dp, reversed = true)
+}
+
+@Preview
+@Composable
+fun WhitePromotionValidationItemPreview() {
+    PromotionValidationItem(size = 100.dp, pieceValue = PromotionKnight(isWhiteTurn = true))
+}
+
+@Preview
+@Composable
+fun BlackPromotionValidationItemPreview() {
+    PromotionValidationItem(size = 100.dp, pieceValue = PromotionRook(isWhiteTurn = false))
+}
+
+@Preview
+@Composable
+fun PromotionValidationZonePreview() {
+    PromotionValidationZone(itemsSize = 100.dp, isWhiteTurn = true)
+}
+
+@Preview
+@Composable
+fun PromotionCancellationItemPreview() {
+    PromotionCancellationItem(size = 100.dp, isWhiteTurn = true)
 }
