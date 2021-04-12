@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -332,6 +333,24 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
         }
     }
 
+    fun commitPromotion(piece: PromotionPiece) {
+        val promotionFen = piece.fen.toLowerCase()
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionFen"
+        val board = positionState.toBoard()
+        val move = Move.getFromString(board, moveString, true)
+        board.doMove(move, true, true)
+
+        positionState = board.fen
+
+        dndState = DndData()
+    }
+
+    fun cancelPendingPromotion() {
+        dndState = DndData()
+    }
+
     fun handleDragStart(offset: Offset) {
         val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
         val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
@@ -405,7 +424,9 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             PromotionValidationZone(
                 modifier = Modifier.offset(itemsZoneX, itemsZoneY),
                 itemsSize = itemsSize,
-                isWhiteTurn = positionState.toBoard().turn
+                isWhiteTurn = positionState.toBoard().turn,
+                commitPromotion = { piece -> commitPromotion(piece) },
+                cancelPendingPromotion = { cancelPendingPromotion() }
             )
         }
 
@@ -609,36 +630,56 @@ private fun DrawScope.drawPlayerTurn(
 }
 
 @Composable
-fun PromotionValidationZone(modifier: Modifier = Modifier, itemsSize: Dp, isWhiteTurn: Boolean) {
+fun PromotionValidationZone(
+    modifier: Modifier = Modifier, itemsSize: Dp, isWhiteTurn: Boolean,
+    commitPromotion: (piece: PromotionPiece) -> Unit = {_ -> },
+    cancelPendingPromotion: () -> Unit = {},
+) {
     Row(modifier = modifier) {
         PromotionValidationItem(
             size = itemsSize,
             pieceValue = PromotionQueen(isWhiteTurn = isWhiteTurn)
-        )
+        ) {
+            commitPromotion(PromotionQueen(isWhiteTurn = isWhiteTurn))
+        }
         PromotionValidationItem(
             size = itemsSize,
             pieceValue = PromotionRook(isWhiteTurn = isWhiteTurn)
-        )
+        ) {
+            commitPromotion(PromotionRook(isWhiteTurn = isWhiteTurn))
+        }
         PromotionValidationItem(
             size = itemsSize,
             pieceValue = PromotionBishop(isWhiteTurn = isWhiteTurn)
-        )
+        ) {
+            commitPromotion(PromotionBishop(isWhiteTurn = isWhiteTurn))
+        }
         PromotionValidationItem(
             size = itemsSize,
             pieceValue = PromotionKnight(isWhiteTurn = isWhiteTurn)
-        )
-        PromotionCancellationItem(size = itemsSize, isWhiteTurn = isWhiteTurn)
+        ) {
+            commitPromotion(PromotionKnight(isWhiteTurn = isWhiteTurn))
+        }
+        PromotionCancellationItem(size = itemsSize, isWhiteTurn = isWhiteTurn) {
+            cancelPendingPromotion()
+        }
     }
 }
 
 @Composable
-fun PromotionValidationItem(modifier: Modifier = Modifier, size: Dp, pieceValue: PromotionPiece) {
+fun PromotionValidationItem(
+    modifier: Modifier = Modifier,
+    size: Dp,
+    pieceValue: PromotionPiece,
+    clickCallback: () -> Unit = {}
+) {
     val backgroundColor = if (pieceValue.isWhiteTurn) Color.Black else Color.White
     val padding = size / 10f
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
+            .clickable(onClick = { clickCallback() })
             .background(backgroundColor)
             .padding(padding)
     ) {
@@ -654,13 +695,19 @@ fun PromotionValidationItem(modifier: Modifier = Modifier, size: Dp, pieceValue:
 }
 
 @Composable
-fun PromotionCancellationItem(modifier: Modifier = Modifier, size: Dp, isWhiteTurn: Boolean) {
+fun PromotionCancellationItem(
+    modifier: Modifier = Modifier,
+    size: Dp,
+    isWhiteTurn: Boolean,
+    clickCallback: () -> Unit = {}
+) {
     val backgroundColor = if (isWhiteTurn) Color.Black else Color.White
     val padding = size / 4.5f
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
+            .clickable(onClick = { clickCallback() })
             .background(backgroundColor)
             .padding(padding)
     ) {
