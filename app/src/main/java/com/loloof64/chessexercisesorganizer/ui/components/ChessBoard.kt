@@ -229,6 +229,7 @@ fun DynamicChessBoard(
     reversed: Boolean = false,
     userRequestStopGame: Boolean = false,
     gameId: Long = 1L,
+    positionChangedCallback: (String) -> Unit = {_ -> }
 ) {
     val context = LocalContext.current
 
@@ -426,6 +427,8 @@ fun DynamicChessBoard(
         val move = Move.getFromString(boardState, moveString, true)
         boardState.doMove(move, true, true)
 
+        positionChangedCallback(boardState.fen)
+
         manageEndStatus(gameEndedCallback = { notifyUserGameFinished() })
     }
 
@@ -453,6 +456,7 @@ fun DynamicChessBoard(
         boardState.doMove(move, true, true)
 
         dndState = DndData()
+        positionChangedCallback(boardState.fen)
         manageEndStatus(gameEndedCallback = { notifyUserGameFinished() })
     }
 
@@ -920,6 +924,10 @@ fun PromotionCancellationItemPreview() {
 fun RestartableAndStoppableDynamicChessBoardPreview() {
     val startPosition = "8/8/7b/8/1k6/pp6/8/K7 b - - 0 1"
 
+    var currentPosition by rememberSaveable {
+        mutableStateOf(startPosition)
+    }
+
     fun randomGameId() : Long {
         return Random.nextLong()
     }
@@ -935,6 +943,7 @@ fun RestartableAndStoppableDynamicChessBoardPreview() {
 
     fun restartGame() {
         gameId = randomGameId()
+        currentPosition = startPosition
     }
 
     Column {
@@ -946,11 +955,15 @@ fun RestartableAndStoppableDynamicChessBoardPreview() {
                 Text(text = "Restart")
             }
         }
+        Text(text = currentPosition)
         DynamicChessBoard(
-            size = 300.dp,
+            size = 200.dp,
             userRequestStopGame = stopRequest,
             startPosition = startPosition,
-            gameId = gameId
+            gameId = gameId,
+            positionChangedCallback = {
+                currentPosition = it
+            }
         )
     }
 }
