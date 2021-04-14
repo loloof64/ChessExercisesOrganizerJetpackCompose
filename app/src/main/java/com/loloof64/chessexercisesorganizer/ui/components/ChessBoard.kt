@@ -39,6 +39,7 @@ import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.floor
+import kotlin.random.Random
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
 
@@ -224,11 +225,16 @@ fun String.toBoard(): Board {
 @Composable
 fun DynamicChessBoard(
     size: Dp,
-    position: String = STANDARD_FEN,
+    startPosition: String = STANDARD_FEN,
     reversed: Boolean = false,
     userRequestStopGame: Boolean = false,
+    gameId: Long = 1L,
 ) {
     val context = LocalContext.current
+
+    var previousGameId by rememberSaveable {
+        mutableStateOf(gameId)
+    }
 
     val globalSize = with(LocalDensity.current) {
         size.toPx()
@@ -239,8 +245,8 @@ fun DynamicChessBoard(
     }
 
     val composableScope = rememberCoroutineScope()
-    val boardState by rememberSaveable(stateSaver = BoardStateSaver) {
-        mutableStateOf(position.toBoard())
+    var boardState by rememberSaveable(stateSaver = BoardStateSaver) {
+        mutableStateOf(startPosition.toBoard())
     }
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
@@ -472,11 +478,19 @@ fun DynamicChessBoard(
         }
     }
 
+    val newGameRequest = previousGameId != gameId
+    if (newGameRequest) {
+        boardState = startPosition.toBoard()
+        previousGameId = gameId
+        gameEnded = GameEndedStatus.GOING_ON
+    }
     // Must also be launched before the next move.
-    val notYetNotifiedOfEndOfGame = gameEnded == GameEndedStatus.GOING_ON
-    manageEndStatus {
-        if (notYetNotifiedOfEndOfGame) {
-            notifyUserGameFinished()
+    else {
+        val notYetNotifiedOfEndOfGame = gameEnded == GameEndedStatus.GOING_ON
+        manageEndStatus {
+            if (notYetNotifiedOfEndOfGame) {
+                notifyUserGameFinished()
+            }
         }
     }
 
@@ -517,7 +531,7 @@ fun DynamicChessBoard(
                 pieceValue = dndState.pieceValue,
                 x = dndState.movedPieceX,
                 y = dndState.movedPieceY,
-                positionFen = position,
+                positionFen = startPosition,
             )
         }
 
@@ -851,20 +865,7 @@ fun DynamicReversedChessBoardPreview() {
 fun DynamicChessBoardCustomPositionPreview() {
     DynamicChessBoard(
         size = 300.dp,
-        // custom
-        //position = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
-
-        // pat
-        // position = "8/8/6b1/8/1k6/pp6/8/K7 b - - 0 1"
-
-        // repetition
-        position = "8/8/7b/8/1k6/pp6/8/K7 b - - 0 1"
-
-        // 50 coups
-        // position = "2k5/8/8/5b2/2n5/8/8/K7 w - - 97 60"
-
-        // manque materiel
-        // position = "2k5/8/8/5b2/8/8/1n6/K7 w - - 0 60"
+        startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }
 
@@ -874,7 +875,7 @@ fun DynamicChessBoardCustomPositionReversedPreview() {
     DynamicChessBoard(
         size = 300.dp,
         reversed = true,
-        position = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+        startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }
 
@@ -916,20 +917,40 @@ fun PromotionCancellationItemPreview() {
 
 @Preview
 @Composable
-fun StoppableDynamicChessBoardPreview() {
+fun RestartableAndStoppableDynamicChessBoardPreview() {
+    val startPosition = "8/8/7b/8/1k6/pp6/8/K7 b - - 0 1"
+
+    fun randomGameId() : Long {
+        return Random.nextLong()
+    }
+
+    var gameId by rememberSaveable {
+        mutableStateOf(randomGameId())
+    }
     var stopRequest by rememberSaveable{ mutableStateOf(false)}
 
     fun stopGame() {
         stopRequest = true
     }
 
+    fun restartGame() {
+        gameId = randomGameId()
+    }
+
     Column {
-        Button(onClick = {stopGame()}) {
-            Text(text = "Stop")
+        Row {
+            Button(onClick = {stopGame()}) {
+                Text(text = "Stop")
+            }
+            Button(onClick = {restartGame()}) {
+                Text(text = "Restart")
+            }
         }
         DynamicChessBoard(
             size = 300.dp,
-            userRequestStopGame = stopRequest
+            userRequestStopGame = stopRequest,
+            startPosition = startPosition,
+            gameId = gameId
         )
     }
 }
