@@ -13,4 +13,11 @@
     <string name="black_queen">Black queen</string>
     <string name="black_king">Black king</string>
     <string name="red_cross">Red cross</string>
+    <string name="chessmate_white">White won by chessmate.</string>
+    <string name="chessmate_black">Black won by chessmate.</string>
+    <string name="stalemate">Draw by stalemate.</string>
+    <string name="three_fold_repetition">Draw by three folds repetition.</string>
+    <string name="fifty_moves_rule_draw">Draw by fifty moves rule.</string>
+    <string name="missing_material_draw">Draw by missing material.</string>
+    <string name="user_stopped_game">Game stopped.</string>
 </resources>
