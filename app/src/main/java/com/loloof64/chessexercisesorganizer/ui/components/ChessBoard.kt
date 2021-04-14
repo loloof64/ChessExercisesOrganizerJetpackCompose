@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
@@ -37,7 +38,6 @@ import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.lang.IllegalStateException
 import kotlin.math.floor
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
@@ -222,7 +222,12 @@ fun String.toBoard(): Board {
 }
 
 @Composable
-fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boolean = false) {
+fun DynamicChessBoard(
+    size: Dp,
+    position: String = STANDARD_FEN,
+    reversed: Boolean = false,
+    userRequestStopGame: Boolean = false,
+) {
     val context = LocalContext.current
 
     val globalSize = with(LocalDensity.current) {
@@ -240,7 +245,9 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
 
-    var gameEnded by rememberSaveable { mutableStateOf(GameEndedStatus.GOING_ON) }
+    var gameEnded by rememberSaveable {
+        mutableStateOf(GameEndedStatus.GOING_ON)
+    }
 
     fun notifyUserGameFinished() {
         val messageId = when (gameEnded) {
@@ -278,6 +285,10 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             }
             boardState.isDrawByMissingMaterial -> {
                 gameEnded = GameEndedStatus.DRAW_MISSING_MATERIAL
+                gameEndedCallback()
+            }
+            userRequestStopGame -> {
+                gameEnded = GameEndedStatus.USER_STOPPED
                 gameEndedCallback()
             }
         }
@@ -458,6 +469,14 @@ fun DynamicChessBoard(size: Dp, position: String = STANDARD_FEN, reversed: Boole
             if (piece != NO_PIECE) {
                 dndStartCallback(file, rank, piece)
             }
+        }
+    }
+
+    // Must also be launched before the next move.
+    val notYetNotifiedOfEndOfGame = gameEnded == GameEndedStatus.GOING_ON
+    manageEndStatus {
+        if (notYetNotifiedOfEndOfGame) {
+            notifyUserGameFinished()
         }
     }
 
@@ -893,4 +912,24 @@ fun PromotionValidationZonePreview() {
 @Composable
 fun PromotionCancellationItemPreview() {
     PromotionCancellationItem(size = 100.dp, isWhiteTurn = true)
+}
+
+@Preview
+@Composable
+fun StoppableDynamicChessBoardPreview() {
+    var stopRequest by rememberSaveable{ mutableStateOf(false)}
+
+    fun stopGame() {
+        stopRequest = true
+    }
+
+    Column {
+        Button(onClick = {stopGame()}) {
+            Text(text = "Stop")
+        }
+        DynamicChessBoard(
+            size = 300.dp,
+            userRequestStopGame = stopRequest
+        )
+    }
 }
