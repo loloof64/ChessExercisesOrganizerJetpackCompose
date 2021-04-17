@@ -21,4 +21,7 @@
     <string name="fifty_moves_rule_draw">Nulle par la règle des 50 coups.</string>
     <string name="missing_material_draw">Nulle par manque de matériel.</string>
     <string name="user_stopped_game">Partie arrêtée.</string>
+    <string name="new_game">Nouvelle</string>
+    <string name="stop_game">Arrêter</string>
+    <string name="reverse_board">Retourner</string>
 </resources>

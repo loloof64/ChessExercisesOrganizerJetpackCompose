@@ -20,4 +20,7 @@
     <string name="fifty_moves_rule_draw">Draw by fifty moves rule.</string>
     <string name="missing_material_draw">Draw by missing material.</string>
     <string name="user_stopped_game">Game stopped.</string>
+    <string name="new_game">New</string>
+    <string name="stop_game">Stop</string>
+    <string name="reverse_board">Reverse</string>
 </resources>

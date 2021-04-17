@@ -8,5 +8,10 @@ Using chess vectors from [Wikimedia Commons](https://commons.wikimedia.org/wiki/
 
 Using source code from [Carballo project](https://github.com/albertoruibal/carballo).
 
+Using source code from [Chess Engine Support archived repository](https://code.google.com/archive/p/chessenginesupport-androidlib/).
+
 Using some pictures from [FlatIcon](http://www.flaticon.com) :
 * red_cross : from https://www.flaticon.com/free-icon/close_1828665 (by Pixel Perfect)
+* start_flag : from https://www.flaticon.com/free-icon/racing-flag_1505471 (by SmashIcons)
+* stop : from https://www.flaticon.com/free-icon/stop_2698545 (by Freepik)
+* reverse: from https://www.flaticon.com/free-icon/arrows_685838 (by Good Ware)
