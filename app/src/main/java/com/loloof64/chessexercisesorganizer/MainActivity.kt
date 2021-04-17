@@ -73,6 +73,18 @@ fun MainPage() {
                         boardReversed = !boardReversed
                     }
                 }
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    SimpleButton(
+                        text = stringResource(R.string.chess_engines),
+                        vectorId = R.drawable.ic_car_engine
+                    ) {
+
+                    }
+                }
                 DynamicChessBoard(size = 260.dp, startPosition = notReadyPositionFen, reversed = boardReversed)
             }
         }

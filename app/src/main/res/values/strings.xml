@@ -23,4 +23,5 @@
     <string name="new_game">New</string>
     <string name="stop_game">Stop</string>
     <string name="reverse_board">Reverse</string>
+    <string name="chess_engines">Engines</string>
 </resources>

@@ -24,4 +24,5 @@
     <string name="new_game">Nouvelle</string>
     <string name="stop_game">Arrêter</string>
     <string name="reverse_board">Retourner</string>
+    <string name="chess_engines">Moteurs</string>
 </resources>

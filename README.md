@@ -15,3 +15,4 @@ Using some pictures from [FlatIcon](http://www.flaticon.com) :
 * start_flag : from https://www.flaticon.com/free-icon/racing-flag_1505471 (by SmashIcons)
 * stop : from https://www.flaticon.com/free-icon/stop_2698545 (by Freepik)
 * reverse: from https://www.flaticon.com/free-icon/arrows_685838 (by Good Ware)
+* car_engine: from https://www.flaticon.com/free-icon/car-engine_2061956 (by Freepik)
