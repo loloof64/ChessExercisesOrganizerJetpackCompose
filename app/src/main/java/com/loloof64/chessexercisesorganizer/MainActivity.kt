@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
+import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 
 class MainActivity : AppCompatActivity() {
@@ -41,52 +42,66 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun MainPage() {
     val notReadyPositionFen = "8/8/8/8/8/8/8/8 w - - 0 1"
-    var boardReversed by rememberSaveable { mutableStateOf(false)}
+    var boardReversed by rememberSaveable { mutableStateOf(false) }
     ChessExercisesOrganizerJetpackComposeTheme {
         Surface(color = MaterialTheme.colors.background) {
-            Column(
-                modifier = Modifier.fillMaxHeight(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceEvenly
+            MainPageContentPortrait(
+                startPositionFen = notReadyPositionFen,
+                boardReversed = boardReversed,
+                boardReverseRequestCallback = { boardReversed = !boardReversed })
+        }
+    }
+}
+
+@Composable
+fun MainPageContentPortrait(
+    startPositionFen: String,
+    boardReversed: Boolean,
+    boardReverseRequestCallback: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            SimpleButton(
+                text = stringResource(R.string.new_game),
+                vectorId = R.drawable.ic_start_flag
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    SimpleButton(
-                        text = stringResource(R.string.new_game),
-                        vectorId = R.drawable.ic_start_flag
-                    ) {
 
-                    }
-                    SimpleButton(
-                        text = stringResource(R.string.stop_game),
-                        vectorId = R.drawable.ic_stop
-                    ) {
-
-                    }
-                    SimpleButton(
-                        text = stringResource(R.string.reverse_board),
-                        vectorId = R.drawable.ic_reverse
-                    ) {
-                        boardReversed = !boardReversed
-                    }
-                }
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    SimpleButton(
-                        text = stringResource(R.string.chess_engines),
-                        vectorId = R.drawable.ic_car_engine
-                    ) {
-
-                    }
-                }
-                DynamicChessBoard(size = 260.dp, startPosition = notReadyPositionFen, reversed = boardReversed)
             }
+            SimpleButton(
+                text = stringResource(R.string.stop_game),
+                vectorId = R.drawable.ic_stop
+            ) {
+
+            }
+            SimpleButton(
+                text = stringResource(R.string.reverse_board),
+                vectorId = R.drawable.ic_reverse
+            ) {
+                boardReverseRequestCallback()
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            SimpleButton(
+                text = stringResource(R.string.chess_engines),
+                vectorId = R.drawable.ic_car_engine
+            ) {
+
+            }
+        }
+        BoxWithConstraints {
+            DynamicChessBoard(size = this.maxWidth, startPosition = startPositionFen, reversed = boardReversed)
         }
     }
 }
@@ -103,7 +118,9 @@ fun SimpleButton(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.border(border = BorderStroke(width = 2.dp, color = Color.Black)).padding(4.dp),
+        modifier = modifier
+            .border(border = BorderStroke(width = 2.dp, color = Color.Black))
+            .padding(4.dp),
     ) {
         IconButton(onClick = callback, modifier = Modifier.size(imageSize)) {
             Image(
@@ -118,7 +135,11 @@ fun SimpleButton(
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    MainPage()
+    MainPageContentPortrait(
+        startPositionFen = STANDARD_FEN,
+        boardReversed = false,
+        boardReverseRequestCallback = {}
+    )
 }
 
 @Preview
