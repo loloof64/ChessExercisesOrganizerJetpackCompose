@@ -1,5 +1,6 @@
 package com.loloof64.chessexercisesorganizer
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,6 +33,7 @@ import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 
 class MainActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -41,14 +44,26 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 fun MainPage() {
+    val isLandscape = when (LocalConfiguration.current.orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> true
+        else -> false
+    }
     val notReadyPositionFen = "8/8/8/8/8/8/8/8 w - - 0 1"
     var boardReversed by rememberSaveable { mutableStateOf(false) }
     ChessExercisesOrganizerJetpackComposeTheme {
         Surface(color = MaterialTheme.colors.background) {
-            MainPageContentPortrait(
-                startPositionFen = notReadyPositionFen,
-                boardReversed = boardReversed,
-                boardReverseRequestCallback = { boardReversed = !boardReversed })
+            if (isLandscape) {
+                MainPageContentLandscape(
+                    startPositionFen = notReadyPositionFen,
+                    boardReversed = boardReversed,
+                    boardReverseRequestCallback = { boardReversed = !boardReversed })
+            } else {
+                MainPageContentPortrait(
+                    startPositionFen = notReadyPositionFen,
+                    boardReversed = boardReversed,
+                    boardReverseRequestCallback = { boardReversed = !boardReversed })
+            }
+
         }
     }
 }
@@ -69,40 +84,88 @@ fun MainPageContentPortrait(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            SimpleButton(
-                text = stringResource(R.string.new_game),
-                vectorId = R.drawable.ic_start_flag
-            ) {
-
-            }
-            SimpleButton(
-                text = stringResource(R.string.stop_game),
-                vectorId = R.drawable.ic_stop
-            ) {
-
-            }
-            SimpleButton(
-                text = stringResource(R.string.reverse_board),
-                vectorId = R.drawable.ic_reverse
-            ) {
-                boardReverseRequestCallback()
-            }
+            MainPageFirstButtonsLine(boardReverseRequestCallback)
         }
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            SimpleButton(
-                text = stringResource(R.string.chess_engines),
-                vectorId = R.drawable.ic_car_engine
-            ) {
-
-            }
+            MainPageSecondButtonsLine()
         }
         BoxWithConstraints {
-            DynamicChessBoard(size = this.maxWidth, startPosition = startPositionFen, reversed = boardReversed)
+            DynamicChessBoard(
+                size = this.maxWidth,
+                startPosition = startPositionFen,
+                reversed = boardReversed
+            )
         }
+    }
+}
+
+@Composable
+fun MainPageContentLandscape(
+    startPositionFen: String,
+    boardReversed: Boolean,
+    boardReverseRequestCallback: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxHeight()
+        ) {
+            MainPageFirstButtonsLine(boardReverseRequestCallback)
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxHeight()
+        ) {
+            MainPageSecondButtonsLine()
+        }
+        BoxWithConstraints {
+            DynamicChessBoard(
+                size = this.maxHeight,
+                startPosition = startPositionFen,
+                reversed = boardReversed
+            )
+        }
+    }
+}
+
+@Composable
+fun MainPageFirstButtonsLine(boardReverseRequestCallback: () -> Unit) {
+    SimpleButton(
+        text = stringResource(R.string.new_game),
+        vectorId = R.drawable.ic_start_flag
+    ) {
+
+    }
+    SimpleButton(
+        text = stringResource(R.string.stop_game),
+        vectorId = R.drawable.ic_stop
+    ) {
+
+    }
+    SimpleButton(
+        text = stringResource(R.string.reverse_board),
+        vectorId = R.drawable.ic_reverse,
+        callback = boardReverseRequestCallback
+    )
+}
+
+@Composable
+private fun MainPageSecondButtonsLine() {
+    SimpleButton(
+        text = stringResource(R.string.chess_engines),
+        vectorId = R.drawable.ic_car_engine
+    ) {
+
     }
 }
 
@@ -136,6 +199,16 @@ fun SimpleButton(
 @Composable
 fun DefaultPreview() {
     MainPageContentPortrait(
+        startPositionFen = STANDARD_FEN,
+        boardReversed = false,
+        boardReverseRequestCallback = {}
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MainPageLandscapePreview() {
+    MainPageContentLandscape(
         startPositionFen = STANDARD_FEN,
         boardReversed = false,
         boardReverseRequestCallback = {}

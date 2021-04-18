@@ -35,7 +35,10 @@
         <entry key="../../../../layout/compose-model-1618220199466.xml" value="0.5" />
         <entry key="../../../../layout/compose-model-1618220199477.xml" value="0.33" />
         <entry key="../../../../layout/compose-model-1618232257008.xml" value="0.1" />
-        <entry key="../../../../layout/compose-model-1618647650660.xml" value="0.25" />
+        <entry key="../../../../layout/compose-model-1618647650660.xml" value="0.21" />
+        <entry key="../../../../layout/compose-model-1618694415312.xml" value="0.1" />
+        <entry key="../../../../layout/compose-model-1618746532789.xml" value="0.1105378051200635" />
+        <entry key="../../../../layout/compose-model-1618747553157.xml" value="0.1" />
       </map>
     </option>
   </component>
@@ -45,5 +48,12 @@
   </component>
   <component name="ProjectType">
     <option name="id" value="Android" />
+  </component>
+  <component name="SuppressABINotification">
+    <option name="modulesWithSuppressedNotConfigured">
+      <set>
+        <option value="ChessExercisesOrganizerJetpackCompose.app" />
+      </set>
+    </option>
   </component>
 </project>
