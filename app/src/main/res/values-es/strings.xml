@@ -29,4 +29,10 @@
     <string name="engines_page">Página configuración motores</string>
     <string name="available_engines">Motores disponibles a partir de paquetes instalados</string>
     <string name="installed_engines">Motores instalados en carpeta local</string>
+    <string name="confirm_install_engine_title">¿Instalar el motor?</string>
+    <string name="confirm_install_engine_message">¿Quiere copiar el motor %1$s a la carpeta de la aplicación interna? Esto te permitirá usar el motor con el juego.</string>
+    <string name="confirm_delete_engine_title">¿Limpiar el motor?</string>
+    <string name="ok">Okey</string>
+    <string name="Cancel">Anular</string>
+    <string name="confirm_delete_engine_message">¿Quiere eliminar el motor %1$s de la carpeta de la aplicación interna? Si lo hace, no podrá utilizar el motor en el juego.</string>
 </resources>

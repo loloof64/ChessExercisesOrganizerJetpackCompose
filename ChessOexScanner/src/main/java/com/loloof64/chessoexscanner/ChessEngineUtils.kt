@@ -36,9 +36,13 @@ class ChessEngineUtils(private val context: Context, appId: String) {
         val enginePackageName = selectedEngine.packageName
         val engineVersionCode = selectedEngine.versionCode
 
+        val enginesFolder = File(context.applicationContext.filesDir, enginesSubfolderName)
+
+        enginesFolder.mkdir()
+
         selectedEngine.copyToFiles(
             context.applicationContext.contentResolver,
-            File(context.applicationContext.filesDir, enginesSubfolderName)
+            enginesFolder
         )
 
         with(enginesSharedPreferences?.edit()) {
@@ -65,11 +69,16 @@ class ChessEngineUtils(private val context: Context, appId: String) {
         catch (ex: NumberFormatException) {
             throw IllegalStateException("The requested engine has not been copied yet in local files.")
         }
+
+        val engineFolder = File(context.applicationContext.filesDir, enginesSubfolderName)
+
+        engineFolder.mkdir()
+
         val engineLastVersionCode = resolver.ensureEngineVersion(
             engineName,
             enginePackage,
             currentVersionCode,
-            File(context.applicationContext.filesDir, enginesSubfolderName)
+            engineFolder
         )
 
         return currentVersionCode < engineLastVersionCode
@@ -77,13 +86,17 @@ class ChessEngineUtils(private val context: Context, appId: String) {
 
     fun listInstalledEngines() : Array<String> {
         val enginesFolder = File(context.applicationContext.filesDir, enginesSubfolderName)
+        enginesFolder.mkdir()
         val files = enginesFolder.listFiles()?.filter { it.isFile }?.toTypedArray() ?: arrayOf<File>()
+        files.sortBy{ it.name }
         return files.map { it.name }.toTypedArray()
     }
 
     fun executeInstalledEngine(index: Int, errorCallback: (Error) -> Unit) {
         val enginesFolder = File(context.applicationContext.filesDir, enginesSubfolderName)
+        enginesFolder.mkdir()
         val files = enginesFolder.listFiles()?.filter { it.isFile }?.toTypedArray() ?: arrayOf<File>()
+        files.sortBy { it.name }
         if (index >= files.size) throw ArrayIndexOutOfBoundsException("Requested index : ${index}, size: ${files.size}")
 
         val selectedFile = files[index]
@@ -112,10 +125,14 @@ class ChessEngineUtils(private val context: Context, appId: String) {
         }
 
         val enginesFolder = File(context.applicationContext.filesDir, enginesSubfolderName)
+        enginesFolder.mkdir()
         val files = enginesFolder.listFiles()?.filter { it.isFile }?.toTypedArray() ?: arrayOf<File>()
+        files.sortBy {it.name}
         if (index >= files.size) throw ArrayIndexOutOfBoundsException("Requested index : ${index}, size: ${files.size}")
 
         val selectedFile = files[index]
         selectedFile.delete()
+
+        // TODO update shared preferences
     }
 }
