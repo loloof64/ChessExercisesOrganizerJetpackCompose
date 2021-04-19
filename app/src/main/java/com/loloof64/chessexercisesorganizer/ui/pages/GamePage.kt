@@ -23,13 +23,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavOptions
+import androidx.navigation.compose.navigate
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 
 @Composable
-fun GamePage() {
+fun GamePage(navController: NavController? = null) {
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -43,11 +46,13 @@ fun GamePage() {
                 Surface(color = MaterialTheme.colors.background) {
                     if (isLandscape) {
                         GamePageContentLandscape(
+                            navController = navController,
                             startPositionFen = notReadyPositionFen,
                             boardReversed = boardReversed,
                             boardReverseRequestCallback = { boardReversed = !boardReversed })
                     } else {
                         GamePageContentPortrait(
+                            navController = navController,
                             startPositionFen = notReadyPositionFen,
                             boardReversed = boardReversed,
                             boardReverseRequestCallback = { boardReversed = !boardReversed })
@@ -61,6 +66,7 @@ fun GamePage() {
 
 @Composable
 fun GamePageContentPortrait(
+    navController: NavController? = null,
     startPositionFen: String,
     boardReversed: Boolean,
     boardReverseRequestCallback: () -> Unit
@@ -75,14 +81,18 @@ fun GamePageContentPortrait(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            GamePageFirstButtonsLine(boardReverseRequestCallback)
+            GamePageFirstButtonsLine(
+                boardReverseRequestCallback = boardReverseRequestCallback
+            )
         }
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            GamePageSecondButtonsLine()
+            GamePageSecondButtonsLine(
+                navController = navController
+            )
         }
         BoxWithConstraints {
             DynamicChessBoard(
@@ -96,6 +106,7 @@ fun GamePageContentPortrait(
 
 @Composable
 fun GamePageContentLandscape(
+    navController: NavController? = null,
     startPositionFen: String,
     boardReversed: Boolean,
     boardReverseRequestCallback: () -> Unit
@@ -110,14 +121,18 @@ fun GamePageContentLandscape(
             verticalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxHeight()
         ) {
-            GamePageFirstButtonsLine(boardReverseRequestCallback)
+            GamePageFirstButtonsLine(
+                boardReverseRequestCallback = boardReverseRequestCallback
+            )
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxHeight()
         ) {
-            GamePageSecondButtonsLine()
+            GamePageSecondButtonsLine(
+                navController = navController
+            )
         }
         BoxWithConstraints {
             DynamicChessBoard(
@@ -146,29 +161,33 @@ fun GamePageFirstButtonsLine(boardReverseRequestCallback: () -> Unit) {
     SimpleButton(
         text = stringResource(R.string.reverse_board),
         vectorId = R.drawable.ic_reverse,
-        callback = boardReverseRequestCallback
+        callback = {_ -> boardReverseRequestCallback() }
     )
 }
 
 @Composable
-private fun GamePageSecondButtonsLine() {
+private fun GamePageSecondButtonsLine(navController: NavController? = null) {
     SimpleButton(
+        navController = navController,
         text = stringResource(R.string.chess_engines),
         vectorId = R.drawable.ic_car_engine
     ) {
-
+        it?.navigate("engines") {
+            launchSingleTop = true
+        }
     }
 }
 
 @Composable
 fun SimpleButton(
     modifier: Modifier = Modifier,
+    navController: NavController? = null,
     text: String,
     vectorId: Int,
     imageContentDescription: String = text,
     imageSize: Dp = 30.dp,
     textSize: TextUnit = 20.sp,
-    callback: () -> Unit
+    callback: (NavController?) -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -176,7 +195,7 @@ fun SimpleButton(
             .border(border = BorderStroke(width = 2.dp, color = Color.Black))
             .padding(4.dp),
     ) {
-        IconButton(onClick = callback, modifier = Modifier.size(imageSize)) {
+        IconButton(onClick = {callback(navController)}, modifier = Modifier.size(imageSize)) {
             Image(
                 painter = painterResource(id = vectorId),
                 contentDescription = imageContentDescription

@@ -26,4 +26,7 @@
     <string name="reverse_board">Retourner</string>
     <string name="chess_engines">Moteurs</string>
     <string name="game_page">Page de jeu</string>
+    <string name="engines_page">Page configuration moteurs</string>
+    <string name="available_engines">Moteurs disponibles à partir des paquets installés</string>
+    <string name="installed_engines">Moteurs installés dans le dossier local</string>
 </resources>

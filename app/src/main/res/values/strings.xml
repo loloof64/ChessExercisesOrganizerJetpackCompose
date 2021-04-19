@@ -25,4 +25,7 @@
     <string name="reverse_board">Reverse</string>
     <string name="chess_engines">Engines</string>
     <string name="game_page">Game page</string>
+    <string name="engines_page">Engines configuration page</string>
+    <string name="available_engines">Available engines from installed packages</string>
+    <string name="installed_engines">Installed engines into local folder</string>
 </resources>

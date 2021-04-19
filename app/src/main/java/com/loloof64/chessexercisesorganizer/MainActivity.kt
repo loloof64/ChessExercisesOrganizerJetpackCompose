@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.loloof64.chessexercisesorganizer.ui.pages.EnginesPage
 import com.loloof64.chessexercisesorganizer.ui.pages.GamePage
 
 class MainActivity : AppCompatActivity() {
@@ -23,6 +24,7 @@ class MainActivity : AppCompatActivity() {
 fun MainContent() {
     val navController = rememberNavController()
     NavHost(navController, startDestination = "game") {
-        composable("game") { GamePage() }
+        composable("game") { GamePage(navController = navController) }
+        composable("engines") { EnginesPage(navController = navController) }
     }
 }
