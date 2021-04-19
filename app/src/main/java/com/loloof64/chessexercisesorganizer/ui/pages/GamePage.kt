@@ -1,14 +1,12 @@
-package com.loloof64.chessexercisesorganizer.ui
+package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.*
 import androidx.compose.material.Surface
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,20 +37,25 @@ fun GamePage() {
     val notReadyPositionFen = "8/8/8/8/8/8/8/8 w - - 0 1"
     var boardReversed by rememberSaveable { mutableStateOf(false) }
     ChessExercisesOrganizerJetpackComposeTheme {
-        Surface(color = MaterialTheme.colors.background) {
-            if (isLandscape) {
-                GamePageContentLandscape(
-                    startPositionFen = notReadyPositionFen,
-                    boardReversed = boardReversed,
-                    boardReverseRequestCallback = { boardReversed = !boardReversed })
-            } else {
-                GamePageContentPortrait(
-                    startPositionFen = notReadyPositionFen,
-                    boardReversed = boardReversed,
-                    boardReverseRequestCallback = { boardReversed = !boardReversed })
-            }
+        Scaffold(
+            topBar = {TopAppBar(title = {Text(stringResource(R.string.game_page))})},
+            content = {
+                Surface(color = MaterialTheme.colors.background) {
+                    if (isLandscape) {
+                        GamePageContentLandscape(
+                            startPositionFen = notReadyPositionFen,
+                            boardReversed = boardReversed,
+                            boardReverseRequestCallback = { boardReversed = !boardReversed })
+                    } else {
+                        GamePageContentPortrait(
+                            startPositionFen = notReadyPositionFen,
+                            boardReversed = boardReversed,
+                            boardReverseRequestCallback = { boardReversed = !boardReversed })
+                    }
 
-        }
+                }
+            }
+        )
     }
 }
 

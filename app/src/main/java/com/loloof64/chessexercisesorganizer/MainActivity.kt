@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.loloof64.chessexercisesorganizer.ui.GamePage
+import com.loloof64.chessexercisesorganizer.ui.pages.GamePage
 
 class MainActivity : AppCompatActivity() {
 
