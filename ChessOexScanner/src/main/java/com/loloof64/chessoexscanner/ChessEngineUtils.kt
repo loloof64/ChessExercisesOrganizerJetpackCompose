@@ -6,6 +6,7 @@ import com.kalab.chess.enginesupport.ChessEngineResolver
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.*
 
 private const val enginesSubfolderName = "engines"
 private const val chessEngineUtilsKey = "CHESS_ENGINE_UTILS"
@@ -133,6 +134,20 @@ class ChessEngineUtils(private val context: Context, appId: String) {
         val selectedFile = files[index]
         selectedFile.delete()
 
-        // TODO update shared preferences
+        // delete matching entry from shared preferences
+        val resolver = ChessEngineResolver(context)
+        val engines = resolver.resolveEngines()
+
+        val matchingEngine = engines.find { it.fileName == selectedFile.name }
+        if (matchingEngine == null) {
+            println("Could not delete engine (${selectedFile.name}) from shared preferences !")
+        }
+        else {
+            val key = "${matchingEngine.fileName}|${matchingEngine.packageName}"
+            with(enginesSharedPreferences?.edit()) {
+                this?.remove(key)
+                this?.apply()
+            }
+        }
     }
 }
