@@ -27,7 +27,7 @@
     <string name="game_page">Game page</string>
     <string name="engines_page">Engines configuration page</string>
     <string name="available_engines">Available engines from installed packages</string>
-    <string name="installed_engines">Installed engines into local folder</string>
+    <string name="installed_engines">Installed engines into application folder</string>
     <string name="confirm_install_engine_title">Install engine ?</string>
     <string name="confirm_install_engine_message">Do you want to install engine %1$s in the application internal folder ? If you do so, you will be able to use the engine with the game.</string>
     <string name="confirm_delete_engine_title">Delete engine ?</string>
@@ -40,4 +40,6 @@
     <string name="chess_oex_application_samples_2">* \"Komodo 10\" by komodochess.com</string>
     <string name="no_local_engine">No engine installed in application folder.</string>
     <string name="install_from_store_possibility">You can install an available engine by clicking on it, then confirming.</string>
+    <string name="store_click_and_confirm">(Click and confirm : install engine in application folder)</string>
+    <string name="local_click_and_confirm">(Click and confirm : delete engine from application folder)</string>
 </resources>

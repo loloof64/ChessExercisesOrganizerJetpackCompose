@@ -126,6 +126,7 @@ fun EnginesPageContent(
         Column(modifier = Modifier.weight(1f)) {
             if (atLeastOneStoreEngine) {
                 Text(text = stringResource(R.string.available_engines))
+                Text(text = stringResource(R.string.store_click_and_confirm))
                 LazyColumn(state = installedListState, modifier = Modifier.fillMaxWidth()) {
                     items(count = storeEngines.size,
                         itemContent = { index ->
@@ -161,6 +162,7 @@ fun EnginesPageContent(
         Column(modifier = Modifier.weight(1f)) {
             if (atLeastOneInstalledEngine) {
                 Text(text = stringResource(R.string.installed_engines))
+                Text(text = stringResource(R.string.local_click_and_confirm))
                 LazyColumn(state = deletedListState, modifier = Modifier.fillMaxWidth()) {
                     items(count = installedEngines.size,
                         itemContent = { index ->

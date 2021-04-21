@@ -28,7 +28,7 @@
     <string name="game_page">Page de jeu</string>
     <string name="engines_page">Page configuration moteurs</string>
     <string name="available_engines">Moteurs disponibles à partir des paquets installés</string>
-    <string name="installed_engines">Moteurs installés dans le dossier local</string>
+    <string name="installed_engines">Moteurs installés dans le dossier application</string>
     <string name="confirm_install_engine_title">Installer le moteur ?</string>
     <string name="confirm_install_engine_message">Voulez-vous copier le moteur %1$s dans le dossier interne de l’application? Cela vous permettra d\'utiliser le moteur dans le jeu.</string>
     <string name="confirm_delete_engine_title">Supprimer le moteur ?</string>
@@ -41,4 +41,6 @@
     <string name="chess_oex_application_samples_2">* \"Komodo 10\" par komodochess.com</string>
     <string name="no_local_engine">Aucun moteur installé dans le dossier de l\'application.</string>
     <string name="install_from_store_possibility">Vous pouvez installer un moteur disponible en cliquant dessus, puis en confirmant.</string>
+    <string name="store_click_and_confirm">(Click et confirmation : installer le moteur dans le dossier de l\'application)</string>
+    <string name="local_click_and_confirm">(Click et confirmation : effacer le moteur du dossier application)</string>
 </resources>
