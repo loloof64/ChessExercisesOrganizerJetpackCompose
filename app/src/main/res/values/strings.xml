@@ -34,4 +34,8 @@
     <string name="ok">OK</string>
     <string name="Cancel">Cancel</string>
     <string name="confirm_delete_engine_message">Do you want to delete engine %1$s from the application internal folder ? If you do so, you won\'t be able to use it with the game.</string>
+    <string name="no_chess_oex_application_installed">No chess OEX engine application installed.</string>
+    <string name="chess_oex_application_samples_header">Some free oex engines examples :</string>
+    <string name="chess_oex_application_samples_1">* \"Stockfish Engine OEX\" by Karl Schreiner</string>
+    <string name="chess_oex_application_samples_2">* \"Komodo 10\" by komodochess.com</string>
 </resources>

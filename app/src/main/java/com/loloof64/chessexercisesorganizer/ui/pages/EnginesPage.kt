@@ -2,6 +2,7 @@ package com.loloof64.chessexercisesorganizer.ui.pages
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
@@ -12,6 +13,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.R
 
@@ -55,6 +58,9 @@ fun EnginesPageContent(
     installRequestCallback: (Int) -> Unit,
     deleteRequestCallback: (Int) -> Unit,
 ) {
+    val atLeastOneStoreEngine = storeEngines.isNotEmpty()
+    val atLeastOneInstalledEngine = installedEngines.isNotEmpty()
+
     var installEngineName: String? by rememberSaveable { mutableStateOf(null) }
     var installEngineIndex: Int? by rememberSaveable {
         mutableStateOf(null)
@@ -84,46 +90,71 @@ fun EnginesPageContent(
     }
 
     Column {
-        ConfirmInstallEngineDialog(
-            isOpen = openConfirmInstallDialog,
-            engineName = installEngineName,
-            validateCallback = {
-                installEngineIndex?.let { installRequestCallback(it) }
-                installEngineIndex = null
-                installEngineName = null
-                openConfirmInstallDialog = false
-            },
-            dismissCallback = {
-                openConfirmInstallDialog = false
-                installEngineIndex = null
-                installEngineName = null
-            })
-        ConfirmDeleteEngineDialog(
-            isOpen = openConfirmDeleteDialog,
-            engineName = deleteEngineName,
-            validateCallback = {
-                deleteEngineIndex?.let { deleteRequestCallback(it) }
-                deleteEngineName = null
-                deleteEngineIndex = null
-                openConfirmDeleteDialog = false
-            },
-            dismissCallback = {
-                openConfirmDeleteDialog = false
-                deleteEngineName = null
-                deleteEngineIndex = null
-            })
+        if (atLeastOneStoreEngine) {
+            ConfirmInstallEngineDialog(
+                isOpen = openConfirmInstallDialog,
+                engineName = installEngineName,
+                validateCallback = {
+                    installEngineIndex?.let { installRequestCallback(it) }
+                    installEngineIndex = null
+                    installEngineName = null
+                    openConfirmInstallDialog = false
+                },
+                dismissCallback = {
+                    openConfirmInstallDialog = false
+                    installEngineIndex = null
+                    installEngineName = null
+                })
+        }
+
+        if (atLeastOneInstalledEngine) {
+            ConfirmDeleteEngineDialog(
+                isOpen = openConfirmDeleteDialog,
+                engineName = deleteEngineName,
+                validateCallback = {
+                    deleteEngineIndex?.let { deleteRequestCallback(it) }
+                    deleteEngineName = null
+                    deleteEngineIndex = null
+                    openConfirmDeleteDialog = false
+                },
+                dismissCallback = {
+                    openConfirmDeleteDialog = false
+                    deleteEngineName = null
+                    deleteEngineIndex = null
+                })
+        }
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = stringResource(R.string.available_engines))
-            LazyColumn(state = installedListState, modifier = Modifier.fillMaxWidth()) {
-                items(count = storeEngines.size,
-                    itemContent = { index ->
-                        Button(
-                            onClick = {
-                                confirmInstallEngine(index)
-                            },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
-                        ) { Text(storeEngines[index]) }
-                    }
+            if (atLeastOneStoreEngine) {
+                Text(text = stringResource(R.string.available_engines))
+                LazyColumn(state = installedListState, modifier = Modifier.fillMaxWidth()) {
+                    items(count = storeEngines.size,
+                        itemContent = { index ->
+                            Button(
+                                onClick = {
+                                    confirmInstallEngine(index)
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
+                            ) { Text(storeEngines[index]) }
+                        }
+                    )
+                }
+            } else {
+                Text(
+                    text = stringResource(id = R.string.no_chess_oex_application_installed),
+                    fontSize = 18.sp
+                )
+                Text(
+                    text = stringResource(id = R.string.chess_oex_application_samples_header),
+                    fontSize = 18.sp,
+                )
+                Text(
+                    text = stringResource(id = R.string.chess_oex_application_samples_1),
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(top = 14.dp)
+                )
+                Text(
+                    text = stringResource(id = R.string.chess_oex_application_samples_2),
+                    fontSize = 18.sp
                 )
             }
         }
