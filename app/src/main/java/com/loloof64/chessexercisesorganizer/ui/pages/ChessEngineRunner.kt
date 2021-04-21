@@ -1,4 +1,4 @@
-package com.loloof64.chessoexscanner
+package com.loloof64.chessexercisesorganizer.ui.pages
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex

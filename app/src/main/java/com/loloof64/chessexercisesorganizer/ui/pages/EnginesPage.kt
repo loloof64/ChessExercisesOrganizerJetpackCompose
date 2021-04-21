@@ -14,19 +14,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessoexscanner.ChessEngineUtils
+
 
 @Composable
 fun EnginesPage(navController: NavController? = null) {
 
     val currentContext = LocalContext.current
-    val enginesUtils = ChessEngineUtils(
-        appId = "com.loloof64.chessexercisesorganizer",
-        context = currentContext
-    )
-
-    val storeEngines by remember{ mutableStateOf(enginesUtils.getMyStoreEnginesNames())}
-    var installedEngines by remember { mutableStateOf(enginesUtils.listInstalledEngines())}
+    val storeEnginesState = getAvailableEngines(currentContext).collectAsState(listOf())
+    val storeEngines by remember { storeEnginesState }
+    var installedEngines by remember { mutableStateOf(listInstalledEngines(currentContext)) }
 
     Scaffold(
         topBar = {
@@ -43,18 +39,18 @@ fun EnginesPage(navController: NavController? = null) {
     ) {
         EnginesPageContent(storeEngines = storeEngines, installedEngines = installedEngines,
             installRequestCallback = {
-                enginesUtils.installEngineFromMyStore(it)
-                installedEngines = enginesUtils.listInstalledEngines()
+                installEngine(currentContext, it)
+                installedEngines = listInstalledEngines(currentContext)
             }, deleteRequestCallback = {
-                enginesUtils.deleteInstalledEngine(it)
-                installedEngines = enginesUtils.listInstalledEngines()
+                deleteInstalledEngine(currentContext, it)
+                installedEngines = listInstalledEngines(currentContext)
             })
     }
 }
 
 @Composable
 fun EnginesPageContent(
-    storeEngines: Array<String>,
+    storeEngines: List<String>,
     installedEngines: Array<String>,
     installRequestCallback: (Int) -> Unit,
     deleteRequestCallback: (Int) -> Unit,
@@ -136,9 +132,12 @@ fun EnginesPageContent(
             LazyColumn(state = deletedListState, modifier = Modifier.fillMaxWidth()) {
                 items(count = installedEngines.size,
                     itemContent = { index ->
-                        Button(onClick = {
-                            confirmDeleteEngine(index)
-                        }, colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)) { Text(installedEngines[index]) }
+                        Button(
+                            onClick = {
+                                confirmDeleteEngine(index)
+                            },
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
+                        ) { Text(installedEngines[index]) }
                     })
             }
         }
