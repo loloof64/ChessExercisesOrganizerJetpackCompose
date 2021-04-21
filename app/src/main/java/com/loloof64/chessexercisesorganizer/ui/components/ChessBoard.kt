@@ -222,6 +222,11 @@ fun String.toBoard(): Board {
     }
 }
 
+enum class PlayerType {
+    Human,
+    Computer
+}
+
 @Composable
 fun DynamicChessBoard(
     size: Dp,
@@ -229,7 +234,9 @@ fun DynamicChessBoard(
     reversed: Boolean = false,
     userRequestStopGame: Boolean = false,
     gameId: Long = 1L,
-    positionChangedCallback: (String) -> Unit = {_ -> }
+    positionChangedCallback: (String) -> Unit = {_ -> },
+    whiteSideType: PlayerType = PlayerType.Human,
+    blackSideType: PlayerType = PlayerType.Human,
 ) {
     val context = LocalContext.current
 
@@ -249,6 +256,9 @@ fun DynamicChessBoard(
     var boardState by rememberSaveable(stateSaver = BoardStateSaver) {
         mutableStateOf(startPosition.toBoard())
     }
+
+    fun isComputerTurn() = (boardState.turn && whiteSideType == PlayerType.Computer)
+            || (!boardState.turn && blackSideType == PlayerType.Computer)
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
 
@@ -352,6 +362,7 @@ fun DynamicChessBoard(
     }
 
     fun dndStartCallback(file: Int, rank: Int, piece: Char) {
+        if (isComputerTurn()) return
         if (dndState.pendingPromotion) return
 
         val whiteTurn = boardState.turn
@@ -373,6 +384,7 @@ fun DynamicChessBoard(
 
     fun dndMoveCallback(xOffset: Float, yOffset: Float) {
         if (gameEnded != GameEndedStatus.GOING_ON) return
+        if (isComputerTurn()) return
         if (dndState.pendingPromotion) return
         if (dndState.pieceValue != NO_PIECE) {
             val newMovedPieceX = dndState.movedPieceX + xOffset
@@ -392,6 +404,7 @@ fun DynamicChessBoard(
 
     fun dndCancelCallback() {
         if (gameEnded != GameEndedStatus.GOING_ON) return
+        if (isComputerTurn()) return
         if (dndState.pendingPromotion) return
         cancelDragAndDrop()
     }
@@ -434,6 +447,7 @@ fun DynamicChessBoard(
 
     fun dndValidatingCallback() {
         if (gameEnded != GameEndedStatus.GOING_ON) return
+        if (isComputerTurn()) return
         if (dndState.pendingPromotion) return
         if (isValidDndMove()) {
             dndState = if (dndMoveIsPromotion()) {

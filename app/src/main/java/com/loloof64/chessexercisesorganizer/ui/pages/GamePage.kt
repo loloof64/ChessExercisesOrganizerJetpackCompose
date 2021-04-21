@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
-import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,36 +23,36 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.NavOptions
 import androidx.navigation.compose.navigate
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
+import com.loloof64.chessexercisesorganizer.ui.components.PlayerType
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 
 @Composable
 fun GamePage(navController: NavController? = null) {
+    val startPositionFen = STANDARD_FEN
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
     }
-    val notReadyPositionFen = "8/8/8/8/8/8/8/8 w - - 0 1"
     var boardReversed by rememberSaveable { mutableStateOf(false) }
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
-            topBar = {TopAppBar(title = {Text(stringResource(R.string.game_page))})},
+            topBar = { TopAppBar(title = { Text(stringResource(R.string.game_page)) }) },
             content = {
                 Surface(color = MaterialTheme.colors.background) {
                     if (isLandscape) {
                         GamePageContentLandscape(
                             navController = navController,
-                            startPositionFen = notReadyPositionFen,
+                            startPositionFen = startPositionFen,
                             boardReversed = boardReversed,
                             boardReverseRequestCallback = { boardReversed = !boardReversed })
                     } else {
                         GamePageContentPortrait(
                             navController = navController,
-                            startPositionFen = notReadyPositionFen,
+                            startPositionFen = startPositionFen,
                             boardReversed = boardReversed,
                             boardReverseRequestCallback = { boardReversed = !boardReversed })
                     }
@@ -98,7 +97,9 @@ fun GamePageContentPortrait(
             DynamicChessBoard(
                 size = this.maxWidth,
                 startPosition = startPositionFen,
-                reversed = boardReversed
+                reversed = boardReversed,
+                whiteSideType = PlayerType.Human,
+                blackSideType = PlayerType.Computer,
             )
         }
     }
@@ -138,7 +139,9 @@ fun GamePageContentLandscape(
             DynamicChessBoard(
                 size = this.maxHeight,
                 startPosition = startPositionFen,
-                reversed = boardReversed
+                reversed = boardReversed,
+                whiteSideType = PlayerType.Human,
+                blackSideType = PlayerType.Computer,
             )
         }
     }
@@ -161,7 +164,7 @@ fun GamePageFirstButtonsLine(boardReverseRequestCallback: () -> Unit) {
     SimpleButton(
         text = stringResource(R.string.reverse_board),
         vectorId = R.drawable.ic_reverse,
-        callback = {_ -> boardReverseRequestCallback() }
+        callback = { boardReverseRequestCallback() }
     )
 }
 
@@ -195,7 +198,7 @@ fun SimpleButton(
             .border(border = BorderStroke(width = 2.dp, color = Color.Black))
             .padding(4.dp),
     ) {
-        IconButton(onClick = {callback(navController)}, modifier = Modifier.size(imageSize)) {
+        IconButton(onClick = { callback(navController) }, modifier = Modifier.size(imageSize)) {
             Image(
                 painter = painterResource(id = vectorId),
                 contentDescription = imageContentDescription
