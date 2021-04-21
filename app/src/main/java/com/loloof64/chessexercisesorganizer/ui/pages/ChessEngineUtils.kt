@@ -72,7 +72,10 @@ fun listInstalledEngines(context: Context): Array<String> {
     enginesFolder.mkdir()
     val files = enginesFolder.listFiles()?.filter { it.isFile }?.toTypedArray() ?: arrayOf<File>()
     files.sortBy { it.name }
-    return files.map { it.name }.toTypedArray()
+    return files.map { file ->
+        val regex = Regex("lib(.*)\\.so")
+        regex.find(file.name)?.groups?.get(1)?.value ?: file.name
+    }.toTypedArray()
 }
 
 fun installEngine(context: Context, index: Int) {
@@ -127,13 +130,13 @@ fun deleteInstalledEngine(context: Context, index: Int) {
 
     val parentFolder = File(context.filesDir, "engines")
     parentFolder.mkdir()
-    val files = parentFolder.listFiles()?.filter { it.isFile }?.toTypedArray() ?: arrayOf<File>()
-    files.sortBy { it.name }
-    if (index < files.size) {
-        val selectedFile = files[index]
+    val installedEngines = listInstalledEngines(context)
+    if (index < installedEngines.size) {
+        val selectedFileName = "lib${installedEngines[index]}.so"
+        val selectedFile = File(parentFolder, selectedFileName)
         selectedFile.delete()
     } else {
-        throw ArrayIndexOutOfBoundsException("Requested index : ${index}, size: ${files.size}")
+        throw ArrayIndexOutOfBoundsException("Requested index : ${index}, size: ${installedEngines.size}")
     }
 }
 
