@@ -159,17 +159,25 @@ fun EnginesPageContent(
             }
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = stringResource(R.string.installed_engines))
-            LazyColumn(state = deletedListState, modifier = Modifier.fillMaxWidth()) {
-                items(count = installedEngines.size,
-                    itemContent = { index ->
-                        Button(
-                            onClick = {
-                                confirmDeleteEngine(index)
-                            },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
-                        ) { Text(installedEngines[index]) }
-                    })
+            if (atLeastOneInstalledEngine) {
+                Text(text = stringResource(R.string.installed_engines))
+                LazyColumn(state = deletedListState, modifier = Modifier.fillMaxWidth()) {
+                    items(count = installedEngines.size,
+                        itemContent = { index ->
+                            Button(
+                                onClick = {
+                                    confirmDeleteEngine(index)
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
+                            ) { Text(installedEngines[index]) }
+                        })
+                }
+            }
+            else {
+                Text(text = stringResource(R.string.no_local_engine), fontSize = 18.sp)
+                if (atLeastOneStoreEngine) {
+                    Text(text = stringResource(R.string.install_from_store_possibility), fontSize = 18.sp)
+                }
             }
         }
     }
