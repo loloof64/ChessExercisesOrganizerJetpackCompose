@@ -32,6 +32,7 @@ import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
 import com.loloof64.chessexercisesorganizer.ui.components.PlayerType
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import kotlin.random.Random
 
 @Composable
 fun GamePage(navController: NavController? = null) {
@@ -56,13 +57,25 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
     }
     var boardReversed by rememberSaveable { mutableStateOf(false) }
 
+    fun randomGameId(): Long {
+        return Random.nextLong()
+    }
+
+    var gameId by rememberSaveable {
+        mutableStateOf(randomGameId())
+    }
+
+    fun restartGame() {
+        gameId = randomGameId()
+    }
+
     Layout(
         content = {
             SimpleButton(
                 text = stringResource(R.string.new_game),
                 vectorId = R.drawable.ic_start_flag
             ) {
-
+                restartGame()
             }
             SimpleButton(
                 text = stringResource(R.string.stop_game),
@@ -91,6 +104,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 reversed = boardReversed,
                 whiteSideType = PlayerType.Human,
                 blackSideType = PlayerType.Computer,
+                gameId = gameId,
             )
 
         }

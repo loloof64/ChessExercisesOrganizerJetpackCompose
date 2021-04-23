@@ -39,6 +39,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.floor
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
@@ -473,8 +474,86 @@ fun DynamicChessBoard(
         }
     }
 
+    fun pointInCircle(
+        pointX: Double,
+        pointY: Double,
+        circleCenterX: Double,
+        circleCenterY: Double,
+        circleRadius: Double
+    ): Boolean {
+        val distance = sqrt(
+            (pointX - circleCenterX) * (pointX - circleCenterX) +
+                    (pointY - circleCenterY) * (pointY - circleCenterY)
+        )
+        return distance <= circleRadius
+    }
+
     fun handleTap(offset: Offset) {
         if (dndState.pendingPromotion) {
+            val promotionInBottomPart =
+                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
+            val minBoardSize = cellsSize * 9
+            val buttonsY = minBoardSize * (if (promotionInBottomPart) 0.06f else 0.85f)
+            val buttonsHalfSizeRatio = 0.575f
+            val buttonsGapRatio = 0.2f
+            val buttonsCenterY = buttonsY + cellsSize * buttonsHalfSizeRatio
+            val queenButtonCenterX = minBoardSize * 0.18f + cellsSize * buttonsHalfSizeRatio
+            val rookButtonCenterX =
+                queenButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+            val bishopButtonCenterX =
+                rookButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+            val knightButtonCenterX =
+                bishopButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+            val cancelButtonCenterX =
+                knightButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+
+            val queenButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = queenButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val rookButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = rookButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val bishopButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = bishopButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val knightButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = knightButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val cancelButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = cancelButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            when {
+                queenButtonTapped -> commitPromotion(piece = PromotionQueen(isWhiteTurn = boardState.turn))
+                rookButtonTapped -> commitPromotion(piece = PromotionRook(isWhiteTurn = boardState.turn))
+                bishopButtonTapped -> commitPromotion(piece = PromotionBishop(isWhiteTurn = boardState.turn))
+                knightButtonTapped -> commitPromotion(piece = PromotionKnight(isWhiteTurn = boardState.turn))
+                cancelButtonTapped -> cancelPendingPromotion()
+            }
 
         }
     }
