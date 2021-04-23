@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -34,6 +35,7 @@ import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.floor
@@ -81,6 +83,7 @@ data class DndData(
     val movedPieceX: Float = Float.MIN_VALUE,
     val movedPieceY: Float = Float.MIN_VALUE,
     val pendingPromotion: Boolean = false,
+    val pendingPromotionForBlack: Boolean = false,
 ) {
     override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
             "$movedPieceX|$movedPieceY|$pendingPromotion"
@@ -425,7 +428,7 @@ fun DynamicChessBoard(
         if (dndState.pendingPromotion) return
         if (isValidDndMove()) {
             dndState = if (dndMoveIsPromotion()) {
-                dndState.copy(pendingPromotion = true)
+                dndState.copy(pendingPromotion = true, pendingPromotionForBlack = !boardState.turn)
             } else {
                 commitDndMove()
                 DndData()
@@ -470,6 +473,12 @@ fun DynamicChessBoard(
         }
     }
 
+    fun handleTap(offset: Offset) {
+        if (dndState.pendingPromotion) {
+
+        }
+    }
+
     val newGameRequest = previousGameId != gameId
     if (newGameRequest) {
         boardState = startPosition.toBoard()
@@ -492,16 +501,25 @@ fun DynamicChessBoard(
         modifier = modifier
             .background(Color(214, 59, 96))
             .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { handleDragStart(it) },
-                    onDragCancel = { dndCancelCallback() },
-                    onDrag = { change, dragAmount ->
-                        change.consumeAllChanges()
-                        dndMoveCallback(dragAmount.x, dragAmount.y)
-                    },
-                    onDragEnd = {
-                        dndValidatingCallback()
-                    })
+                coroutineScope {
+                    launch {
+                        detectDragGestures(
+                            onDragStart = { handleDragStart(it) },
+                            onDragCancel = { dndCancelCallback() },
+                            onDrag = { change, dragAmount ->
+                                change.consumeAllChanges()
+                                dndMoveCallback(dragAmount.x, dragAmount.y)
+                            },
+                            onDragEnd = {
+                                dndValidatingCallback()
+                            })
+                    }
+                    launch {
+                        detectTapGestures(
+                            onTap = { handleTap(it) }
+                        )
+                    }
+                }
             },
     ) {
         val minSize = if (size.width < size.height) size.width else size.height
@@ -531,7 +549,8 @@ fun DynamicChessBoard(
         }
 
         if (dndState.pendingPromotion) {
-            val promotionInBottomPart = dndState.movedPieceY > (minSize / 2)
+            val promotionInBottomPart =
+                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
             val itemsZoneX = minSize * 0.18f
             val itemsZoneY = minSize * (if (promotionInBottomPart) 0.06f else 0.85f)
             val itemsSize = cellsSize * 1.15f
