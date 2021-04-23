@@ -1,38 +1,36 @@
 package com.loloof64.chessexercisesorganizer.ui.components
 
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
@@ -70,24 +68,6 @@ fun Char.getPieceImageID(): Int {
         'r' -> R.drawable.ic_chess_rdt45
         'q' -> R.drawable.ic_chess_qdt45
         'k' -> R.drawable.ic_chess_kdt45
-        else -> throw RuntimeException("Not a valid piece: $this !")
-    }
-}
-
-fun Char.getPieceImageDescriptionID(): Int {
-    return when (this) {
-        'P' -> R.string.white_pawn
-        'N' -> R.string.white_knight
-        'B' -> R.string.white_bishop
-        'R' -> R.string.white_rook
-        'Q' -> R.string.white_queen
-        'K' -> R.string.white_king
-        'p' -> R.string.black_pawn
-        'n' -> R.string.black_knight
-        'b' -> R.string.black_bishop
-        'r' -> R.string.black_rook
-        'q' -> R.string.black_queen
-        'k' -> R.string.black_king
         else -> throw RuntimeException("Not a valid piece: $this !")
     }
 }
@@ -229,12 +209,12 @@ enum class PlayerType {
 
 @Composable
 fun DynamicChessBoard(
-    size: Dp,
+    modifier: Modifier = Modifier,
     startPosition: String = STANDARD_FEN,
     reversed: Boolean = false,
     userRequestStopGame: Boolean = false,
     gameId: Long = 1L,
-    positionChangedCallback: (String) -> Unit = {_ -> },
+    positionChangedCallback: (String) -> Unit = { _ -> },
     whiteSideType: PlayerType = PlayerType.Human,
     blackSideType: PlayerType = PlayerType.Human,
 ) {
@@ -244,27 +224,21 @@ fun DynamicChessBoard(
         mutableStateOf(gameId)
     }
 
-    val globalSize = with(LocalDensity.current) {
-        size.toPx()
-    }
-    val cellsSize = globalSize / 9f
-    val textSize = with(LocalDensity.current) {
-        (cellsSize * 0.3f).toSp()
-    }
-
     val composableScope = rememberCoroutineScope()
     var boardState by rememberSaveable(stateSaver = BoardStateSaver) {
         mutableStateOf(startPosition.toBoard())
     }
 
-    fun isComputerTurn() = (boardState.turn && whiteSideType == PlayerType.Computer)
-            || (!boardState.turn && blackSideType == PlayerType.Computer)
+    fun isComputerTurn() = false/*(boardState.turn && whiteSideType == PlayerType.Computer)
+            || (!boardState.turn && blackSideType == PlayerType.Computer)*/
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
 
     var gameEnded by rememberSaveable {
         mutableStateOf(GameEndedStatus.GOING_ON)
     }
+
+    var cellsSize by remember { mutableStateOf(0f) }
 
     fun notifyUserGameFinished() {
         val messageId = when (gameEnded) {
@@ -512,14 +486,11 @@ fun DynamicChessBoard(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .size(size)
+    val currentContext = LocalContext.current
+
+    Canvas(
+        modifier = modifier
             .background(Color(214, 59, 96))
-            .drawBehind {
-                drawCells(cellsSize, reversed, dndData = dndState)
-                drawPlayerTurn(cellsSize, boardState)
-            }
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { handleDragStart(it) },
@@ -533,10 +504,15 @@ fun DynamicChessBoard(
                     })
             },
     ) {
-        FilesCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
-        RanksCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
+        val minSize = if (size.width < size.height) size.width else size.height
+        cellsSize = minSize / 9f
 
-        Pieces(
+        drawCells(cellsSize, reversed, dndData = dndState)
+        drawFilesCoordinates(cellsSize, reversed)
+        drawRanksCoordinates(cellsSize, reversed)
+        drawPlayerTurn(cellsSize, boardState)
+        drawPieces(
+            context = currentContext,
             cellsSize = cellsSize,
             position = boardState,
             reversed = reversed,
@@ -544,8 +520,9 @@ fun DynamicChessBoard(
         )
 
         if (dndState.pieceValue != NO_PIECE) {
-            MovedPiece(
-                cellsSize = cellsSize,
+            drawMovedPiece(
+                context = currentContext,
+                cellsSize = cellsSize.toInt(),
                 pieceValue = dndState.pieceValue,
                 x = dndState.movedPieceX,
                 y = dndState.movedPieceY,
@@ -554,23 +531,19 @@ fun DynamicChessBoard(
         }
 
         if (dndState.pendingPromotion) {
-            val itemsZoneX = with(LocalDensity.current) {
-                (size.toPx() * 0.18f).toDp()
-            }
-            val itemsZoneY = with(LocalDensity.current) {
-                val promotionInBottomPart = dndState.movedPieceY > size.toPx() / 2
-                (size.toPx() * (if (promotionInBottomPart) 0.06f else 0.85f)).toDp()
-            }
-            val itemsSize = with(LocalDensity.current) {
-                cellsSize.toDp() * 1.15f
-            }
+            val promotionInBottomPart = dndState.movedPieceY > (minSize / 2)
+            val itemsZoneX = minSize * 0.18f
+            val itemsZoneY = minSize * (if (promotionInBottomPart) 0.06f else 0.85f)
+            val itemsSize = cellsSize * 1.15f
+            val spaceBetweenItems = cellsSize * 0.2f
 
-            PromotionValidationZone(
-                modifier = Modifier.offset(itemsZoneX, itemsZoneY),
+            drawPromotionValidationZone(
+                context,
+                x = itemsZoneX,
+                y = itemsZoneY,
                 itemsSize = itemsSize,
                 isWhiteTurn = boardState.turn,
-                commitPromotion = { piece -> commitPromotion(piece) },
-                cancelPendingPromotion = { cancelPendingPromotion() }
+                spaceBetweenItems = spaceBetweenItems,
             )
         }
 
@@ -579,155 +552,31 @@ fun DynamicChessBoard(
 
 @Composable
 private fun StaticChessBoard(
-    size: Dp,
+    modifier: Modifier = Modifier,
     position: String = STANDARD_FEN,
     reversed: Boolean = false,
 ) {
-    val globalSize = with(LocalDensity.current) {
-        size.toPx()
-    }
-    val cellsSize = globalSize / 9f
-    val textSize = with(LocalDensity.current) {
-        (cellsSize * 0.3f).toSp()
-    }
+    val boardLogic = position.toBoard()
+    val currentContext = LocalContext.current
 
-    val boardLogic = Board().apply {
-        fen = position
-    }
-
-    Box(
-        modifier = Modifier
-            .size(size)
+    Canvas(
+        modifier = modifier
             .background(Color(214, 59, 96))
-            .drawBehind {
-                drawCells(cellsSize, reversed)
-                drawPlayerTurn(cellsSize, boardLogic)
-            },
     ) {
-        FilesCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
-        RanksCoordinates(cellsSize = cellsSize, textSize = textSize, reversed = reversed)
-
-        Pieces(
+        val minSize = if (size.width < size.height) size.width else size.height
+        val cellsSize = minSize / 9f
+        drawCells(cellsSize, reversed)
+        drawFilesCoordinates(cellsSize, reversed)
+        drawPlayerTurn(cellsSize, boardLogic)
+        drawPieces(
+            context = currentContext,
             cellsSize = cellsSize,
             position = boardLogic,
             reversed = reversed,
+            dndData = DndData()
         )
 
     }
-}
-
-@Composable
-private fun FilesCoordinates(cellsSize: Float, textSize: TextUnit, reversed: Boolean) {
-    repeat(8) { col ->
-        val file = if (reversed) 7 - col else col
-        val coordinateText = "${('A'.toInt() + file).toChar()}"
-        val x = with(LocalDensity.current) { (cellsSize * (0.90f + col)).toDp() }
-        val y1 = with(LocalDensity.current) { (cellsSize * 0.025f).toDp() }
-        val y2 = with(
-            LocalDensity.current
-        ) { (cellsSize * 8.525f).toDp() }
-        Text(
-            text = coordinateText, fontWeight = FontWeight.Bold, fontSize = textSize,
-            color = Color(255, 199, 0),
-            modifier = Modifier.offset(x, y1)
-        )
-        Text(
-            text = coordinateText, fontWeight = FontWeight.Bold, fontSize = textSize,
-            color = Color(255, 199, 0),
-            modifier = Modifier.offset(x, y2)
-        )
-    }
-}
-
-@Composable
-private fun RanksCoordinates(cellsSize: Float, textSize: TextUnit, reversed: Boolean) {
-    repeat(8) { row ->
-        val rank = if (reversed) row else 7 - row
-        val coordinateText = "${('1'.toInt() + rank).toChar()}"
-        val y = with(LocalDensity.current) { (cellsSize * (0.75f + row)).toDp() }
-        val x1 = with(LocalDensity.current) { (cellsSize * 0.15f).toDp() }
-        val x2 = with(LocalDensity.current) { (cellsSize * 8.65f).toDp() }
-
-        Text(
-            text = coordinateText, fontWeight = FontWeight.Bold, fontSize = textSize,
-            color = Color(255, 199, 0),
-            modifier = Modifier.offset(x1, y)
-        )
-        Text(
-            text = coordinateText, fontWeight = FontWeight.Bold, fontSize = textSize,
-            color = Color(255, 199, 0),
-            modifier = Modifier.offset(x2, y)
-        )
-    }
-}
-
-@Composable
-private fun Pieces(
-    cellsSize: Float,
-    position: Board,
-    reversed: Boolean,
-    dndData: DndData = DndData()
-) {
-    repeat(8) { row ->
-        val rank = if (reversed) row else 7 - row
-        repeat(8) { col ->
-            val file = if (reversed) 7 - col else col
-
-            val square = getSquareFromCellCoordinates(file, rank)
-            val piece = position.getPieceAt(square)
-            if (piece != NO_PIECE) {
-                val isDraggedPiece = (dndData.startFile == file) && (dndData.startRank == rank)
-                if (!isDraggedPiece) {
-                    val x = with(
-                        LocalDensity.current
-                    ) { (cellsSize * (0.5f + col)).toDp() }
-                    val y = with(LocalDensity.current) { (cellsSize * (0.5f + row)).toDp() }
-                    val imageSize = with(LocalDensity.current) {
-                        cellsSize.toDp()
-                    }
-                    val imageRef = piece.getPieceImageID()
-                    val contentDescription = piece.getPieceImageDescriptionID()
-                    Image(
-                        painter = painterResource(id = imageRef),
-                        contentDescription = stringResource(contentDescription),
-                        modifier = Modifier
-                            .size(imageSize)
-                            .offset(x, y)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MovedPiece(
-    cellsSize: Float,
-    positionFen: String,
-    pieceValue: Char,
-    x: Float,
-    y: Float
-) {
-    val boardLogic = Board()
-    boardLogic.fen = positionFen
-    val imageRef = pieceValue.getPieceImageID()
-    val imageDescription =
-        pieceValue.getPieceImageDescriptionID()
-
-    val xDp = with(LocalDensity.current) { x.toDp() }
-    val yDp = with(
-        LocalDensity.current
-    ) { y.toDp() }
-    val imageSize = with(LocalDensity.current) {
-        cellsSize.toDp()
-    }
-    Image(
-        painter = painterResource(id = imageRef),
-        contentDescription = stringResource(imageDescription),
-        modifier = Modifier
-            .size(imageSize)
-            .offset(xDp, yDp)
-    )
 }
 
 private fun getSquareFromCellCoordinates(file: Int, rank: Int): Long {
@@ -773,116 +622,250 @@ private fun DrawScope.drawPlayerTurn(
     drawCircle(color = turnColor, radius = turnRadius, center = Offset(location, location))
 }
 
-@Composable
-fun PromotionValidationZone(
-    modifier: Modifier = Modifier, itemsSize: Dp, isWhiteTurn: Boolean,
-    commitPromotion: (piece: PromotionPiece) -> Unit = { _ -> },
-    cancelPendingPromotion: () -> Unit = {},
+private fun DrawScope.drawFilesCoordinates(
+    cellsSize: Float, reversed: Boolean
 ) {
-    Row(modifier = modifier) {
-        PromotionValidationItem(
-            size = itemsSize,
-            pieceValue = PromotionQueen(isWhiteTurn = isWhiteTurn)
-        ) {
-            commitPromotion(PromotionQueen(isWhiteTurn = isWhiteTurn))
-        }
-        PromotionValidationItem(
-            size = itemsSize,
-            pieceValue = PromotionRook(isWhiteTurn = isWhiteTurn)
-        ) {
-            commitPromotion(PromotionRook(isWhiteTurn = isWhiteTurn))
-        }
-        PromotionValidationItem(
-            size = itemsSize,
-            pieceValue = PromotionBishop(isWhiteTurn = isWhiteTurn)
-        ) {
-            commitPromotion(PromotionBishop(isWhiteTurn = isWhiteTurn))
-        }
-        PromotionValidationItem(
-            size = itemsSize,
-            pieceValue = PromotionKnight(isWhiteTurn = isWhiteTurn)
-        ) {
-            commitPromotion(PromotionKnight(isWhiteTurn = isWhiteTurn))
-        }
-        PromotionCancellationItem(size = itemsSize, isWhiteTurn = isWhiteTurn) {
-            cancelPendingPromotion()
+    val fontSize = cellsSize * 0.3f
+    repeat(8) { col ->
+        val file = if (reversed) 7 - col else col
+        val coordinateText = "${('A'.toInt() + file).toChar()}"
+        val x = cellsSize * (0.90f + col)
+        val y1 = cellsSize * 0.375f
+        val y2 = cellsSize * 8.875f
+
+        drawIntoCanvas {
+            val paint = Paint().apply {
+                setARGB(255, 255, 199, 0)
+                textSize = fontSize
+            }
+            it.nativeCanvas.drawText(coordinateText, x, y1, paint)
+            it.nativeCanvas.drawText(coordinateText, x, y2, paint)
         }
     }
 }
 
-@Composable
-fun PromotionValidationItem(
-    modifier: Modifier = Modifier,
-    size: Dp,
-    pieceValue: PromotionPiece,
-    clickCallback: () -> Unit = {}
+private fun DrawScope.drawRanksCoordinates(
+    cellsSize: Float, reversed: Boolean
 ) {
-    val backgroundColor = if (pieceValue.isWhiteTurn) Color.Black else Color.White
-    val padding = size / 10f
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .clickable(onClick = { clickCallback() })
-            .background(backgroundColor)
-            .padding(padding)
-    ) {
-        val imageRef = pieceValue.fen.getPieceImageID()
-        val contentDescription = pieceValue.fen.getPieceImageDescriptionID()
-        Image(
-            painter = painterResource(id = imageRef),
-            contentDescription = stringResource(contentDescription),
-            modifier = Modifier
-                .size(size)
+    val fontSize = cellsSize * 0.3f
+    repeat(8) { row ->
+        val rank = if (reversed) row else 7 - row
+        val coordinateText = "${('1'.toInt() + rank).toChar()}"
+        val y = cellsSize * (1.125f + row)
+        val x1 = cellsSize * 0.15f
+        val x2 = cellsSize * 8.65f
+
+        drawIntoCanvas {
+            val paint = Paint().apply {
+                setARGB(255, 255, 199, 0)
+                textSize = fontSize
+            }
+            it.nativeCanvas.drawText(coordinateText, x1, y, paint)
+            it.nativeCanvas.drawText(coordinateText, x2, y, paint)
+        }
+    }
+}
+
+private fun DrawScope.drawPieces(
+    context: Context,
+    cellsSize: Float,
+    position: Board,
+    reversed: Boolean,
+    dndData: DndData
+) {
+    repeat(8) { row ->
+        val rank = if (reversed) row else 7 - row
+        repeat(8) { col ->
+            val file = if (reversed) 7 - col else col
+
+            val square = getSquareFromCellCoordinates(file, rank)
+            val piece = position.getPieceAt(square)
+            if (piece != NO_PIECE) {
+                val isDraggedPiece = (dndData.startFile == file) && (dndData.startRank == rank)
+                if (!isDraggedPiece) {
+                    val x = cellsSize * (0.5f + col)
+                    val y = cellsSize * (0.5f + row)
+                    val imageRef = piece.getPieceImageID()
+                    val vectorDrawable =
+                        VectorDrawableCompat.create(context.resources, imageRef, null)
+                    drawIntoCanvas {
+                        if (vectorDrawable != null) it.nativeCanvas.drawVector(
+                            vectorDrawable,
+                            x,
+                            y,
+                            cellsSize.toInt(),
+                            cellsSize.toInt()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawMovedPiece(
+    context: Context,
+    cellsSize: Int,
+    pieceValue: Char,
+    x: Float,
+    y: Float,
+    positionFen: String
+) {
+    val boardLogic = Board()
+    boardLogic.fen = positionFen
+    val imageRef = pieceValue.getPieceImageID()
+
+    val vectorDrawable =
+        VectorDrawableCompat.create(context.resources, imageRef, null)
+    drawIntoCanvas {
+        if (vectorDrawable != null) it.nativeCanvas.drawVector(
+            vectorDrawable,
+            x,
+            y,
+            cellsSize,
+            cellsSize
         )
     }
 }
 
-@Composable
-fun PromotionCancellationItem(
-    modifier: Modifier = Modifier,
-    size: Dp,
+private fun DrawScope.drawPromotionValidationZone(
+    context: Context,
+    x: Float,
+    y: Float,
+    itemsSize: Float,
+    spaceBetweenItems: Float,
     isWhiteTurn: Boolean,
-    clickCallback: () -> Unit = {}
 ) {
-    val backgroundColor = if (isWhiteTurn) Color.Black else Color.White
-    val padding = size / 4.5f
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .clickable(onClick = { clickCallback() })
-            .background(backgroundColor)
-            .padding(padding)
-    ) {
-        val imageRef = R.drawable.ic_red_cross
-        val contentDescription = R.string.red_cross
-        Image(
-            painter = painterResource(id = imageRef),
-            contentDescription = stringResource(contentDescription),
-            modifier = Modifier
-                .size(size)
+    val xRook = x + itemsSize + spaceBetweenItems
+    val xBishop = xRook + itemsSize + spaceBetweenItems
+    val xKnight = xBishop + itemsSize + spaceBetweenItems
+    val xCancellation = xKnight + itemsSize + spaceBetweenItems
+    drawPromotionValidationItem(context, x, y, itemsSize, PromotionQueen(isWhiteTurn = isWhiteTurn))
+    drawPromotionValidationItem(
+        context,
+        xRook,
+        y,
+        itemsSize,
+        PromotionRook(isWhiteTurn = isWhiteTurn)
+    )
+    drawPromotionValidationItem(
+        context,
+        xBishop,
+        y,
+        itemsSize,
+        PromotionBishop(isWhiteTurn = isWhiteTurn)
+    )
+    drawPromotionValidationItem(
+        context,
+        xKnight,
+        y,
+        itemsSize,
+        PromotionKnight(isWhiteTurn = isWhiteTurn)
+    )
+    drawPromotionCancellationItem(
+        context,
+        xCancellation,
+        y,
+        itemsSize,
+        isWhiteTurn = isWhiteTurn
+    )
+}
+
+fun DrawScope.drawPromotionValidationItem(
+    context: Context,
+    x: Float,
+    y: Float,
+    size: Float,
+    pieceValue: PromotionPiece,
+) {
+    val ovalPaint = Paint().apply {
+        if (pieceValue.isWhiteTurn) setARGB(255, 0, 0, 0)
+        else setARGB(255, 255, 255, 255)
+        style = Paint.Style.FILL
+    }
+    val ovalX = x - size * 0.15f
+    val ovalY = y - size * 0.15f
+
+    val imageRef = pieceValue.fen.getPieceImageID()
+    val vectorDrawable =
+        VectorDrawableCompat.create(context.resources, imageRef, null)
+
+    val imageSize = size * 0.7f
+    drawIntoCanvas {
+        it.nativeCanvas.drawOval(ovalX, ovalY, ovalX + size, ovalY + size, ovalPaint)
+        if (vectorDrawable != null) it.nativeCanvas.drawVector(
+            vectorDrawable,
+            x,
+            y,
+            imageSize.toInt(),
+            imageSize.toInt()
         )
     }
+}
+
+fun DrawScope.drawPromotionCancellationItem(
+    context: Context,
+    x: Float,
+    y: Float,
+    size: Float,
+    isWhiteTurn: Boolean,
+) {
+    val ovalPaint = Paint().apply {
+        if (isWhiteTurn) setARGB(255, 0, 0, 0)
+        else setARGB(255, 255, 255, 255)
+        style = Paint.Style.FILL
+    }
+    val ovalX = x - size * 0.15f
+    val ovalY = y - size * 0.15f
+
+
+    val imageRef = R.drawable.ic_red_cross
+    val vectorDrawable =
+        VectorDrawableCompat.create(context.resources, imageRef, null)
+    val imageSize = size * 0.7f
+    drawIntoCanvas {
+        it.nativeCanvas.drawOval(ovalX, ovalY, ovalX + size, ovalY + size, ovalPaint)
+        if (vectorDrawable != null) it.nativeCanvas.drawVector(
+            vectorDrawable,
+            x,
+            y,
+            imageSize.toInt(),
+            imageSize.toInt()
+        )
+    }
+}
+
+private fun Canvas.drawVector(
+    drawable: VectorDrawableCompat,
+    x: Float,
+    y: Float,
+    width: Int,
+    height: Int
+) {
+    drawable.setBounds(0, 0, width, height)
+    save()
+    translate(x, y)
+    drawable.draw(this)
+    restore()
 }
 
 @Preview
 @Composable
 fun DynamicChessBoardPreview() {
-    DynamicChessBoard(size = 300.dp)
+    DynamicChessBoard(modifier = Modifier.size(300.dp))
 }
 
 @Preview
 @Composable
 fun DynamicReversedChessBoardPreview() {
-    DynamicChessBoard(size = 300.dp, reversed = true)
+    DynamicChessBoard(modifier = Modifier.size(300.dp), reversed = true)
 }
 
 @Preview
 @Composable
 fun DynamicChessBoardCustomPositionPreview() {
     DynamicChessBoard(
-        size = 300.dp,
+        modifier = Modifier.size(300.dp),
         startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }
@@ -891,7 +874,7 @@ fun DynamicChessBoardCustomPositionPreview() {
 @Composable
 fun DynamicChessBoardCustomPositionReversedPreview() {
     DynamicChessBoard(
-        size = 300.dp,
+        modifier = Modifier.size(300.dp),
         reversed = true,
         startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
@@ -900,37 +883,13 @@ fun DynamicChessBoardCustomPositionReversedPreview() {
 @Preview
 @Composable
 fun StaticChessBoardPreview() {
-    StaticChessBoard(size = 300.dp)
+    StaticChessBoard(modifier = Modifier.size(300.dp))
 }
 
 @Preview
 @Composable
 fun StaticChessBoardReversedPreview() {
-    StaticChessBoard(size = 300.dp, reversed = true)
-}
-
-@Preview
-@Composable
-fun WhitePromotionValidationItemPreview() {
-    PromotionValidationItem(size = 100.dp, pieceValue = PromotionKnight(isWhiteTurn = true))
-}
-
-@Preview
-@Composable
-fun BlackPromotionValidationItemPreview() {
-    PromotionValidationItem(size = 100.dp, pieceValue = PromotionRook(isWhiteTurn = false))
-}
-
-@Preview
-@Composable
-fun PromotionValidationZonePreview() {
-    PromotionValidationZone(itemsSize = 100.dp, isWhiteTurn = true)
-}
-
-@Preview
-@Composable
-fun PromotionCancellationItemPreview() {
-    PromotionCancellationItem(size = 100.dp, isWhiteTurn = true)
+    StaticChessBoard(modifier = Modifier.size(300.dp), reversed = true)
 }
 
 @Preview
@@ -942,14 +901,14 @@ fun RestartableAndStoppableDynamicChessBoardPreview() {
         mutableStateOf(startPosition)
     }
 
-    fun randomGameId() : Long {
+    fun randomGameId(): Long {
         return Random.nextLong()
     }
 
     var gameId by rememberSaveable {
         mutableStateOf(randomGameId())
     }
-    var stopRequest by rememberSaveable{ mutableStateOf(false)}
+    var stopRequest by rememberSaveable { mutableStateOf(false) }
 
     fun stopGame() {
         stopRequest = true
@@ -962,16 +921,16 @@ fun RestartableAndStoppableDynamicChessBoardPreview() {
 
     Column {
         Row {
-            Button(onClick = {stopGame()}) {
+            Button(onClick = { stopGame() }) {
                 Text(text = "Stop")
             }
-            Button(onClick = {restartGame()}) {
+            Button(onClick = { restartGame() }) {
                 Text(text = "Restart")
             }
         }
         Text(text = currentPosition)
         DynamicChessBoard(
-            size = 200.dp,
+            modifier = Modifier.size(300.dp),
             userRequestStopGame = stopRequest,
             startPosition = startPosition,
             gameId = gameId,
