@@ -64,8 +64,13 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
 
     var stopRequest by rememberSaveable { mutableStateOf(false) }
 
+    var enginesConfigurationAvailable by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     fun stopGame() {
         stopRequest = true
+        enginesConfigurationAvailable = true
     }
 
     fun randomGameId(): Long {
@@ -77,6 +82,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
     }
 
     fun restartGame() {
+        enginesConfigurationAvailable = false
         stopRequest = false
         gameId = randomGameId()
     }
@@ -92,8 +98,8 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
             GameEndedStatus.USER_STOPPED -> R.string.user_stopped_game
             else -> throw IllegalStateException("The game is not finished yet.")
         }
-
         Toast.makeText(context, messageId, Toast.LENGTH_LONG).show()
+        enginesConfigurationAvailable = true
     }
 
     Layout(
@@ -116,13 +122,15 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
             ) {
                 boardReversed = !boardReversed
             }
-            SimpleButton(
-                navController = navController,
-                text = stringResource(R.string.chess_engines),
-                vectorId = R.drawable.ic_car_engine
-            ) {
-                it?.navigate("engines") {
-                    launchSingleTop = true
+            if (enginesConfigurationAvailable) {
+                SimpleButton(
+                    navController = navController,
+                    text = stringResource(R.string.chess_engines),
+                    vectorId = R.drawable.ic_car_engine
+                ) {
+                    it?.navigate("engines") {
+                        launchSingleTop = true
+                    }
                 }
             }
 
@@ -139,7 +147,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
         }
     ) { allMeasurable, constraints ->
         val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
-        val buttonsCount = 4
+        val buttonsCount = if (enginesConfigurationAvailable) 4 else 3
 
         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
             if (index == buttonsCount) measurable.measure(
