@@ -86,9 +86,12 @@ data class DndData(
     val pendingPromotion: Boolean = false,
     val pendingPromotionForBlack: Boolean = false,
     val pendingPromotionStartedInReversedMode: Boolean = false,
+    val movedPieceXRatio: Float = Float.MIN_VALUE,
+    val movedPieceYRatio: Float = Float.MAX_VALUE,
 ) {
     override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
-            "$movedPieceX|$movedPieceY|$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
+            "$movedPieceX|$movedPieceY|$pendingPromotion|$pendingPromotionForBlack|" +
+            "$pendingPromotionStartedInReversedMode|$movedPieceXRatio|$movedPieceYRatio"
 
     companion object {
         fun parse(valueStr: String): DndData {
@@ -105,6 +108,8 @@ data class DndData(
                     pendingPromotion = parts[7].toBoolean(),
                     pendingPromotionForBlack = parts[8].toBoolean(),
                     pendingPromotionStartedInReversedMode = parts[9].toBoolean(),
+                    movedPieceXRatio = parts[10].toFloat(),
+                    movedPieceYRatio = parts[11].toFloat(),
                 )
             } catch (ex: NumberFormatException) {
                 return DndData()
@@ -353,11 +358,18 @@ fun DynamicChessBoard(
         if (isPieceOfSideToMove) {
             val col = if (reversed) 7 - file else file
             val row = if (reversed) rank else 7 - rank
+            val boardMinSize = cellsSize * 9f
+            val newMovedPieceX = cellsSize * (0.5f + col.toFloat())
+            val newMovedPieceY = cellsSize * (0.5f + row.toFloat())
+            val newMovedPieceXRatio = newMovedPieceX / boardMinSize
+            val newMovedPieceYRatio = newMovedPieceY / boardMinSize
             dndState = dndState.copy(
                 startFile = file,
                 startRank = rank,
-                movedPieceX = cellsSize * (0.5f + col.toFloat()),
-                movedPieceY = cellsSize * (0.5f + row.toFloat()),
+                movedPieceX = newMovedPieceX,
+                movedPieceY = newMovedPieceY,
+                movedPieceXRatio = newMovedPieceXRatio,
+                movedPieceYRatio = newMovedPieceYRatio,
                 pieceValue = piece
             )
         }
@@ -368,8 +380,11 @@ fun DynamicChessBoard(
         if (isComputerTurn()) return
         if (dndState.pendingPromotion) return
         if (dndState.pieceValue != NO_PIECE) {
+            val boardMinSize = cellsSize * 9f
             val newMovedPieceX = dndState.movedPieceX + xOffset
             val newMovedPieceY = dndState.movedPieceY + yOffset
+            val newMovedPieceXRatio = newMovedPieceX / boardMinSize
+            val newMovedPieceYRatio = newMovedPieceY / boardMinSize
             val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
             val newRow = floor((newMovedPieceY - cellsSize * 0.5f) / cellsSize).toInt()
             val targetFile = if (reversed) 7 - newCol else newCol
@@ -377,6 +392,8 @@ fun DynamicChessBoard(
             dndState = dndState.copy(
                 movedPieceX = newMovedPieceX,
                 movedPieceY = newMovedPieceY,
+                movedPieceXRatio = newMovedPieceXRatio,
+                movedPieceYRatio = newMovedPieceYRatio,
                 targetFile = targetFile,
                 targetRank = targetRank
             )
@@ -624,11 +641,11 @@ fun DynamicChessBoard(
         )
 
         if (dndState.pieceValue != NO_PIECE) {
-            var x = dndState.movedPieceX
-            var y = dndState.movedPieceY
+            val boardMinSize = cellsSize * 9f
+            var x = boardMinSize * dndState.movedPieceXRatio
+            var y = boardMinSize * dndState.movedPieceYRatio
 
             if (dndState.pendingPromotion) {
-                val boardMinSize = cellsSize * 9f
                 val notInitialReversedMode =
                     reversed != dndState.pendingPromotionStartedInReversedMode
 
