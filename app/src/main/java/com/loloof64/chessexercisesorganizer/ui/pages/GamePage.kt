@@ -1,6 +1,7 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,6 +31,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.navigate
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
+import com.loloof64.chessexercisesorganizer.ui.components.GameEndedStatus
 import com.loloof64.chessexercisesorganizer.ui.components.PlayerType
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
@@ -50,6 +53,8 @@ fun GamePage(navController: NavController? = null) {
 
 @Composable
 fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
+    val context = LocalContext.current
+
     val startPositionFen = STANDARD_FEN
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
@@ -74,6 +79,21 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
     fun restartGame() {
         stopRequest = false
         gameId = randomGameId()
+    }
+
+    fun notifyUserGameFinished(gameEndStatus: GameEndedStatus) {
+        val messageId = when (gameEndStatus) {
+            GameEndedStatus.CHECKMATE_WHITE -> R.string.chessmate_white
+            GameEndedStatus.CHECKMATE_BLACK -> R.string.chessmate_black
+            GameEndedStatus.STALEMATE -> R.string.stalemate
+            GameEndedStatus.DRAW_THREE_FOLD_REPETITION -> R.string.three_fold_repetition
+            GameEndedStatus.DRAW_FIFTY_MOVES_RULE -> R.string.fifty_moves_rule_draw
+            GameEndedStatus.DRAW_MISSING_MATERIAL -> R.string.missing_material_draw
+            GameEndedStatus.USER_STOPPED -> R.string.user_stopped_game
+            else -> throw IllegalStateException("The game is not finished yet.")
+        }
+
+        Toast.makeText(context, messageId, Toast.LENGTH_LONG).show()
     }
 
     Layout(
@@ -112,7 +132,8 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 whiteSideType = PlayerType.Human,
                 blackSideType = PlayerType.Computer,
                 gameId = gameId,
-                userRequestStopGame = stopRequest
+                userRequestStopGame = stopRequest,
+                naturalGameEndCallback = { notifyUserGameFinished(it) },
             )
 
         }

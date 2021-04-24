@@ -227,6 +227,7 @@ fun DynamicChessBoard(
     userRequestStopGame: Boolean = false,
     gameId: Long = 1L,
     positionChangedCallback: (String) -> Unit = { _ -> },
+    naturalGameEndCallback: (GameEndedStatus) -> Unit = { _ -> },
     whiteSideType: PlayerType = PlayerType.Human,
     blackSideType: PlayerType = PlayerType.Human,
 ) {
@@ -252,47 +253,32 @@ fun DynamicChessBoard(
 
     var cellsSize by remember { mutableStateOf(0f) }
 
-    fun notifyUserGameFinished() {
-        val messageId = when (gameEnded) {
-            GameEndedStatus.CHECKMATE_WHITE -> R.string.chessmate_white
-            GameEndedStatus.CHECKMATE_BLACK -> R.string.chessmate_black
-            GameEndedStatus.STALEMATE -> R.string.stalemate
-            GameEndedStatus.DRAW_THREE_FOLD_REPETITION -> R.string.three_fold_repetition
-            GameEndedStatus.DRAW_FIFTY_MOVES_RULE -> R.string.fifty_moves_rule_draw
-            GameEndedStatus.DRAW_MISSING_MATERIAL -> R.string.missing_material_draw
-            GameEndedStatus.USER_STOPPED -> R.string.user_stopped_game
-            else -> throw IllegalStateException("The game is not finished yet.")
-        }
-
-        Toast.makeText(context, messageId, Toast.LENGTH_LONG).show()
-    }
-
-    fun manageEndStatus(gameEndedCallback: () -> Unit = {}) {
+    fun manageEndStatus(gameEndedCallback: (GameEndedStatus) -> Unit = {}) {
         when {
             boardState.isMate -> {
                 gameEnded =
                     if (boardState.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
-                gameEndedCallback()
+                gameEndedCallback(gameEnded)
             }
             boardState.isStalemate -> {
                 gameEnded = GameEndedStatus.STALEMATE
-                gameEndedCallback()
+                gameEndedCallback(gameEnded)
             }
             boardState.isDrawByThreeFoldRepetitions -> {
                 gameEnded = GameEndedStatus.DRAW_THREE_FOLD_REPETITION
-                gameEndedCallback()
+                gameEndedCallback(gameEnded)
             }
             boardState.isDrawByFiftyMovesRule -> {
                 gameEnded = GameEndedStatus.DRAW_FIFTY_MOVES_RULE
-                gameEndedCallback()
+                gameEndedCallback(gameEnded)
             }
             boardState.isDrawByMissingMaterial -> {
                 gameEnded = GameEndedStatus.DRAW_MISSING_MATERIAL
-                gameEndedCallback()
+                gameEndedCallback(gameEnded)
             }
             userRequestStopGame -> {
                 gameEnded = GameEndedStatus.USER_STOPPED
-                gameEndedCallback()
+                gameEndedCallback(gameEnded)
             }
         }
     }
@@ -440,7 +426,7 @@ fun DynamicChessBoard(
 
         positionChangedCallback(boardState.fen)
 
-        manageEndStatus(gameEndedCallback = { notifyUserGameFinished() })
+        manageEndStatus(gameEndedCallback = { naturalGameEndCallback(it) })
     }
 
     fun dndValidatingCallback() {
@@ -473,7 +459,7 @@ fun DynamicChessBoard(
 
         dndState = DndData()
         positionChangedCallback(boardState.fen)
-        manageEndStatus(gameEndedCallback = { notifyUserGameFinished() })
+        manageEndStatus(gameEndedCallback = { naturalGameEndCallback(it) })
     }
 
     fun cancelPendingPromotion() {
@@ -594,7 +580,7 @@ fun DynamicChessBoard(
         val notYetNotifiedOfEndOfGame = gameEnded == GameEndedStatus.GOING_ON
         manageEndStatus {
             if (notYetNotifiedOfEndOfGame) {
-                notifyUserGameFinished()
+                naturalGameEndCallback(gameEnded)
             }
         }
     }
