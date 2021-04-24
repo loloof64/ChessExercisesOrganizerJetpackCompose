@@ -584,6 +584,7 @@ fun DynamicChessBoard(
 
     val newGameRequest = previousGameId != gameId
     if (newGameRequest) {
+        cancelPendingPromotion()
         boardState = startPosition.toBoard()
         previousGameId = gameId
         gameEnded = GameEndedStatus.GOING_ON
