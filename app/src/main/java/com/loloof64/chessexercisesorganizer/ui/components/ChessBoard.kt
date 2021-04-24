@@ -579,7 +579,7 @@ fun DynamicChessBoard(
     Canvas(
         modifier = modifier
             .background(Color(214, 59, 96))
-            .pointerInput(Unit) {
+            .pointerInput(reversed) {
                 coroutineScope {
                     launch {
                         detectDragGestures(
