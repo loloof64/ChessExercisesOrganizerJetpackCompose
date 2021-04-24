@@ -85,9 +85,10 @@ data class DndData(
     val movedPieceY: Float = Float.MIN_VALUE,
     val pendingPromotion: Boolean = false,
     val pendingPromotionForBlack: Boolean = false,
+    val pendingPromotionStartedInReversedMode: Boolean = false,
 ) {
     override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
-            "$movedPieceX|$movedPieceY|$pendingPromotion"
+            "$movedPieceX|$movedPieceY|$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
 
     companion object {
         fun parse(valueStr: String): DndData {
@@ -101,7 +102,9 @@ data class DndData(
                     targetRank = parts[4].toInt(),
                     movedPieceX = parts[5].toFloat(),
                     movedPieceY = parts[6].toFloat(),
-                    pendingPromotion = parts[7].toBoolean()
+                    pendingPromotion = parts[7].toBoolean(),
+                    pendingPromotionForBlack = parts[8].toBoolean(),
+                    pendingPromotionStartedInReversedMode = parts[9].toBoolean(),
                 )
             } catch (ex: NumberFormatException) {
                 return DndData()
@@ -429,7 +432,11 @@ fun DynamicChessBoard(
         if (dndState.pendingPromotion) return
         if (isValidDndMove()) {
             dndState = if (dndMoveIsPromotion()) {
-                dndState.copy(pendingPromotion = true, pendingPromotionForBlack = !boardState.turn)
+                dndState.copy(
+                    pendingPromotion = true,
+                    pendingPromotionForBlack = !boardState.turn,
+                    pendingPromotionStartedInReversedMode = reversed
+                )
             } else {
                 commitDndMove()
                 DndData()
@@ -617,12 +624,26 @@ fun DynamicChessBoard(
         )
 
         if (dndState.pieceValue != NO_PIECE) {
+            var x = dndState.movedPieceX
+            var y = dndState.movedPieceY
+
+            if (dndState.pendingPromotion) {
+                val boardMinSize = cellsSize * 9f
+                val notInitialReversedMode =
+                    reversed != dndState.pendingPromotionStartedInReversedMode
+
+                if (notInitialReversedMode) {
+                    x = boardMinSize - cellsSize - x
+                    y = boardMinSize - cellsSize - y
+                }
+            }
+
             drawMovedPiece(
                 context = currentContext,
                 cellsSize = cellsSize.toInt(),
                 pieceValue = dndState.pieceValue,
-                x = dndState.movedPieceX,
-                y = dndState.movedPieceY,
+                x = x,
+                y = y,
                 positionFen = startPosition,
             )
         }
