@@ -57,6 +57,12 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
     }
     var boardReversed by rememberSaveable { mutableStateOf(false) }
 
+    var stopRequest by rememberSaveable { mutableStateOf(false) }
+
+    fun stopGame() {
+        stopRequest = true
+    }
+
     fun randomGameId(): Long {
         return Random.nextLong()
     }
@@ -66,6 +72,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
     }
 
     fun restartGame() {
+        stopRequest = false
         gameId = randomGameId()
     }
 
@@ -81,7 +88,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 text = stringResource(R.string.stop_game),
                 vectorId = R.drawable.ic_stop
             ) {
-
+                stopGame()
             }
             SimpleButton(
                 text = stringResource(R.string.reverse_board),
@@ -105,6 +112,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 whiteSideType = PlayerType.Human,
                 blackSideType = PlayerType.Computer,
                 gameId = gameId,
+                userRequestStopGame = stopRequest
             )
 
         }

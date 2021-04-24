@@ -1052,6 +1052,7 @@ fun RestartableAndStoppableDynamicChessBoardPreview() {
     }
 
     fun restartGame() {
+        stopRequest = false
         gameId = randomGameId()
         currentPosition = startPosition
     }
