@@ -242,8 +242,8 @@ fun DynamicChessBoard(
         mutableStateOf(startPosition.toBoard())
     }
 
-    fun isComputerTurn() = (boardState.turn && whiteSideType == PlayerType.Computer)
-            || (!boardState.turn && blackSideType == PlayerType.Computer)
+    fun isComputerTurn() = false/*(boardState.turn && whiteSideType == PlayerType.Computer)
+            || (!boardState.turn && blackSideType == PlayerType.Computer)*/
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
 

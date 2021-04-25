@@ -49,7 +49,7 @@ fun GamePage(navController: NavController? = null) {
             topBar = { TopAppBar(title = { Text(stringResource(R.string.game_page)) }) },
             content = {
                 Surface(color = MaterialTheme.colors.background) {
-                    AdaptableLayoutGamePageContent(navController) { text ->
+                    AdaptableLayoutGamePageContent(navController, showInfiniteSnackbarAction = { text ->
                         scope.launch {
                             scaffoldState.snackbarHostState.showSnackbar(
                                 message = text,
@@ -57,7 +57,14 @@ fun GamePage(navController: NavController? = null) {
                                 duration = SnackbarDuration.Indefinite
                             )
                         }
-                    }
+                    }, showMinutedSnackbarAction = { text, duration ->
+                        scope.launch {
+                            scaffoldState.snackbarHostState.showSnackbar(
+                                message = text,
+                                duration = duration,
+                            )
+                        }
+                    })
                 }
             },
         )
@@ -67,7 +74,8 @@ fun GamePage(navController: NavController? = null) {
 @Composable
 fun AdaptableLayoutGamePageContent(
     navController: NavController? = null,
-    showInfiniteSnackbarAction: (String) -> Unit
+    showInfiniteSnackbarAction: (String) -> Unit,
+    showMinutedSnackbarAction: (String, SnackbarDuration) -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -104,6 +112,14 @@ fun AdaptableLayoutGamePageContent(
 
     val noInstalledEngineText = stringResource(R.string.no_installed_engine_error)
 
+    val checkmateWhiteText = stringResource(R.string.chessmate_white)
+    val checkmateBlackText = stringResource(R.string.chessmate_black)
+    val stalemateText = stringResource(R.string.stalemate)
+    val threeFoldRepetitionText = stringResource(R.string.three_fold_repetition)
+    val fiftyMovesText = stringResource(R.string.fifty_moves_rule_draw)
+    val missingMaterialText = stringResource(R.string.missing_material_draw)
+    val userStoppedText = stringResource(R.string.user_stopped_game)
+
     fun abortGameIfNoEngineInstalled() {
         val enginesList = listInstalledEngines(context)
         val engineAvailable = enginesList.isNotEmpty()
@@ -121,17 +137,17 @@ fun AdaptableLayoutGamePageContent(
     }
 
     fun notifyUserGameFinished(gameEndStatus: GameEndedStatus) {
-        val messageId = when (gameEndStatus) {
-            GameEndedStatus.CHECKMATE_WHITE -> R.string.chessmate_white
-            GameEndedStatus.CHECKMATE_BLACK -> R.string.chessmate_black
-            GameEndedStatus.STALEMATE -> R.string.stalemate
-            GameEndedStatus.DRAW_THREE_FOLD_REPETITION -> R.string.three_fold_repetition
-            GameEndedStatus.DRAW_FIFTY_MOVES_RULE -> R.string.fifty_moves_rule_draw
-            GameEndedStatus.DRAW_MISSING_MATERIAL -> R.string.missing_material_draw
-            GameEndedStatus.USER_STOPPED -> R.string.user_stopped_game
+        val message = when (gameEndStatus) {
+            GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
+            GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
+            GameEndedStatus.STALEMATE -> stalemateText
+            GameEndedStatus.DRAW_THREE_FOLD_REPETITION -> threeFoldRepetitionText
+            GameEndedStatus.DRAW_FIFTY_MOVES_RULE -> fiftyMovesText
+            GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
+            GameEndedStatus.USER_STOPPED -> userStoppedText
             else -> throw IllegalStateException("The game is not finished yet.")
         }
-        Toast.makeText(context, messageId, Toast.LENGTH_LONG).show()
+        showMinutedSnackbarAction(message, SnackbarDuration.Long)
         gameInProgress = false
     }
 
