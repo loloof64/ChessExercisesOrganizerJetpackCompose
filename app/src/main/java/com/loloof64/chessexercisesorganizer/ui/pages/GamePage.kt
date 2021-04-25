@@ -9,11 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,24 +32,43 @@ import com.loloof64.chessexercisesorganizer.ui.components.GameEndedStatus
 import com.loloof64.chessexercisesorganizer.ui.components.PlayerType
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 @Composable
 fun GamePage(navController: NavController? = null) {
+
+    val scaffoldState = rememberScaffoldState()
+    val scope = rememberCoroutineScope()
+
+    val okString = stringResource(R.string.ok)
+
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
+            scaffoldState = scaffoldState,
             topBar = { TopAppBar(title = { Text(stringResource(R.string.game_page)) }) },
             content = {
                 Surface(color = MaterialTheme.colors.background) {
-                    AdaptableLayoutGamePageContent(navController)
+                    AdaptableLayoutGamePageContent(navController) { text ->
+                        scope.launch {
+                            scaffoldState.snackbarHostState.showSnackbar(
+                                message = text,
+                                actionLabel = okString,
+                                duration = SnackbarDuration.Indefinite
+                            )
+                        }
+                    }
                 }
-            }
+            },
         )
     }
 }
 
 @Composable
-fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
+fun AdaptableLayoutGamePageContent(
+    navController: NavController? = null,
+    showInfiniteSnackbarAction: (String) -> Unit
+) {
     val context = LocalContext.current
 
     val startPositionFen = STANDARD_FEN
@@ -60,12 +76,13 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
     }
+
     var boardReversed by rememberSaveable { mutableStateOf(false) }
 
     var stopRequest by rememberSaveable { mutableStateOf(false) }
 
-    var enginesConfigurationAvailable by rememberSaveable {
-        mutableStateOf(false)
+    var gameInProgress by rememberSaveable {
+        mutableStateOf(true)
     }
 
     var confirmStopDialogOpen by rememberSaveable {
@@ -74,7 +91,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
 
     fun stopGame() {
         stopRequest = true
-        enginesConfigurationAvailable = true
+        gameInProgress = false
     }
 
     fun randomGameId(): Long {
@@ -85,10 +102,22 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
         mutableStateOf(randomGameId())
     }
 
-    fun restartGame() {
-        enginesConfigurationAvailable = false
+    val noInstalledEngineText = stringResource(R.string.no_installed_engine_error)
+
+    fun abortGameIfNoEngineInstalled() {
+        val enginesList = listInstalledEngines(context)
+        val engineAvailable = enginesList.isNotEmpty()
+        if (!engineAvailable) {
+            stopGame()
+            showInfiniteSnackbarAction(noInstalledEngineText)
+        }
+    }
+
+    fun newGame() {
+        gameInProgress = true
         stopRequest = false
         gameId = randomGameId()
+        abortGameIfNoEngineInstalled()
     }
 
     fun notifyUserGameFinished(gameEndStatus: GameEndedStatus) {
@@ -103,7 +132,11 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
             else -> throw IllegalStateException("The game is not finished yet.")
         }
         Toast.makeText(context, messageId, Toast.LENGTH_LONG).show()
-        enginesConfigurationAvailable = true
+        gameInProgress = false
+    }
+
+    if (gameInProgress) {
+        abortGameIfNoEngineInstalled()
     }
 
     Layout(
@@ -112,13 +145,12 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 text = stringResource(R.string.new_game),
                 vectorId = R.drawable.ic_start_flag
             ) {
-                restartGame()
+                newGame()
             }
             SimpleButton(
                 text = stringResource(R.string.stop_game),
                 vectorId = R.drawable.ic_stop
             ) {
-                val gameInProgress = ! enginesConfigurationAvailable
                 if (gameInProgress) {
                     confirmStopDialogOpen = true
                 }
@@ -129,7 +161,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
             ) {
                 boardReversed = !boardReversed
             }
-            if (enginesConfigurationAvailable) {
+            if (!gameInProgress) {
                 SimpleButton(
                     navController = navController,
                     text = stringResource(R.string.chess_engines),
@@ -163,7 +195,7 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
         }
     ) { allMeasurable, constraints ->
         val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
-        val buttonsCount = if (enginesConfigurationAvailable) 4 else 3
+        val buttonsCount = if (!gameInProgress) 4 else 3
 
         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
             if (index == buttonsCount) measurable.measure(

@@ -45,4 +45,5 @@
     <string name="local_click_and_confirm">(Clic y confirmación: eliminar el motor de la carpeta de la aplicación)</string>
     <string name="confirm_stop_game_title">¿Detener el juego en curso?</string>
     <string name="confirm_stop_game_message">¿Estás seguro de que quieres salir del juego actual?</string>
+    <string name="no_installed_engine_error">No hay motor instalado localmente. Juego cancelado. Compruebe la configuración de los motores.</string>
 </resources>

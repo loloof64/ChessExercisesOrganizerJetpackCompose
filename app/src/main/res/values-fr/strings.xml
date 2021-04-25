@@ -45,4 +45,5 @@
     <string name="local_click_and_confirm">(Click et confirmation : effacer le moteur du dossier application)</string>
     <string name="confirm_stop_game_title">Arrêter la partie en cours ?</string>
     <string name="confirm_stop_game_message">Souhaitez-vous vraiment quitter la partie en cours ?</string>
+    <string name="no_installed_engine_error">Aucun moteur installé localement. Partie annulée. Veuillez vérifier la configuration des moteurs.</string>
 </resources>
