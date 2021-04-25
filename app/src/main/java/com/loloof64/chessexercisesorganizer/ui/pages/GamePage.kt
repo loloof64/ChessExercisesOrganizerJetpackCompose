@@ -68,6 +68,10 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
         mutableStateOf(false)
     }
 
+    var confirmStopDialogOpen by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     fun stopGame() {
         stopRequest = true
         enginesConfigurationAvailable = true
@@ -114,7 +118,10 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 text = stringResource(R.string.stop_game),
                 vectorId = R.drawable.ic_stop
             ) {
-                stopGame()
+                val gameInProgress = ! enginesConfigurationAvailable
+                if (gameInProgress) {
+                    confirmStopDialogOpen = true
+                }
             }
             SimpleButton(
                 text = stringResource(R.string.reverse_board),
@@ -142,6 +149,15 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 gameId = gameId,
                 userRequestStopGame = stopRequest,
                 naturalGameEndCallback = { notifyUserGameFinished(it) },
+            )
+
+            ConfirmStopGameDialog(
+                isOpen = confirmStopDialogOpen,
+                validateCallback = {
+                    confirmStopDialogOpen = false
+                    stopGame()
+                },
+                dismissCallback = { confirmStopDialogOpen = false }
             )
 
         }
@@ -208,6 +224,45 @@ fun AdaptableLayoutGamePageContent(navController: NavController? = null) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ConfirmStopGameDialog(
+    isOpen: Boolean,
+    validateCallback: () -> Unit,
+    dismissCallback: () -> Unit
+) {
+    if (isOpen) {
+        AlertDialog(onDismissRequest = { dismissCallback() },
+            title = {
+                Text(stringResource(R.string.confirm_stop_game_title))
+            },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.confirm_stop_game_message
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { validateCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { dismissCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
+                ) {
+                    Text(stringResource(R.string.Cancel))
+                }
+            }
+        )
+
     }
 }
 

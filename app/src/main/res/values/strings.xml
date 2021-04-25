@@ -42,4 +42,6 @@
     <string name="install_from_store_possibility">You can install an available engine by clicking on it, then confirming.</string>
     <string name="store_click_and_confirm">(Click and confirm : install engine in application folder)</string>
     <string name="local_click_and_confirm">(Click and confirm : delete engine from application folder)</string>
+    <string name="confirm_stop_game_title">Stop current game ?</string>
+    <string name="confirm_stop_game_message">Do you really want to quit current game ?</string>
 </resources>

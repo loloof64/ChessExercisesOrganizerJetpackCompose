@@ -43,4 +43,6 @@
     <string name="install_from_store_possibility">Puede instalar un motor disponible haciendo clic en él y luego confirmando.</string>
     <string name="store_click_and_confirm">(Haga clic y confirmación: instale el motor en la carpeta de la aplicación)</string>
     <string name="local_click_and_confirm">(Clic y confirmación: eliminar el motor de la carpeta de la aplicación)</string>
+    <string name="confirm_stop_game_title">¿Detener el juego en curso?</string>
+    <string name="confirm_stop_game_message">¿Estás seguro de que quieres salir del juego actual?</string>
 </resources>
