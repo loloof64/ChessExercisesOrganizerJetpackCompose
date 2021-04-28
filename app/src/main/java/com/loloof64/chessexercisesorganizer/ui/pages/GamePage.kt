@@ -158,6 +158,7 @@ fun AdaptableLayoutGamePageContent(
     }
 
     fun notifyUserGameFinished(gameEndStatus: GameEndedStatus) {
+        if (!gameInProgress) return
         val message = when (gameEndStatus) {
             GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
             GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
