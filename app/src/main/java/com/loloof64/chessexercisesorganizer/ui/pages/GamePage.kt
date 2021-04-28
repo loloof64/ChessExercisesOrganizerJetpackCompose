@@ -1,13 +1,13 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,6 +33,7 @@ import com.loloof64.chessexercisesorganizer.ui.components.PlayerType
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.random.Random
 
 @Composable
@@ -49,22 +50,25 @@ fun GamePage(navController: NavController? = null) {
             topBar = { TopAppBar(title = { Text(stringResource(R.string.game_page)) }) },
             content = {
                 Surface(color = MaterialTheme.colors.background) {
-                    AdaptableLayoutGamePageContent(navController, showInfiniteSnackbarAction = { text ->
-                        scope.launch {
-                            scaffoldState.snackbarHostState.showSnackbar(
-                                message = text,
-                                actionLabel = okString,
-                                duration = SnackbarDuration.Indefinite
-                            )
-                        }
-                    }, showMinutedSnackbarAction = { text, duration ->
-                        scope.launch {
-                            scaffoldState.snackbarHostState.showSnackbar(
-                                message = text,
-                                duration = duration,
-                            )
-                        }
-                    })
+                    AdaptableLayoutGamePageContent(
+                        navController,
+                        showInfiniteSnackbarAction = { text ->
+                            scope.launch {
+                                scaffoldState.snackbarHostState.showSnackbar(
+                                    message = text,
+                                    actionLabel = okString,
+                                    duration = SnackbarDuration.Indefinite
+                                )
+                            }
+                        },
+                        showMinutedSnackbarAction = { text, duration ->
+                            scope.launch {
+                                scaffoldState.snackbarHostState.showSnackbar(
+                                    message = text,
+                                    duration = duration,
+                                )
+                            }
+                        })
                 }
             },
         )
@@ -78,8 +82,9 @@ fun AdaptableLayoutGamePageContent(
     showMinutedSnackbarAction: (String, SnackbarDuration) -> Unit,
 ) {
     val context = LocalContext.current
+    val emptyFen = "8/8/8/8/8/8/8/8 w - - 0 1"
 
-    val startPositionFen = STANDARD_FEN
+    var startPositionFen by rememberSaveable { mutableStateOf(emptyFen)}
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -90,12 +95,18 @@ fun AdaptableLayoutGamePageContent(
     var stopRequest by rememberSaveable { mutableStateOf(false) }
 
     var gameInProgress by rememberSaveable {
-        mutableStateOf(true)
+        mutableStateOf(false)
     }
 
     var confirmStopDialogOpen by rememberSaveable {
         mutableStateOf(false)
     }
+
+    var selectEngineDialogOpen by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val coroutineScope = rememberCoroutineScope()
 
     fun stopGame() {
         stopRequest = true
@@ -110,6 +121,8 @@ fun AdaptableLayoutGamePageContent(
         mutableStateOf(randomGameId())
     }
 
+    val enginesFolder = File(context.filesDir, "engines")
+
     val noInstalledEngineText = stringResource(R.string.no_installed_engine_error)
 
     val checkmateWhiteText = stringResource(R.string.chessmate_white)
@@ -120,8 +133,11 @@ fun AdaptableLayoutGamePageContent(
     val missingMaterialText = stringResource(R.string.missing_material_draw)
     val userStoppedText = stringResource(R.string.user_stopped_game)
 
+    val errorLaunchingEngineText = stringResource(R.string.error_launching_engine)
+
+    val enginesList = listInstalledEngines(enginesFolder)
+
     fun abortGameIfNoEngineInstalled() {
-        val enginesList = listInstalledEngines(context)
         val engineAvailable = enginesList.isNotEmpty()
         if (!engineAvailable) {
             stopGame()
@@ -129,7 +145,12 @@ fun AdaptableLayoutGamePageContent(
         }
     }
 
-    fun newGame() {
+    fun onNewGameRequest() {
+        selectEngineDialogOpen = true
+    }
+
+    fun doStartNewGame() {
+        startPositionFen = STANDARD_FEN
         gameInProgress = true
         stopRequest = false
         gameId = randomGameId()
@@ -161,7 +182,7 @@ fun AdaptableLayoutGamePageContent(
                 text = stringResource(R.string.new_game),
                 vectorId = R.drawable.ic_start_flag
             ) {
-                newGame()
+                onNewGameRequest()
             }
             SimpleButton(
                 text = stringResource(R.string.stop_game),
@@ -207,6 +228,20 @@ fun AdaptableLayoutGamePageContent(
                 },
                 dismissCallback = { confirmStopDialogOpen = false }
             )
+
+            SelectEngineDialog(isOpen = selectEngineDialogOpen, enginesList = enginesList,
+                validateCallback = {
+                    coroutineScope.launch {
+                        println("Started engine")
+                        executeInstalledEngine(enginesFolder = enginesFolder, index = it, errorCallback = {
+                            showInfiniteSnackbarAction(errorLaunchingEngineText)
+                        })
+                    }
+                    selectEngineDialogOpen = false
+                    doStartNewGame()
+                }, dismissCallback = {
+                    selectEngineDialogOpen = false
+                })
 
         }
     ) { allMeasurable, constraints ->
@@ -300,6 +335,47 @@ fun ConfirmStopGameDialog(
                 ) {
                     Text(stringResource(R.string.ok))
                 }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { dismissCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
+                ) {
+                    Text(stringResource(R.string.Cancel))
+                }
+            }
+        )
+
+    }
+}
+
+@Composable
+fun SelectEngineDialog(
+    isOpen: Boolean,
+    enginesList: Array<String>,
+    validateCallback: (Int) -> Unit,
+    dismissCallback: () -> Unit
+) {
+    if (isOpen) {
+        AlertDialog(onDismissRequest = { dismissCallback() },
+            title = {
+                Text(stringResource(R.string.select_engine_title))
+            },
+            text = {
+                LazyColumn {
+                    enginesList.mapIndexed { index, caption ->
+                        item {
+                            Button(onClick = {
+                                validateCallback(index)
+                            }) {
+                                Text(text = caption)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+
             },
             dismissButton = {
                 Button(

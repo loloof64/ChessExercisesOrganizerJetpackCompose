@@ -3,7 +3,6 @@ package com.loloof64.chessexercisesorganizer.ui.components
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
@@ -242,8 +241,8 @@ fun DynamicChessBoard(
         mutableStateOf(startPosition.toBoard())
     }
 
-    fun isComputerTurn() = false/*(boardState.turn && whiteSideType == PlayerType.Computer)
-            || (!boardState.turn && blackSideType == PlayerType.Computer)*/
+    fun isComputerTurn() = (boardState.turn && whiteSideType == PlayerType.Computer)
+            || (!boardState.turn && blackSideType == PlayerType.Computer)
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
 

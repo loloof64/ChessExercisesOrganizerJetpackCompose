@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.R
+import java.io.File
 
 
 @Composable
@@ -25,7 +26,8 @@ fun EnginesPage(navController: NavController? = null) {
     val currentContext = LocalContext.current
     val storeEnginesState = getAvailableEngines(currentContext).collectAsState(listOf())
     val storeEngines by remember { storeEnginesState }
-    var installedEngines by remember { mutableStateOf(listInstalledEngines(currentContext)) }
+    val enginesFolder = File(currentContext.filesDir, "engines")
+    var installedEngines by remember { mutableStateOf(listInstalledEngines(enginesFolder)) }
 
     Scaffold(
         topBar = {
@@ -43,10 +45,10 @@ fun EnginesPage(navController: NavController? = null) {
         EnginesPageContent(storeEngines = storeEngines, installedEngines = installedEngines,
             installRequestCallback = {
                 installEngine(currentContext, it)
-                installedEngines = listInstalledEngines(currentContext)
+                installedEngines = listInstalledEngines(enginesFolder)
             }, deleteRequestCallback = {
-                deleteInstalledEngine(currentContext, it)
-                installedEngines = listInstalledEngines(currentContext)
+                deleteInstalledEngine(enginesFolder, it)
+                installedEngines = listInstalledEngines(enginesFolder)
             })
     }
 }

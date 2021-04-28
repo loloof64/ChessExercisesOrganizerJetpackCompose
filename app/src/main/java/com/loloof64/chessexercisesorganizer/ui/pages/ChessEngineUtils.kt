@@ -67,8 +67,7 @@ fun getAvailableEngines(context: Context): Flow<List<String>> = callbackFlow {
     }
 }
 
-fun listInstalledEngines(context: Context): Array<String> {
-    val enginesFolder = File(context.filesDir, "engines")
+fun listInstalledEngines(enginesFolder: File): Array<String> {
     enginesFolder.mkdir()
     val files = enginesFolder.listFiles()?.filter { it.isFile }?.toTypedArray() ?: arrayOf<File>()
     files.sortBy { it.name }
@@ -122,26 +121,24 @@ fun installEngine(context: Context, index: Int) {
     }
 }
 
-fun deleteInstalledEngine(context: Context, index: Int) {
+fun deleteInstalledEngine(enginesFolder: File, index: Int) {
     val anInstalledEngineIsRunning = currentRunner?.isRunning?.get() == true
     if (anInstalledEngineIsRunning) {
         throw IllegalStateException("Cannot delete an installed engine while an engine is running !")
     }
 
-    val parentFolder = File(context.filesDir, "engines")
-    parentFolder.mkdir()
-    val installedEngines = listInstalledEngines(context)
+    enginesFolder.mkdir()
+    val installedEngines = listInstalledEngines(enginesFolder)
     if (index < installedEngines.size) {
         val selectedFileName = "lib${installedEngines[index]}.so"
-        val selectedFile = File(parentFolder, selectedFileName)
+        val selectedFile = File(enginesFolder, selectedFileName)
         selectedFile.delete()
     } else {
         throw ArrayIndexOutOfBoundsException("Requested index : ${index}, size: ${installedEngines.size}")
     }
 }
 
-fun executeInstalledEngine(context: Context, index: Int, errorCallback: (Error) -> Unit) {
-    val enginesFolder = File(context.filesDir, "engines")
+fun executeInstalledEngine(enginesFolder: File, index: Int, errorCallback: (Error) -> Unit) {
     enginesFolder.mkdir()
     val files = enginesFolder.listFiles()?.filter { it.isFile }?.toTypedArray() ?: arrayOf<File>()
     files.sortBy { it.name }

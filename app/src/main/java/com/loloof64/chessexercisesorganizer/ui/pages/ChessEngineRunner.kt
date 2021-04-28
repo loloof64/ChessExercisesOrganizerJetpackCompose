@@ -19,78 +19,94 @@ class ChessEngineRunner(
 ) {
     private val mutex = Mutex()
     var isRunning = AtomicBoolean(false)
-    var isUCI = false
-    var startedOk = AtomicBoolean(false)
-    var mainJob: Job? = null
-    var process: Process? = null
-    var outputQueue = LinkedList<String>()
-    var processBufferedReader: BufferedReader? = null
-    var processOutputStream: OutputStream? = null
+    private var isUCI = false
+    private var startedOk = AtomicBoolean(false)
+    private var mainJob: Job? = null
+    private var process: Process? = null
+    private var outputQueue = LinkedList<String>()
+    private var processBufferedReader: BufferedReader? = null
+    private var processOutputStream: OutputStream? = null
+    private var globalJob: Job? = null
+    private var globalCoroutineScope: CoroutineScope? = null
 
-    fun run() = runBlocking {
-        outputQueue.clear()
-        // starter coroutine
-        coroutineScope {
-            launch {
-                delay(10000)
-                if (startedOk.get() && isRunning.get() && !isUCI) {
-                    errorCallback(EngineNotStarted)
-                }
-            }
+    private suspend fun checkEngineStarted() {
+        delay(10000)
+        if (!isUCI || !isRunning.get() || !startedOk.get()) {
+            errorCallback(EngineNotStarted)
         }
+    }
 
-        // running engine coroutine
-        mainJob = GlobalScope.launch {
-            try {
-                val engineAbsolutePath = engineFile.absolutePath
-                mutex.withLock {
-                    runCatching {
-                        process = ProcessBuilder(engineAbsolutePath).start()
+    fun run() {
+        isUCI = false
+        startedOk.set(false)
+        globalJob = Job()
+        globalCoroutineScope = CoroutineScope(Dispatchers.Default + globalJob as CompletableJob)
+        globalCoroutineScope!!.launch {
+            outputQueue.clear()
+            // starter coroutine
+            async { checkEngineStarted() }
+
+            // running engine coroutine
+            mainJob = launch MainJob@{
+                try {
+                    val engineAbsolutePath = engineFile.absolutePath
+                    mutex.withLock {
+                        runCatching {
+                            process = ProcessBuilder(engineAbsolutePath).start()
+                        }
+                        if (process == null) {
+                            errorCallback(CannotCommunicateWithEngine(""))
+                            return@MainJob
+                        }
                     }
-                    if (process == null) {
-                        errorCallback(CannotCommunicateWithEngine(""))
-                        return@launch
-                    }
-                }
-                while (isActive) {
+
                     val inputStream = process!!.inputStream
                     val inputSteamReader = InputStreamReader(inputStream)
                     processBufferedReader = BufferedReader(inputSteamReader, 8192)
                     processOutputStream = process!!.outputStream
 
-                    try {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            runCatching {
-                                var first = true
-                                var line: String?
-                                mutex.withLock {
-                                    line = processBufferedReader?.readLine()
-                                }
-                                while (line != null) {
-                                    outputQueue.add(line!!)
-                                    if (first) {
-                                        startedOk.set(true)
-                                        isRunning.set(true)
-                                        first = false
-                                    }
+                    sendCommand("uci")
+                    sendCommand("isready")
+
+                    var first = true
+                    CoroutineScope(Dispatchers.IO).launch {
+                        runCatching {
+                            while (isActive) {
+                                try {
+                                    var line: String? = null
                                     mutex.withLock {
-                                        line = processBufferedReader?.readLine()
+                                        if (processBufferedReader?.ready() == true) {
+                                            line = processBufferedReader?.readLine()
+                                        }
                                     }
+                                    if (line != null) {
+                                        if (line == "uciok") isUCI = true
+                                        if (line == "readyok") startedOk.set(true)
+                                        outputQueue.add(line!!)
+                                        if (first) {
+                                            isRunning.set(true)
+                                            first = false
+                                        }
+                                    }
+                                } catch (ignore: IOException) {
+                                } catch (ex: Exception) {
+                                    errorCallback(MiscError(ex.message ?: ""))
                                 }
                             }
                         }
-                    } catch (ignore: IOException) {
-                    } catch (ex: Exception) {
-                        errorCallback(MiscError(ex.message ?: ""))
                     }
-                }
-            } catch (ex: Exception) {
-                when (ex) {
-                    is SecurityException -> errorCallback(CannotStartEngine(ex.message ?: ""))
-                    is IOException -> errorCallback(CannotCommunicateWithEngine(ex.message ?: ""))
-                    else -> errorCallback(MiscError(ex.message ?: ""))
-                }
+                } catch (ex: Exception) {
+                    when (ex) {
+                        is SecurityException -> errorCallback(CannotStartEngine(ex.message ?: ""))
+                        is IOException -> errorCallback(
+                            CannotCommunicateWithEngine(
+                                ex.message ?: ""
+                            )
+                        )
+                        else -> errorCallback(MiscError(ex.message ?: ""))
+                    }
 
+                }
             }
         }
     }
@@ -132,5 +148,7 @@ class ChessEngineRunner(
         mainJob?.cancel()
         processBufferedReader?.close()
         processOutputStream?.close()
+        globalJob?.cancel()
+        globalCoroutineScope = null
     }
 }
