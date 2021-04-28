@@ -159,16 +159,20 @@ val BoardStateSaver = Saver<Board, String>(
     }
 )
 
-sealed class PromotionPiece(val baseFen: Char, val isWhiteTurn: Boolean) {
-    val fen = if (isWhiteTurn) baseFen.toUpperCase() else baseFen.toLowerCase()
-}
+sealed class PromotionPiece(val fen: Char)
 
-class PromotionQueen(isWhiteTurn: Boolean) :
-    PromotionPiece(baseFen = 'Q', isWhiteTurn = isWhiteTurn)
+class PromotionQueen : PromotionPiece('q')
+class PromotionRook : PromotionPiece('r')
+class PromotionBishop : PromotionPiece('b')
+class PromotionKnight : PromotionPiece('n')
 
-class PromotionRook(isWhiteTurn: Boolean) : PromotionPiece('R', isWhiteTurn = isWhiteTurn)
-class PromotionBishop(isWhiteTurn: Boolean) : PromotionPiece('B', isWhiteTurn = isWhiteTurn)
-class PromotionKnight(isWhiteTurn: Boolean) : PromotionPiece('N', isWhiteTurn = isWhiteTurn)
+data class ComputerMove(
+    val startFile: Int,
+    val startRank: Int,
+    val targetFile: Int,
+    val targetRank: Int,
+    val promotion: PromotionPiece?
+)
 
 fun Char.isWhitePiece(): Boolean {
     return when (this) {
@@ -241,8 +245,8 @@ fun DynamicChessBoard(
         mutableStateOf(startPosition.toBoard())
     }
 
-    fun isComputerTurn() = (boardState.turn && whiteSideType == PlayerType.Computer)
-            || (!boardState.turn && blackSideType == PlayerType.Computer)
+    fun isComputerTurn() = false /*(boardState.turn && whiteSideType == PlayerType.Computer)
+            || (!boardState.turn && blackSideType == PlayerType.Computer)*/
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
 
@@ -557,10 +561,10 @@ fun DynamicChessBoard(
             )
 
             when {
-                queenButtonTapped -> commitPromotion(piece = PromotionQueen(isWhiteTurn = boardState.turn))
-                rookButtonTapped -> commitPromotion(piece = PromotionRook(isWhiteTurn = boardState.turn))
-                bishopButtonTapped -> commitPromotion(piece = PromotionBishop(isWhiteTurn = boardState.turn))
-                knightButtonTapped -> commitPromotion(piece = PromotionKnight(isWhiteTurn = boardState.turn))
+                queenButtonTapped -> commitPromotion(piece = PromotionQueen())
+                rookButtonTapped -> commitPromotion(piece = PromotionRook())
+                bishopButtonTapped -> commitPromotion(piece = PromotionBishop())
+                knightButtonTapped -> commitPromotion(piece = PromotionKnight())
                 cancelButtonTapped -> cancelPendingPromotion()
             }
 
@@ -862,27 +866,30 @@ private fun DrawScope.drawPromotionValidationZone(
     val xBishop = xRook + itemsSize + spaceBetweenItems
     val xKnight = xBishop + itemsSize + spaceBetweenItems
     val xCancellation = xKnight + itemsSize + spaceBetweenItems
-    drawPromotionValidationItem(context, x, y, itemsSize, PromotionQueen(isWhiteTurn = isWhiteTurn))
+    drawPromotionValidationItem(context, x, y, itemsSize, PromotionQueen(), whiteTurn = isWhiteTurn)
     drawPromotionValidationItem(
         context,
         xRook,
         y,
         itemsSize,
-        PromotionRook(isWhiteTurn = isWhiteTurn)
+        PromotionRook(),
+        whiteTurn = isWhiteTurn
     )
     drawPromotionValidationItem(
         context,
         xBishop,
         y,
         itemsSize,
-        PromotionBishop(isWhiteTurn = isWhiteTurn)
+        PromotionBishop(),
+        whiteTurn = isWhiteTurn
     )
     drawPromotionValidationItem(
         context,
         xKnight,
         y,
         itemsSize,
-        PromotionKnight(isWhiteTurn = isWhiteTurn)
+        PromotionKnight(),
+        whiteTurn = isWhiteTurn
     )
     drawPromotionCancellationItem(
         context,
@@ -899,16 +906,21 @@ fun DrawScope.drawPromotionValidationItem(
     y: Float,
     size: Float,
     pieceValue: PromotionPiece,
+    whiteTurn: Boolean,
 ) {
     val ovalPaint = Paint().apply {
-        if (pieceValue.isWhiteTurn) setARGB(255, 0, 0, 0)
+        if (whiteTurn) setARGB(255, 0, 0, 0)
         else setARGB(255, 255, 255, 255)
         style = Paint.Style.FILL
     }
     val ovalX = x - size * 0.15f
     val ovalY = y - size * 0.15f
 
-    val imageRef = pieceValue.fen.getPieceImageID()
+    val pieceFen = if (whiteTurn) pieceValue.fen.toUpperCase() else pieceValue.fen.toLowerCase()
+    /////////////////////////////////////////////////////////////////
+    println("Piece Fen : $pieceFen")
+    ////////////////////////////////////////////////////////////////
+    val imageRef = pieceFen.getPieceImageID()
     val vectorDrawable =
         VectorDrawableCompat.create(context.resources, imageRef, null)
 
