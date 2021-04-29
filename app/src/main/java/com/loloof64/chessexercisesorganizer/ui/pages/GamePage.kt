@@ -3,6 +3,7 @@ package com.loloof64.chessexercisesorganizer.ui.pages
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -14,7 +15,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Red
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -124,6 +127,10 @@ fun AdaptableLayoutGamePageContent(
         mutableStateOf(ComputerMovePendingState.NO_NEW_CPU_MOVE)
     }
 
+    var computerThinking by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     var computerMoveString by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -182,8 +189,9 @@ fun AdaptableLayoutGamePageContent(
     }
 
     fun generateComputerMove(currentPosition: String) {
+        computerThinking = true
         sendCommandToRunningEngine("position fen $currentPosition")
-        sendCommandToRunningEngine("go movetime 1000")
+        sendCommandToRunningEngine("go depth 10")
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
             var moveLine: String? = null
@@ -246,8 +254,8 @@ fun AdaptableLayoutGamePageContent(
             DynamicChessBoard(
                 startPosition = startPositionFen,
                 reversed = boardReversed,
-                whiteSideType = PlayerType.Computer,
-                blackSideType = PlayerType.Human,
+                whiteSideType = PlayerType.Human,
+                blackSideType = PlayerType.Computer,
                 newGameRequestState = newGameRequestState,
                 newGameRequestProcessedCallback = { newGameRequestState = NewGameRequestState.NO_PENDING_REQUEST },
                 userRequestStopGame = stopRequest,
@@ -256,6 +264,7 @@ fun AdaptableLayoutGamePageContent(
                 newComputerMovePendingState = newComputerMovePendingState,
                 computerMoveString = computerMoveString,
                 computerMoveProcessedCallback = {
+                    computerThinking = false
                     newComputerMovePendingState = ComputerMovePendingState.NO_NEW_CPU_MOVE
                     readEngineOutputJob?.cancel()
                     readEngineOutputJob = null
@@ -286,6 +295,10 @@ fun AdaptableLayoutGamePageContent(
                 }, dismissCallback = {
                     selectEngineDialogOpen = false
                 })
+            
+            if (computerThinking) {
+                CircularProgressIndicator(modifier = Modifier.size(50.dp))
+            }
 
         }
     ) { allMeasurable, constraints ->
@@ -293,7 +306,10 @@ fun AdaptableLayoutGamePageContent(
         val buttonsCount = if (!gameInProgress) 4 else 3
 
         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
-            if (index == buttonsCount) measurable.measure(
+            val isBoard = index == buttonsCount
+            val isCircularProgressBar = index == allMeasurable.size - 1
+
+            if (isBoard || isCircularProgressBar) measurable.measure(
                 constraints.copy(
                     minWidth = boardSize,
                     minHeight = boardSize,
@@ -309,17 +325,29 @@ fun AdaptableLayoutGamePageContent(
                 if (constraints.maxWidth < constraints.maxHeight) constraints.maxWidth else constraints.maxHeight
             val buttonGap = minOfMaxSize * 0.01
 
+            var buttonsZoneEnd = buttonGap
             var accumulatedLocation = buttonGap
             var furtherLineButton = 0.0
             var crossLocation = buttonGap
 
+            fun placeStdComponent(placeable: Placeable, location: Int) {
+                if (isLandscape) {
+                    placeable.place(location, 0)
+                } else {
+                    placeable.place(0, location)
+                }
+            }
+
             allPlaceable.forEachIndexed { index, placeable ->
                 val isAButton = index < buttonsCount
+                val isBoard = index == buttonsCount
+                val isCircularProgressBar = index == allPlaceable.size - 1
                 if (isAButton) {
                     val buttonColumnIndex = index % 3
                     if (buttonColumnIndex == 0) {
                         crossLocation = buttonGap
                         accumulatedLocation += furtherLineButton + buttonGap
+                        buttonsZoneEnd = accumulatedLocation
                         furtherLineButton = 0.0
                     }
                     if (isLandscape) {
@@ -341,13 +369,22 @@ fun AdaptableLayoutGamePageContent(
                         placeable.place(x.toInt(), y.toInt())
                         crossLocation += placeable.width + buttonGap
                     }
-                } else {
+                }
+                else if (isBoard) {
                     accumulatedLocation += furtherLineButton + buttonGap
+                    buttonsZoneEnd = accumulatedLocation
+                    placeStdComponent(placeable, accumulatedLocation.toInt())
+                }
+                else if (isCircularProgressBar) {
                     if (isLandscape) {
-                        placeable.place(accumulatedLocation.toInt(), 0)
+                        placeable.place(buttonsZoneEnd.toInt(), 0)
                     } else {
-                        placeable.place(0, accumulatedLocation.toInt())
+                        placeable.place(0, buttonsZoneEnd.toInt())
                     }
+                }
+                else {
+                    accumulatedLocation += furtherLineButton + buttonGap
+                    placeStdComponent(placeable, accumulatedLocation.toInt())
                 }
             }
         }
