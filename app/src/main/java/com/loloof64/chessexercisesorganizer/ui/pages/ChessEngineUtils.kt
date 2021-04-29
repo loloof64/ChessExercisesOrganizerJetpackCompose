@@ -154,8 +154,8 @@ fun sendCommandToRunningEngine(command: String) {
     currentRunner?.sendCommand(command)
 }
 
-fun readCurrentEnginePendingOutputs(): Array<String> {
-    return currentRunner?.readPendingOutputs() ?: arrayOf()
+fun readNextEngineOutput() : String? {
+    return currentRunner?.readNextOutput()
 }
 
 fun stopCurrentRunningEngine() {

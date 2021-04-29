@@ -27,11 +27,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.navigate
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
-import com.loloof64.chessexercisesorganizer.ui.components.GameEndedStatus
-import com.loloof64.chessexercisesorganizer.ui.components.PlayerType
-import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
+import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.random.Random
@@ -84,7 +83,7 @@ fun AdaptableLayoutGamePageContent(
     val context = LocalContext.current
     val emptyFen = "8/8/8/8/8/8/8/8 w - - 0 1"
 
-    var startPositionFen by rememberSaveable { mutableStateOf(emptyFen)}
+    var startPositionFen by rememberSaveable { mutableStateOf(emptyFen) }
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -107,18 +106,31 @@ fun AdaptableLayoutGamePageContent(
     }
 
     val coroutineScope = rememberCoroutineScope()
+    var readEngineOutputJob by remember {
+        mutableStateOf<Job?>(null)
+    }
+
 
     fun stopGame() {
+        stopCurrentRunningEngine()
         stopRequest = true
         gameInProgress = false
     }
 
-    fun randomGameId(): Long {
+    fun randomId(): Long {
         return Random.nextLong()
     }
 
     var gameId by rememberSaveable {
-        mutableStateOf(randomGameId())
+        mutableStateOf(randomId())
+    }
+
+    var computerMoveId by rememberSaveable {
+        mutableStateOf(randomId())
+    }
+
+    var computerMoveString by rememberSaveable {
+        mutableStateOf<String?>(null)
     }
 
     val enginesFolder = File(context.filesDir, "engines")
@@ -153,8 +165,9 @@ fun AdaptableLayoutGamePageContent(
         startPositionFen = STANDARD_FEN
         gameInProgress = true
         stopRequest = false
-        gameId = randomGameId()
+        gameId = randomId()
         abortGameIfNoEngineInstalled()
+        sendCommandToRunningEngine("ucinewgame")
     }
 
     fun notifyUserGameFinished(gameEndStatus: GameEndedStatus) {
@@ -171,6 +184,30 @@ fun AdaptableLayoutGamePageContent(
         }
         showMinutedSnackbarAction(message, SnackbarDuration.Long)
         gameInProgress = false
+    }
+
+    fun generateComputerMove(currentPosition: String) {
+        sendCommandToRunningEngine("position fen $currentPosition")
+        sendCommandToRunningEngine("go movetime 1000")
+        readEngineOutputJob = coroutineScope.launch {
+            var mustExitLoop = false
+            var moveLine: String? = null
+
+            while (!mustExitLoop) {
+                val nextEngineLine = readNextEngineOutput()
+                if (nextEngineLine != null && nextEngineLine.startsWith("bestmove")) {
+                    moveLine = nextEngineLine
+                    mustExitLoop = true
+                }
+                delay(100)
+            }
+
+            val moveParts = moveLine!!.split(" ")
+            val move = moveParts[1]
+
+            computerMoveString = move
+            computerMoveId = randomId()
+        }
     }
 
     if (gameInProgress) {
@@ -214,11 +251,18 @@ fun AdaptableLayoutGamePageContent(
             DynamicChessBoard(
                 startPosition = startPositionFen,
                 reversed = boardReversed,
-                whiteSideType = PlayerType.Human,
-                blackSideType = PlayerType.Computer,
+                whiteSideType = PlayerType.Computer,
+                blackSideType = PlayerType.Human,
                 gameId = gameId,
                 userRequestStopGame = stopRequest,
                 naturalGameEndCallback = { notifyUserGameFinished(it) },
+                computerMoveRequestCallback = { generateComputerMove(it) },
+                computerMoveId = computerMoveId,
+                computerMoveString = computerMoveString,
+                computerMoveProcessedCallback = {
+                    readEngineOutputJob?.cancel()
+                    readEngineOutputJob = null
+                }
             )
 
             ConfirmStopGameDialog(
@@ -233,10 +277,12 @@ fun AdaptableLayoutGamePageContent(
             SelectEngineDialog(isOpen = selectEngineDialogOpen, enginesList = enginesList,
                 validateCallback = {
                     coroutineScope.launch {
-                        println("Started engine")
-                        executeInstalledEngine(enginesFolder = enginesFolder, index = it, errorCallback = {
-                            showInfiniteSnackbarAction(errorLaunchingEngineText)
-                        })
+                        executeInstalledEngine(
+                            enginesFolder = enginesFolder,
+                            index = it,
+                            errorCallback = {
+                                showInfiniteSnackbarAction(errorLaunchingEngineText)
+                            })
                     }
                     selectEngineDialogOpen = false
                     doStartNewGame()

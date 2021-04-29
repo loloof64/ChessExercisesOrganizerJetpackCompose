@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.withLock
 import java.io.*
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.NoSuchElementException
 
 sealed class Error
 object EngineNotStarted : Error()
@@ -40,7 +41,7 @@ class ChessEngineRunner(
         isUCI = false
         startedOk.set(false)
         globalJob = Job()
-        globalCoroutineScope = CoroutineScope(Dispatchers.Default + globalJob as CompletableJob)
+        globalCoroutineScope = CoroutineScope(Dispatchers.IO + globalJob as CompletableJob)
         globalCoroutineScope!!.launch {
             outputQueue.clear()
             // starter coroutine
@@ -114,11 +115,13 @@ class ChessEngineRunner(
     fun sendCommand(command: String) {
         val carriageReturnTerminatedCmd = "$command\n"
         try {
-            runBlocking {
-                mutex.withLock {
-                    if (process != null) {
-                        processOutputStream?.write(carriageReturnTerminatedCmd.toByteArray())
-                        processOutputStream?.flush()
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching {
+                    mutex.withLock {
+                        if (process != null) {
+                            processOutputStream?.write(carriageReturnTerminatedCmd.toByteArray())
+                            processOutputStream?.flush()
+                        }
                     }
                 }
             }
@@ -126,22 +129,13 @@ class ChessEngineRunner(
         }
     }
 
-    fun readPendingOutputs(): Array<String> {
-        val results = mutableListOf<String>()
-        try {
-            // Will exit from itself with an exception NoSuchElementException
-            while (true) {
-                runBlocking {
-                    mutex.withLock {
-                        val next = outputQueue.remove()
-                        results.add(next)
-                    }
-                }
-            }
+    fun readNextOutput(): String? {
+        return try {
+            val next = outputQueue.remove()
+            next
         } catch (ex: NoSuchElementException) {
-
+            null
         }
-        return results.toTypedArray()
     }
 
     fun stop() {

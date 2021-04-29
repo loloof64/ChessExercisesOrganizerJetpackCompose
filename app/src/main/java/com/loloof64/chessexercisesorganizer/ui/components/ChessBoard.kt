@@ -37,6 +37,7 @@ import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.lang.IllegalStateException
 import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -166,13 +167,19 @@ class PromotionRook : PromotionPiece('r')
 class PromotionBishop : PromotionPiece('b')
 class PromotionKnight : PromotionPiece('n')
 
-data class ComputerMove(
-    val startFile: Int,
-    val startRank: Int,
-    val targetFile: Int,
-    val targetRank: Int,
-    val promotion: PromotionPiece?
-)
+fun checkComputerMove(computerMove: String) {
+    val startFile = computerMove[0].toByte().toInt() - 'a'.toByte().toInt()
+    val startRank = computerMove[1].toByte().toInt() - '1'.toByte().toInt()
+    val targetFile = computerMove[2].toByte().toInt() - 'a'.toByte().toInt()
+    val targetRank = computerMove[3].toByte().toInt() - '1'.toByte().toInt()
+
+    val invalidComputerMove = startFile < 0 || startFile > 7
+            || startRank < 0 || startRank > 7
+            || targetFile < 0 || targetFile > 7
+            || targetRank < 0 || targetRank > 7
+
+    if (invalidComputerMove) throw IllegalArgumentException("Invalid computer move $computerMove")
+}
 
 fun Char.isWhitePiece(): Boolean {
     return when (this) {
@@ -229,6 +236,10 @@ fun DynamicChessBoard(
     reversed: Boolean = false,
     userRequestStopGame: Boolean = false,
     gameId: Long = 1L,
+    computerMoveId: Long = 1L,
+    computerMoveProcessedCallback: () -> Unit = {},
+    computerMoveRequestCallback: (String) -> Unit = { _ -> },
+    computerMoveString: String? = null,
     positionChangedCallback: (String) -> Unit = { _ -> },
     naturalGameEndCallback: (GameEndedStatus) -> Unit = { _ -> },
     whiteSideType: PlayerType = PlayerType.Human,
@@ -240,23 +251,25 @@ fun DynamicChessBoard(
         mutableStateOf(gameId)
     }
 
+    var previousComputerMoveId by rememberSaveable {
+        mutableStateOf(computerMoveId)
+    }
+
     val composableScope = rememberCoroutineScope()
     var boardState by rememberSaveable(stateSaver = BoardStateSaver) {
         mutableStateOf(startPosition.toBoard())
     }
 
-    fun isComputerTurn() = false /*(boardState.turn && whiteSideType == PlayerType.Computer)
-            || (!boardState.turn && blackSideType == PlayerType.Computer)*/
-
-    var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
-
     var gameEnded by rememberSaveable {
         mutableStateOf(GameEndedStatus.GOING_ON)
     }
 
-    var cellsSize by remember { mutableStateOf(0f) }
+    fun isComputerTurn() = (boardState.turn && whiteSideType == PlayerType.Computer)
+            || (!boardState.turn && blackSideType == PlayerType.Computer)
 
-    fun manageEndStatus(gameEndedCallback: (GameEndedStatus) -> Unit = {}) {
+    fun manageEndStatus(
+        gameEndedCallback: (GameEndedStatus) -> Unit = {},
+    ) {
         when {
             boardState.isMate -> {
                 gameEnded =
@@ -285,6 +298,41 @@ fun DynamicChessBoard(
             }
         }
     }
+
+    fun makeComputerMoveRequestIfAppropriate() {
+        if (gameEnded != GameEndedStatus.GOING_ON) return
+
+        if (!isComputerTurn()) return
+        computerMoveRequestCallback(boardState.fen)
+    }
+
+    fun tryCommitComputerMove() {
+        if (computerMoveString == null) return
+        try {
+            checkComputerMove(computerMoveString)
+        }
+        catch (ex: IllegalStateException) {
+            println(ex.localizedMessage)
+            computerMoveProcessedCallback()
+            return
+        }
+
+        val move = Move.getFromString(boardState, computerMoveString, true)
+        boardState.doMove(move, true, true)
+
+        computerMoveProcessedCallback()
+        positionChangedCallback(boardState.fen)
+
+        manageEndStatus(
+            gameEndedCallback = { naturalGameEndCallback(it) }
+        )
+
+        makeComputerMoveRequestIfAppropriate()
+    }
+
+    var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
+
+    var cellsSize by remember { mutableStateOf(0f) }
 
     fun cancelDragAndDrop() {
         val initialX = dndState.movedPieceX
@@ -429,7 +477,11 @@ fun DynamicChessBoard(
 
         positionChangedCallback(boardState.fen)
 
-        manageEndStatus(gameEndedCallback = { naturalGameEndCallback(it) })
+        manageEndStatus(
+            gameEndedCallback = { naturalGameEndCallback(it) },
+        )
+
+        makeComputerMoveRequestIfAppropriate()
     }
 
     fun dndValidatingCallback() {
@@ -462,7 +514,11 @@ fun DynamicChessBoard(
 
         dndState = DndData()
         positionChangedCallback(boardState.fen)
-        manageEndStatus(gameEndedCallback = { naturalGameEndCallback(it) })
+        manageEndStatus(
+            gameEndedCallback = { naturalGameEndCallback(it) },
+        )
+
+        makeComputerMoveRequestIfAppropriate()
     }
 
     fun cancelPendingPromotion() {
@@ -578,15 +634,24 @@ fun DynamicChessBoard(
         previousGameId = gameId
         gameEnded = GameEndedStatus.GOING_ON
     }
-    // Must also be launched before the next move.
-    else {
-        val notYetNotifiedOfEndOfGame = gameEnded == GameEndedStatus.GOING_ON
-        manageEndStatus {
-            if (notYetNotifiedOfEndOfGame) {
-                naturalGameEndCallback(gameEnded)
-            }
-        }
+
+    val newComputerMove = previousComputerMoveId != computerMoveId
+    if (newComputerMove) {
+        tryCommitComputerMove()
+        previousComputerMoveId = computerMoveId
     }
+
+    // Must also be launched before the first move just after reload.
+    manageEndStatus(
+        gameEndedCallback = {
+            val notYetNotifiedOfEndOfGame = it == GameEndedStatus.GOING_ON
+            if (notYetNotifiedOfEndOfGame) {
+                naturalGameEndCallback(it)
+            }
+        },
+    )
+
+    makeComputerMoveRequestIfAppropriate()
 
     val currentContext = LocalContext.current
 
@@ -917,9 +982,6 @@ fun DrawScope.drawPromotionValidationItem(
     val ovalY = y - size * 0.15f
 
     val pieceFen = if (whiteTurn) pieceValue.fen.toUpperCase() else pieceValue.fen.toLowerCase()
-    /////////////////////////////////////////////////////////////////
-    println("Piece Fen : $pieceFen")
-    ////////////////////////////////////////////////////////////////
     val imageRef = pieceFen.getPieceImageID()
     val vectorDrawable =
         VectorDrawableCompat.create(context.resources, imageRef, null)
