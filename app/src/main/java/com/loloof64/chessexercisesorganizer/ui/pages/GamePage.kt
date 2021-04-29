@@ -33,7 +33,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.random.Random
 
 @Composable
 fun GamePage(navController: NavController? = null) {
@@ -97,6 +96,10 @@ fun AdaptableLayoutGamePageContent(
         mutableStateOf(false)
     }
 
+    var newGameRequestState by rememberSaveable {
+        mutableStateOf(NewGameRequestState.NO_PENDING_REQUEST)
+    }
+
     var confirmStopDialogOpen by rememberSaveable {
         mutableStateOf(false)
     }
@@ -117,16 +120,8 @@ fun AdaptableLayoutGamePageContent(
         gameInProgress = false
     }
 
-    fun randomId(): Long {
-        return Random.nextLong()
-    }
-
-    var gameId by rememberSaveable {
-        mutableStateOf(randomId())
-    }
-
-    var computerMoveId by rememberSaveable {
-        mutableStateOf(randomId())
+    var newComputerMovePendingState by rememberSaveable {
+        mutableStateOf(ComputerMovePendingState.NO_NEW_CPU_MOVE)
     }
 
     var computerMoveString by rememberSaveable {
@@ -165,7 +160,7 @@ fun AdaptableLayoutGamePageContent(
         startPositionFen = STANDARD_FEN
         gameInProgress = true
         stopRequest = false
-        gameId = randomId()
+        newGameRequestState = NewGameRequestState.REQUEST_PENDING
         abortGameIfNoEngineInstalled()
         sendCommandToRunningEngine("ucinewgame")
     }
@@ -206,7 +201,7 @@ fun AdaptableLayoutGamePageContent(
             val move = moveParts[1]
 
             computerMoveString = move
-            computerMoveId = randomId()
+            newComputerMovePendingState = ComputerMovePendingState.NEW_CPU_MOVE_AVAILABLE
         }
     }
 
@@ -253,13 +248,15 @@ fun AdaptableLayoutGamePageContent(
                 reversed = boardReversed,
                 whiteSideType = PlayerType.Computer,
                 blackSideType = PlayerType.Human,
-                gameId = gameId,
+                newGameRequestState = newGameRequestState,
+                newGameRequestProcessedCallback = { newGameRequestState = NewGameRequestState.NO_PENDING_REQUEST },
                 userRequestStopGame = stopRequest,
                 naturalGameEndCallback = { notifyUserGameFinished(it) },
                 computerMoveRequestCallback = { generateComputerMove(it) },
-                computerMoveId = computerMoveId,
+                newComputerMovePendingState = newComputerMovePendingState,
                 computerMoveString = computerMoveString,
                 computerMoveProcessedCallback = {
+                    newComputerMovePendingState = ComputerMovePendingState.NO_NEW_CPU_MOVE
                     readEngineOutputJob?.cancel()
                     readEngineOutputJob = null
                 }

@@ -46,6 +46,16 @@ const val STANDARD_FEN = Board.FEN_START_POSITION
 
 const val NO_PIECE = '.'
 
+enum class NewGameRequestState {
+    REQUEST_PENDING,
+    NO_PENDING_REQUEST,
+}
+
+enum class ComputerMovePendingState {
+    NO_NEW_CPU_MOVE,
+    NEW_CPU_MOVE_AVAILABLE,
+}
+
 enum class GameEndedStatus {
     GOING_ON,
     USER_STOPPED,
@@ -233,10 +243,11 @@ enum class PlayerType {
 fun DynamicChessBoard(
     modifier: Modifier = Modifier,
     startPosition: String = STANDARD_FEN,
+    newGameRequestState: NewGameRequestState = NewGameRequestState.NO_PENDING_REQUEST,
+    newGameRequestProcessedCallback: () -> Unit = {},
     reversed: Boolean = false,
     userRequestStopGame: Boolean = false,
-    gameId: Long = 1L,
-    computerMoveId: Long = 1L,
+    newComputerMovePendingState: ComputerMovePendingState = ComputerMovePendingState.NO_NEW_CPU_MOVE,
     computerMoveProcessedCallback: () -> Unit = {},
     computerMoveRequestCallback: (String) -> Unit = { _ -> },
     computerMoveString: String? = null,
@@ -246,14 +257,6 @@ fun DynamicChessBoard(
     blackSideType: PlayerType = PlayerType.Human,
 ) {
     val context = LocalContext.current
-
-    var previousGameId by rememberSaveable {
-        mutableStateOf(gameId)
-    }
-
-    var previousComputerMoveId by rememberSaveable {
-        mutableStateOf(computerMoveId)
-    }
 
     val composableScope = rememberCoroutineScope()
     var boardState by rememberSaveable(stateSaver = BoardStateSaver) {
@@ -627,18 +630,17 @@ fun DynamicChessBoard(
         }
     }
 
-    val newGameRequest = previousGameId != gameId
+    val newGameRequest = newGameRequestState == NewGameRequestState.REQUEST_PENDING
     if (newGameRequest) {
         cancelPendingPromotion()
         boardState = startPosition.toBoard()
-        previousGameId = gameId
+        newGameRequestProcessedCallback()
         gameEnded = GameEndedStatus.GOING_ON
     }
 
-    val newComputerMove = previousComputerMoveId != computerMoveId
+    val newComputerMove = newComputerMovePendingState == ComputerMovePendingState.NEW_CPU_MOVE_AVAILABLE
     if (newComputerMove) {
         tryCommitComputerMove()
-        previousComputerMoveId = computerMoveId
     }
 
     // Must also be launched before the first move just after reload.
@@ -1086,54 +1088,4 @@ fun StaticChessBoardPreview() {
 @Composable
 fun StaticChessBoardReversedPreview() {
     StaticChessBoard(modifier = Modifier.size(300.dp), reversed = true)
-}
-
-@Preview
-@Composable
-fun RestartableAndStoppableDynamicChessBoardPreview() {
-    val startPosition = "8/8/7b/8/1k6/pp6/8/K7 b - - 0 1"
-
-    var currentPosition by rememberSaveable {
-        mutableStateOf(startPosition)
-    }
-
-    fun randomGameId(): Long {
-        return Random.nextLong()
-    }
-
-    var gameId by rememberSaveable {
-        mutableStateOf(randomGameId())
-    }
-    var stopRequest by rememberSaveable { mutableStateOf(false) }
-
-    fun stopGame() {
-        stopRequest = true
-    }
-
-    fun restartGame() {
-        stopRequest = false
-        gameId = randomGameId()
-        currentPosition = startPosition
-    }
-
-    Column {
-        Row {
-            Button(onClick = { stopGame() }) {
-                Text(text = "Stop")
-            }
-            Button(onClick = { restartGame() }) {
-                Text(text = "Restart")
-            }
-        }
-        Text(text = currentPosition)
-        DynamicChessBoard(
-            modifier = Modifier.size(300.dp),
-            userRequestStopGame = stopRequest,
-            startPosition = startPosition,
-            gameId = gameId,
-            positionChangedCallback = {
-                currentPosition = it
-            }
-        )
-    }
 }
