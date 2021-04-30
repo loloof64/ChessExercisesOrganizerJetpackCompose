@@ -29,10 +29,12 @@ class ChessEngineRunner(
     private var processOutputStream: OutputStream? = null
     private var globalJob: Job? = null
     private var globalCoroutineScope: CoroutineScope? = null
+    private var readingOutputLoopJob : Job? = null
 
     private suspend fun checkEngineStarted() {
         delay(10000)
         if (!isUCI || !isRunning.get() || !startedOk.get()) {
+            stop()
             errorCallback(EngineNotStarted)
         }
     }
@@ -70,7 +72,7 @@ class ChessEngineRunner(
                     sendCommand("isready")
 
                     var first = true
-                    CoroutineScope(Dispatchers.IO).launch {
+                    readingOutputLoopJob = CoroutineScope(Dispatchers.IO).launch {
                         runCatching {
                             while (isActive) {
                                 try {
@@ -139,10 +141,12 @@ class ChessEngineRunner(
     }
 
     fun stop() {
+        readingOutputLoopJob?.cancel()
         mainJob?.cancel()
         processBufferedReader?.close()
         processOutputStream?.close()
         globalJob?.cancel()
         globalCoroutineScope = null
+        isRunning.set(false)
     }
 }
