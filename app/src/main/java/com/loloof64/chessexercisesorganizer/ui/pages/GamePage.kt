@@ -102,7 +102,9 @@ fun AdaptableLayoutGamePageContent(
         }
     ) { allMeasurable, constraints ->
         val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
-        val buttonsCount = /*if (!gameInProgress) */4 /*else 3*/
+        val buttonsCount = /* TODO handle in upper stage
+        if (!gameInProgress) 4 else */
+            3
 
         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
             val isBoard = index == buttonsCount

@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.alonsoruibal.chess.Board
+import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -42,6 +43,35 @@ fun Char.isWhitePiece(): Boolean {
         else -> throw IllegalArgumentException("Not a valid piece : $this !")
     }
 }
+
+fun Int.asFileChar(): Char {
+    return when (this) {
+        0 -> 'a'
+        1 -> 'b'
+        2 -> 'c'
+        3 -> 'd'
+        4 -> 'e'
+        5 -> 'f'
+        6 -> 'g'
+        7 -> 'h'
+        else -> 'X'
+    }
+}
+
+fun Int.asRankChar(): Char {
+    return when (this) {
+        0 -> '1'
+        1 -> '2'
+        2 -> '3'
+        3 -> '4'
+        4 -> '5'
+        5 -> '6'
+        6 -> '7'
+        7 -> '8'
+        else -> 'X'
+    }
+}
+
 
 fun Char.getPieceImageID(): Int {
     return when (this) {
@@ -67,6 +97,39 @@ fun String.toBoard(): Board {
         fen = position
     }
 }
+
+fun serializeBoard(board: Board): String {
+    val positionPart = board.fen
+    val keyHistoryPart = board.keyHistory.joinToString(separator = "@") {
+        "${it[0]};${it[1]}"
+    }
+    val keyPart = "${board.key[0]};${board.key[1]}"
+    return "$positionPart|$keyHistoryPart|$keyPart"
+}
+
+fun deserializeBoard(input: String): Board {
+    val parts = input.split("|")
+    val fen = parts[0]
+    val keyHistory = parts[1].split('@').map { entryPairString ->
+        val entryPair = entryPairString.split(';')
+        val whitePart = entryPair[0].toLong()
+        val blackPart = entryPair[1].toLong()
+        arrayOf(whitePart, blackPart).toLongArray()
+    }.toTypedArray()
+    val keyParts = parts[2].split(';')
+    val key = arrayOf(keyParts[0].toLong(), keyParts[1].toLong()).toLongArray()
+    return fen.toBoard().apply {
+        this.keyHistory = keyHistory
+        this.key = key
+    }
+}
+
+val BoardStateSaver = Saver<Board, String>(
+    save = { state -> serializeBoard(state) },
+    restore = { value ->
+        deserializeBoard(value)
+    }
+)
 
 data class DndData(
     val pieceValue: Char = NO_PIECE,
@@ -116,10 +179,14 @@ fun DynamicChessBoard(
     modifier: Modifier = Modifier,
     position: String = STANDARD_FEN,
     reversed: Boolean = false,
+    positionChangedCallback : (String) -> Unit = { _ -> },
 ) {
     val composableScope = rememberCoroutineScope()
 
-    val boardLogic = position.toBoard()
+    val boardState by rememberSaveable(stateSaver = BoardStateSaver) {
+        mutableStateOf(position.toBoard())
+    }
+
     val currentContext = LocalContext.current
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) {
@@ -129,7 +196,7 @@ fun DynamicChessBoard(
     var cellsSize by remember { mutableStateOf(0f) }
 
     fun processDragAndDropStart(file: Int, rank: Int, piece: Char) {
-        val whiteTurn = boardLogic.turn
+        val whiteTurn = boardState.turn
         val isPieceOfSideToMove =
             (piece.isWhitePiece() && whiteTurn) ||
                     (!piece.isWhitePiece() && !whiteTurn)
@@ -208,6 +275,43 @@ fun DynamicChessBoard(
         }
     }
 
+    fun isValidDndMove(): Boolean {
+        if (dndState.pieceValue == NO_PIECE) return false
+        if (dndState.startFile < 0 || dndState.startFile > 7) return false
+        if (dndState.startRank < 0 || dndState.startRank > 7) return false
+        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
+        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
+
+        val promotionChar = /* TODO handle in upper stage
+        if (dndMoveIsPromotion()) "Q" else */ ""
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
+        val move = Move.getFromString(boardState, moveString, true)
+        val boardCopy = Board()
+        boardCopy.fen = boardState.fen
+        return boardCopy.doMove(move, true, false)
+    }
+
+    fun commitDndMove() {
+        if (!isValidDndMove()) return
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}"
+        val move = Move.getFromString(boardState, moveString, true)
+        boardState.doMove(move, true, true)
+
+        positionChangedCallback(boardState.fen)
+
+        /* TODO handle in upper stage
+        manageEndStatus(
+            gameEndedCallback = { naturalGameEndCallback(it) },
+        )
+
+        makeComputerMoveRequestIfAppropriate()
+        */
+    }
+
 
     fun handleDragStart(offset: Offset) {
         val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
@@ -218,7 +322,7 @@ fun DynamicChessBoard(
             val file = if (reversed) 7 - col else col
             val rank = if (reversed) row else 7 - row
             val square = getSquareFromCellCoordinates(file, rank)
-            val piece = boardLogic.getPieceAt(square)
+            val piece = boardState.getPieceAt(square)
 
             if (piece != NO_PIECE) {
                 processDragAndDropStart(file, rank, piece)
@@ -252,6 +356,15 @@ fun DynamicChessBoard(
         cancelDragAndDropAnimation()
     }
 
+    fun handleDndValidation() {
+        if (isValidDndMove()) {
+            commitDndMove()
+            dndState = DndData()
+        } else {
+            cancelDragAndDropAnimation()
+        }
+    }
+
     Canvas(
         modifier = modifier
             .background(Color(214, 59, 96))
@@ -262,7 +375,7 @@ fun DynamicChessBoard(
                         handleDragMove(change, dragAmount)
                     },
                     onDragCancel = { handleDndCancel() },
-                    onDragEnd = { handleDndCancel() },
+                    onDragEnd = { handleDndValidation() },
                 )
             }
     ) {
@@ -271,11 +384,11 @@ fun DynamicChessBoard(
         drawCells(cellsSize = cellsSize, reversed = reversed, dndData = dndState)
         drawFilesCoordinates(cellsSize, reversed)
         drawRanksCoordinates(cellsSize, reversed)
-        drawPlayerTurn(cellsSize, boardLogic)
+        drawPlayerTurn(cellsSize, boardState)
         drawPieces(
             context = currentContext,
             cellsSize = cellsSize,
-            position = boardLogic,
+            position = boardState,
             reversed = reversed,
             dndData = dndState,
         )
@@ -291,7 +404,7 @@ fun DynamicChessBoard(
                 pieceValue = dndState.pieceValue,
                 x = x,
                 y = y,
-                positionFen = boardLogic.fen,
+                positionFen = boardState.fen,
             )
         }
 
