@@ -62,6 +62,10 @@ fun DynamicChessBoard(
         mutableStateOf(DndData())
     }
 
+    var promotionState by rememberSaveable(stateSaver = PendingPromotionStateSaver) {
+        mutableStateOf(PendingPromotionData())
+    }
+
     var cellsSize by remember { mutableStateOf(0f) }
 
     fun commitPromotion(piece: PromotionPiece) {
@@ -72,6 +76,7 @@ fun DynamicChessBoard(
         val move = Move.getFromString(boardState, moveString, true)
         boardState.doMove(move, true, true)
 
+        promotionState = PendingPromotionData()
         dndState = DndData()
         positionChangedCallback(boardState.fen)
         /* TODO handle at upper stage
@@ -142,9 +147,9 @@ fun DynamicChessBoard(
 
 
     fun handleTap(offset: Offset) {
-        if (dndState.pendingPromotion) {
+        if (promotionState.pendingPromotion) {
             val promotionInBottomPart =
-                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
+                (reversed && !promotionState.pendingPromotionForBlack) || (!reversed && promotionState.pendingPromotionForBlack)
             val minBoardSize = cellsSize * 9
             val buttonsY = minBoardSize * (if (promotionInBottomPart) 0.06f else 0.85f)
             val buttonsHalfSizeRatio = 0.575f
@@ -206,6 +211,7 @@ fun DynamicChessBoard(
                 bishopButtonTapped -> commitPromotion(piece = PromotionBishop())
                 knightButtonTapped -> commitPromotion(piece = PromotionKnight())
                 cancelButtonTapped -> {
+                    promotionState = PendingPromotionData()
                     dndState = dndState.copy(
                         targetFile = Int.MIN_VALUE,
                         targetRank = Int.MIN_VALUE,
@@ -218,7 +224,7 @@ fun DynamicChessBoard(
     }
 
     fun processDragAndDropStart(file: Int, rank: Int, piece: Char) {
-        if (dndState.pendingPromotion) return
+        if (promotionState.pendingPromotion) return
         val whiteTurn = boardState.turn
         val isPieceOfSideToMove =
             (piece.isWhitePiece() && whiteTurn) ||
@@ -285,7 +291,7 @@ fun DynamicChessBoard(
 
 
     fun handleDragStart(offset: Offset) {
-        if (dndState.pendingPromotion) return
+        if (promotionState.pendingPromotion) return
         val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
         val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
 
@@ -305,7 +311,7 @@ fun DynamicChessBoard(
     fun handleDragMove(change: PointerInputChange, dragAmount: Offset) {
         change.consumeAllChanges()
 
-        if (dndState.pendingPromotion) return
+        if (promotionState.pendingPromotion) return
 
         if (dndState.pieceValue != NO_PIECE) {
             val boardMinSize = cellsSize * 9f
@@ -327,22 +333,22 @@ fun DynamicChessBoard(
     }
 
     fun handleDndCancel() {
-        if (dndState.pendingPromotion) return
+        if (promotionState.pendingPromotion) return
         cancelDragAndDropAnimation()
     }
 
     fun handleDndValidation() {
-        if (dndState.pendingPromotion) return
+        if (promotionState.pendingPromotion) return
         if (isValidDndMove()) {
-            dndState = if (dndMoveIsPromotion()) {
-                dndState.copy(
+            if (dndMoveIsPromotion()) {
+                promotionState = promotionState.copy(
                     pendingPromotion = true,
                     pendingPromotionForBlack = !boardState.turn,
-                    pendingPromotionStartedInReversedMode = reversed
+                    pendingPromotionStartedInReversedMode = reversed,
                 )
             } else {
                 commitDndMove()
-                DndData()
+                dndState = DndData()
             }
         } else {
             cancelDragAndDropAnimation()
@@ -364,7 +370,7 @@ fun DynamicChessBoard(
             }
             .pointerInput(reversed) {
                 detectTapGestures(
-                    onTap = {handleTap(it)}
+                    onTap = { handleTap(it) }
                 )
             }
     ) {
@@ -387,9 +393,9 @@ fun DynamicChessBoard(
             var x = boardMinSize * dndState.movedPieceXRatio
             var y = boardMinSize * dndState.movedPieceYRatio
 
-            if (dndState.pendingPromotion) {
+            if (promotionState.pendingPromotion) {
                 val notInitialReversedMode =
-                    reversed != dndState.pendingPromotionStartedInReversedMode
+                    reversed != promotionState.pendingPromotionStartedInReversedMode
 
                 if (notInitialReversedMode) {
                     x = boardMinSize - cellsSize - x
@@ -407,9 +413,9 @@ fun DynamicChessBoard(
             )
         }
 
-        if (dndState.pendingPromotion) {
+        if (promotionState.pendingPromotion) {
             val promotionInBottomPart =
-                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
+                (reversed && !promotionState.pendingPromotionForBlack) || (!reversed && promotionState.pendingPromotionForBlack)
             val itemsZoneX = minSize * 0.18f
             val itemsZoneY = minSize * (if (promotionInBottomPart) 0.06f else 0.85f)
             val itemsSize = cellsSize * 1.15f
@@ -554,6 +560,38 @@ private val BoardStateSaver = Saver<Board, String>(
     }
 )
 
+private data class PendingPromotionData(
+    val pendingPromotion: Boolean = false,
+    val pendingPromotionForBlack: Boolean = false,
+    val pendingPromotionStartedInReversedMode: Boolean = false,
+) {
+    override fun toString(): String = "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
+
+    companion object {
+        fun parse(valueStr: String): PendingPromotionData {
+            return try {
+                val parts = valueStr.split("|")
+                PendingPromotionData(
+                    pendingPromotion = parts[0].toBoolean(),
+                    pendingPromotionForBlack = parts[1].toBoolean(),
+                    pendingPromotionStartedInReversedMode = parts[2].toBoolean(),
+                )
+            } catch (ex: NumberFormatException) {
+                PendingPromotionData()
+            } catch (ex: ArrayIndexOutOfBoundsException) {
+                PendingPromotionData()
+            }
+        }
+    }
+}
+private val PendingPromotionStateSaver = Saver<PendingPromotionData, String>(
+    save = { state -> state.toString() },
+    restore = { value ->
+        PendingPromotionData.parse(value)
+    }
+)
+
+
 private data class DndData(
     val pieceValue: Char = NO_PIECE,
     val startFile: Int = Int.MIN_VALUE,
@@ -562,13 +600,9 @@ private data class DndData(
     val targetRank: Int = Int.MIN_VALUE,
     val movedPieceXRatio: Float = Float.MIN_VALUE,
     val movedPieceYRatio: Float = Float.MAX_VALUE,
-    val pendingPromotion: Boolean = false,
-    val pendingPromotionForBlack: Boolean = false,
-    val pendingPromotionStartedInReversedMode: Boolean = false,
 ) {
     override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
-            "$movedPieceXRatio|$movedPieceYRatio|" +
-            "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
+            "$movedPieceXRatio|$movedPieceYRatio"
 
     companion object {
         fun parse(valueStr: String): DndData {
@@ -582,9 +616,6 @@ private data class DndData(
                     targetRank = parts[4].toInt(),
                     movedPieceXRatio = parts[5].toFloat(),
                     movedPieceYRatio = parts[6].toFloat(),
-                    pendingPromotion = parts[7].toBoolean(),
-                    pendingPromotionForBlack = parts[8].toBoolean(),
-                    pendingPromotionStartedInReversedMode = parts[9].toBoolean(),
                 )
             } catch (ex: NumberFormatException) {
                 return DndData()
