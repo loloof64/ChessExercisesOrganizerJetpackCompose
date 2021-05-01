@@ -96,6 +96,37 @@ val PositionHandlerSaver = Saver<PositionHandler, String>(
     restore = { PositionHandler.deserialize(it) }
 )
 
+data class PendingPromotionData(
+    val pendingPromotion: Boolean = false,
+    val pendingPromotionForBlack: Boolean = false,
+    val pendingPromotionStartedInReversedMode: Boolean = false,
+) {
+    override fun toString(): String =
+        "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
+
+    companion object {
+        fun parse(valueStr: String): PendingPromotionData {
+            return try {
+                val parts = valueStr.split("|")
+                PendingPromotionData(
+                    pendingPromotion = parts[0].toBoolean(),
+                    pendingPromotionForBlack = parts[1].toBoolean(),
+                    pendingPromotionStartedInReversedMode = parts[2].toBoolean(),
+                )
+            } catch (ex: NumberFormatException) {
+                PendingPromotionData()
+            } catch (ex: ArrayIndexOutOfBoundsException) {
+                PendingPromotionData()
+            }
+        }
+    }
+}
+
+val PendingPromotionStateSaver = Saver<PendingPromotionData, String>(
+    save = { it.toString() },
+    restore = { PendingPromotionData.parse(it) }
+)
+
 sealed class PromotionPiece(val fen: Char)
 
 class PromotionQueen : PromotionPiece('q')
@@ -108,8 +139,11 @@ fun DynamicChessBoard(
     modifier: Modifier = Modifier,
     reversed: Boolean = false,
     position: String = PositionHandler().getCurrentPosition(),
+    promotionState: PendingPromotionData = PendingPromotionData(),
     validMoveCallback: (String) -> Boolean = { _ -> false },
     dndMoveCallback: (String) -> Unit = { _ -> },
+    setPendingPromotionCallback: () -> Unit = { },
+    cancelPendingPromotionCallback: () -> Unit = { },
     promotionMoveCallback: (String) -> Unit = { _ -> },
     gameInProgress: Boolean = false,
 ) {
@@ -119,10 +153,6 @@ fun DynamicChessBoard(
 
     var dndState by rememberSaveable(stateSaver = DndDataStateSaver) {
         mutableStateOf(DndData())
-    }
-
-    var promotionState by rememberSaveable(stateSaver = PendingPromotionStateSaver) {
-        mutableStateOf(PendingPromotionData())
     }
 
     var cellsSize by remember { mutableStateOf(0f) }
@@ -135,7 +165,6 @@ fun DynamicChessBoard(
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
                     "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionFen"
         promotionMoveCallback(moveString)
-        promotionState = PendingPromotionData()
         dndState = DndData()
     }
 
@@ -266,7 +295,7 @@ fun DynamicChessBoard(
                 bishopButtonTapped -> commitPromotion(piece = PromotionBishop())
                 knightButtonTapped -> commitPromotion(piece = PromotionKnight())
                 cancelButtonTapped -> {
-                    promotionState = PendingPromotionData()
+                    cancelPendingPromotionCallback()
                     dndState = dndState.copy(
                         targetFile = Int.MIN_VALUE,
                         targetRank = Int.MIN_VALUE,
@@ -395,11 +424,7 @@ fun DynamicChessBoard(
 
         if (isValidDndMove()) {
             if (dndMoveIsPromotion()) {
-                promotionState = promotionState.copy(
-                    pendingPromotion = true,
-                    pendingPromotionForBlack = !position.toBoard().turn,
-                    pendingPromotionStartedInReversedMode = reversed,
-                )
+                setPendingPromotionCallback()
             } else {
                 commitDndMove()
             }
@@ -411,7 +436,7 @@ fun DynamicChessBoard(
     Canvas(
         modifier = modifier
             .background(Color(214, 59, 96))
-            .pointerInput(reversed, gameInProgress, position) {
+            .pointerInput(reversed, gameInProgress, position, promotionState) {
                 detectDragGestures(
                     onDragStart = { handleDragStart(it) },
                     onDrag = { change, dragAmount ->
@@ -421,7 +446,7 @@ fun DynamicChessBoard(
                     onDragEnd = { handleDndValidation() },
                 )
             }
-            .pointerInput(reversed, gameInProgress, position) {
+            .pointerInput(reversed, gameInProgress, position, promotionState) {
                 detectTapGestures(
                     onTap = { handleTap(it) }
                 )
@@ -598,37 +623,6 @@ private fun deserializeBoard(input: String): Board {
         this.key = key
     }
 }
-
-private data class PendingPromotionData(
-    val pendingPromotion: Boolean = false,
-    val pendingPromotionForBlack: Boolean = false,
-    val pendingPromotionStartedInReversedMode: Boolean = false,
-) {
-    override fun toString(): String =
-        "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
-
-    companion object {
-        fun parse(valueStr: String): PendingPromotionData {
-            return try {
-                val parts = valueStr.split("|")
-                PendingPromotionData(
-                    pendingPromotion = parts[0].toBoolean(),
-                    pendingPromotionForBlack = parts[1].toBoolean(),
-                    pendingPromotionStartedInReversedMode = parts[2].toBoolean(),
-                )
-            } catch (ex: NumberFormatException) {
-                PendingPromotionData()
-            } catch (ex: ArrayIndexOutOfBoundsException) {
-                PendingPromotionData()
-            }
-        }
-    }
-}
-
-private val PendingPromotionStateSaver = Saver<PendingPromotionData, String>(
-    save = { it.toString() },
-    restore = { PendingPromotionData.parse(it) }
-)
 
 
 private data class DndData(

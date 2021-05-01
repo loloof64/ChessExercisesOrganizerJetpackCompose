@@ -67,6 +67,10 @@ fun AdaptableLayoutGamePageContent(
         mutableStateOf(positionHandlerInstance.getCurrentPosition())
     }
 
+    var promotionState by rememberSaveable(stateSaver = PendingPromotionStateSaver) {
+        mutableStateOf(PendingPromotionData())
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -76,6 +80,7 @@ fun AdaptableLayoutGamePageContent(
     var gameInProgress by rememberSaveable { mutableStateOf(false) }
 
     fun startNewGame() {
+        promotionState = PendingPromotionData()
         positionHandlerInstance.newGame()
         currentPosition = positionHandlerInstance.getCurrentPosition()
         gameInProgress = true
@@ -116,6 +121,7 @@ fun AdaptableLayoutGamePageContent(
                 reversed = boardReversed,
                 gameInProgress = gameInProgress,
                 position = currentPosition,
+                promotionState = promotionState,
                 validMoveCallback = {
                     positionHandlerInstance.isValidMove(it)
                 },
@@ -125,7 +131,18 @@ fun AdaptableLayoutGamePageContent(
                 },
                 promotionMoveCallback = {
                     positionHandlerInstance.makeMove(it)
+                    promotionState = PendingPromotionData()
                     currentPosition = positionHandlerInstance.getCurrentPosition()
+                },
+                cancelPendingPromotionCallback = {
+                    promotionState = PendingPromotionData()
+                },
+                setPendingPromotionCallback = {
+                    promotionState = promotionState.copy(
+                        pendingPromotion = true,
+                        pendingPromotionStartedInReversedMode = boardReversed,
+                        pendingPromotionForBlack = !(currentPosition.toBoard().turn)
+                    )
                 }
             )
 
