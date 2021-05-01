@@ -3,21 +3,10 @@ package com.loloof64.chessexercisesorganizer.ui.components
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Button
-import androidx.compose.material.Text
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -25,47 +14,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.input.pointer.consumeAllChanges
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.alonsoruibal.chess.Board
-import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import java.lang.IllegalStateException
-import kotlin.math.floor
-import kotlin.math.sqrt
-import kotlin.random.Random
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
 
 const val NO_PIECE = '.'
-
-enum class NewGameRequestState {
-    REQUEST_PENDING,
-    NO_PENDING_REQUEST,
-}
-
-enum class ComputerMovePendingState {
-    NO_NEW_CPU_MOVE,
-    NEW_CPU_MOVE_AVAILABLE,
-}
-
-enum class GameEndedStatus {
-    GOING_ON,
-    USER_STOPPED,
-    CHECKMATE_WHITE,
-    CHECKMATE_BLACK,
-    STALEMATE,
-    DRAW_THREE_FOLD_REPETITION,
-    DRAW_FIFTY_MOVES_RULE,
-    DRAW_MISSING_MATERIAL,
-}
 
 fun Char.getPieceImageID(): Int {
     return when (this) {
@@ -85,148 +43,6 @@ fun Char.getPieceImageID(): Int {
     }
 }
 
-data class DndData(
-    val pieceValue: Char = NO_PIECE,
-    val startFile: Int = Int.MIN_VALUE,
-    val startRank: Int = Int.MIN_VALUE,
-    val targetFile: Int = Int.MIN_VALUE,
-    val targetRank: Int = Int.MIN_VALUE,
-    val movedPieceX: Float = Float.MIN_VALUE,
-    val movedPieceY: Float = Float.MIN_VALUE,
-    val pendingPromotion: Boolean = false,
-    val pendingPromotionForBlack: Boolean = false,
-    val pendingPromotionStartedInReversedMode: Boolean = false,
-    val movedPieceXRatio: Float = Float.MIN_VALUE,
-    val movedPieceYRatio: Float = Float.MAX_VALUE,
-) {
-    override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
-            "$movedPieceX|$movedPieceY|$pendingPromotion|$pendingPromotionForBlack|" +
-            "$pendingPromotionStartedInReversedMode|$movedPieceXRatio|$movedPieceYRatio"
-
-    companion object {
-        fun parse(valueStr: String): DndData {
-            try {
-                val parts = valueStr.split("|")
-                return DndData(
-                    pieceValue = parts[0][0],
-                    startFile = parts[1].toInt(),
-                    startRank = parts[2].toInt(),
-                    targetFile = parts[3].toInt(),
-                    targetRank = parts[4].toInt(),
-                    movedPieceX = parts[5].toFloat(),
-                    movedPieceY = parts[6].toFloat(),
-                    pendingPromotion = parts[7].toBoolean(),
-                    pendingPromotionForBlack = parts[8].toBoolean(),
-                    pendingPromotionStartedInReversedMode = parts[9].toBoolean(),
-                    movedPieceXRatio = parts[10].toFloat(),
-                    movedPieceYRatio = parts[11].toFloat(),
-                )
-            } catch (ex: NumberFormatException) {
-                return DndData()
-            } catch (ex: ArrayIndexOutOfBoundsException) {
-                return DndData()
-            }
-        }
-    }
-}
-
-val DndDataStateSaver = Saver<DndData, String>(
-    save = { state -> state.toString() },
-    restore = { value ->
-        DndData.parse(value)
-    }
-)
-
-fun serializeBoard(board: Board): String {
-    val positionPart = board.fen
-    val keyHistoryPart = board.keyHistory.joinToString(separator = "@") {
-        "${it[0]};${it[1]}"
-    }
-    val keyPart = "${board.key[0]};${board.key[1]}"
-    return "$positionPart|$keyHistoryPart|$keyPart"
-}
-
-fun deserializeBoard(input: String): Board {
-    val parts = input.split("|")
-    val fen = parts[0]
-    val keyHistory = parts[1].split('@').map { entryPairString ->
-        val entryPair = entryPairString.split(';')
-        val whitePart = entryPair[0].toLong()
-        val blackPart = entryPair[1].toLong()
-        arrayOf(whitePart, blackPart).toLongArray()
-    }.toTypedArray()
-    val keyParts = parts[2].split(';')
-    val key = arrayOf(keyParts[0].toLong(), keyParts[1].toLong()).toLongArray()
-    return fen.toBoard().apply {
-        this.keyHistory = keyHistory
-        this.key = key
-    }
-}
-
-val BoardStateSaver = Saver<Board, String>(
-    save = { state -> serializeBoard(state) },
-    restore = { value ->
-        deserializeBoard(value)
-    }
-)
-
-sealed class PromotionPiece(val fen: Char)
-
-class PromotionQueen : PromotionPiece('q')
-class PromotionRook : PromotionPiece('r')
-class PromotionBishop : PromotionPiece('b')
-class PromotionKnight : PromotionPiece('n')
-
-fun checkComputerMove(computerMove: String) {
-    val startFile = computerMove[0].toByte().toInt() - 'a'.toByte().toInt()
-    val startRank = computerMove[1].toByte().toInt() - '1'.toByte().toInt()
-    val targetFile = computerMove[2].toByte().toInt() - 'a'.toByte().toInt()
-    val targetRank = computerMove[3].toByte().toInt() - '1'.toByte().toInt()
-
-    val invalidComputerMove = startFile < 0 || startFile > 7
-            || startRank < 0 || startRank > 7
-            || targetFile < 0 || targetFile > 7
-            || targetRank < 0 || targetRank > 7
-
-    if (invalidComputerMove) throw IllegalArgumentException("Invalid computer move $computerMove")
-}
-
-fun Char.isWhitePiece(): Boolean {
-    return when (this) {
-        'P', 'N', 'B', 'R', 'Q', 'K' -> true
-        'p', 'n', 'b', 'r', 'q', 'k' -> false
-        else -> throw IllegalArgumentException("Not a valid piece : $this !")
-    }
-}
-
-fun Int.asFileChar(): Char {
-    return when (this) {
-        0 -> 'a'
-        1 -> 'b'
-        2 -> 'c'
-        3 -> 'd'
-        4 -> 'e'
-        5 -> 'f'
-        6 -> 'g'
-        7 -> 'h'
-        else -> 'X'
-    }
-}
-
-fun Int.asRankChar(): Char {
-    return when (this) {
-        0 -> '1'
-        1 -> '2'
-        2 -> '3'
-        3 -> '4'
-        4 -> '5'
-        5 -> '6'
-        6 -> '7'
-        7 -> '8'
-        else -> 'X'
-    }
-}
-
 fun String.toBoard(): Board {
     val position = this
     return Board().apply {
@@ -234,517 +50,8 @@ fun String.toBoard(): Board {
     }
 }
 
-enum class PlayerType {
-    Human,
-    Computer
-}
-
 @Composable
 fun DynamicChessBoard(
-    modifier: Modifier = Modifier,
-    startPosition: String = STANDARD_FEN,
-    newGameRequestState: NewGameRequestState = NewGameRequestState.NO_PENDING_REQUEST,
-    newGameRequestProcessedCallback: () -> Unit = {},
-    reversed: Boolean = false,
-    userRequestStopGame: Boolean = false,
-    newComputerMovePendingState: ComputerMovePendingState = ComputerMovePendingState.NO_NEW_CPU_MOVE,
-    computerMoveProcessedCallback: () -> Unit = {},
-    computerMoveRequestCallback: (String) -> Unit = { _ -> },
-    computerMoveString: String? = null,
-    positionChangedCallback: (String) -> Unit = { _ -> },
-    naturalGameEndCallback: (GameEndedStatus) -> Unit = { _ -> },
-    whiteSideType: PlayerType = PlayerType.Human,
-    blackSideType: PlayerType = PlayerType.Human,
-) {
-    val context = LocalContext.current
-
-    val composableScope = rememberCoroutineScope()
-    var boardState by rememberSaveable(stateSaver = BoardStateSaver) {
-        mutableStateOf(startPosition.toBoard())
-    }
-
-    var gameEnded by rememberSaveable {
-        mutableStateOf(GameEndedStatus.GOING_ON)
-    }
-
-    fun isComputerTurn() = (boardState.turn && whiteSideType == PlayerType.Computer)
-            || (!boardState.turn && blackSideType == PlayerType.Computer)
-
-    fun manageEndStatus(
-        gameEndedCallback: (GameEndedStatus) -> Unit = {},
-    ) {
-        when {
-            boardState.isMate -> {
-                gameEnded =
-                    if (boardState.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
-                gameEndedCallback(gameEnded)
-            }
-            boardState.isStalemate -> {
-                gameEnded = GameEndedStatus.STALEMATE
-                gameEndedCallback(gameEnded)
-            }
-            boardState.isDrawByThreeFoldRepetitions -> {
-                gameEnded = GameEndedStatus.DRAW_THREE_FOLD_REPETITION
-                gameEndedCallback(gameEnded)
-            }
-            boardState.isDrawByFiftyMovesRule -> {
-                gameEnded = GameEndedStatus.DRAW_FIFTY_MOVES_RULE
-                gameEndedCallback(gameEnded)
-            }
-            boardState.isDrawByMissingMaterial -> {
-                gameEnded = GameEndedStatus.DRAW_MISSING_MATERIAL
-                gameEndedCallback(gameEnded)
-            }
-            userRequestStopGame -> {
-                gameEnded = GameEndedStatus.USER_STOPPED
-                gameEndedCallback(gameEnded)
-            }
-        }
-    }
-
-    fun makeComputerMoveRequestIfAppropriate() {
-        if (gameEnded != GameEndedStatus.GOING_ON) return
-
-        if (!isComputerTurn()) return
-        computerMoveRequestCallback(boardState.fen)
-    }
-
-    fun tryCommitComputerMove() {
-        if (computerMoveString == null) return
-        try {
-            checkComputerMove(computerMoveString)
-        }
-        catch (ex: IllegalStateException) {
-            println(ex.localizedMessage)
-            computerMoveProcessedCallback()
-            return
-        }
-
-        val move = Move.getFromString(boardState, computerMoveString, true)
-        boardState.doMove(move, true, true)
-
-        computerMoveProcessedCallback()
-        positionChangedCallback(boardState.fen)
-
-        manageEndStatus(
-            gameEndedCallback = { naturalGameEndCallback(it) }
-        )
-
-        makeComputerMoveRequestIfAppropriate()
-    }
-
-    var dndState by rememberSaveable(stateSaver = DndDataStateSaver) { mutableStateOf(DndData()) }
-
-    var cellsSize by remember { mutableStateOf(0f) }
-
-    fun cancelDragAndDrop() {
-        val initialX = dndState.movedPieceX
-        val initialY = dndState.movedPieceY
-
-        val startCol = if (reversed) 7 - dndState.startFile else dndState.startFile
-        val startRow = if (reversed) dndState.startRank else 7 - dndState.startRank
-
-        val targetX = cellsSize * (0.5f + startCol)
-        val targetY = cellsSize * (0.5f + startRow)
-
-        val animationDurationMillis = 150
-
-        dndState = dndState.copy(
-            targetFile = Int.MIN_VALUE,
-            targetRank = Int.MIN_VALUE
-        )
-
-        composableScope.launch {
-            animate(
-                initialValue = initialX,
-                targetValue = targetX,
-                animationSpec = tween(
-                    durationMillis = animationDurationMillis,
-                    easing = FastOutSlowInEasing
-                )
-            ) { value, _ ->
-                dndState = dndState.copy(movedPieceX = value)
-            }
-        }
-
-        composableScope.launch {
-            animate(
-                initialValue = initialY,
-                targetValue = targetY,
-                animationSpec = tween(
-                    durationMillis = animationDurationMillis,
-                    easing = FastOutSlowInEasing
-                )
-            ) { value, _ ->
-                dndState = dndState.copy(movedPieceY = value)
-            }
-        }
-
-
-        composableScope.launch {
-            delay(animationDurationMillis.toLong())
-            dndState = DndData()
-        }
-    }
-
-    fun dndStartCallback(file: Int, rank: Int, piece: Char) {
-        if (isComputerTurn()) return
-        if (dndState.pendingPromotion) return
-
-        val whiteTurn = boardState.turn
-        val isPieceOfSideToMove =
-            (piece.isWhitePiece() && whiteTurn) ||
-                    (!piece.isWhitePiece() && !whiteTurn)
-        if (isPieceOfSideToMove) {
-            val col = if (reversed) 7 - file else file
-            val row = if (reversed) rank else 7 - rank
-            val boardMinSize = cellsSize * 9f
-            val newMovedPieceX = cellsSize * (0.5f + col.toFloat())
-            val newMovedPieceY = cellsSize * (0.5f + row.toFloat())
-            val newMovedPieceXRatio = newMovedPieceX / boardMinSize
-            val newMovedPieceYRatio = newMovedPieceY / boardMinSize
-            dndState = dndState.copy(
-                startFile = file,
-                startRank = rank,
-                movedPieceX = newMovedPieceX,
-                movedPieceY = newMovedPieceY,
-                movedPieceXRatio = newMovedPieceXRatio,
-                movedPieceYRatio = newMovedPieceYRatio,
-                pieceValue = piece
-            )
-        }
-    }
-
-    fun dndMoveCallback(xOffset: Float, yOffset: Float) {
-        if (gameEnded != GameEndedStatus.GOING_ON) return
-        if (isComputerTurn()) return
-        if (dndState.pendingPromotion) return
-        if (dndState.pieceValue != NO_PIECE) {
-            val boardMinSize = cellsSize * 9f
-            val newMovedPieceX = dndState.movedPieceX + xOffset
-            val newMovedPieceY = dndState.movedPieceY + yOffset
-            val newMovedPieceXRatio = newMovedPieceX / boardMinSize
-            val newMovedPieceYRatio = newMovedPieceY / boardMinSize
-            val newCol = floor((newMovedPieceX - cellsSize * 0.5f) / cellsSize).toInt()
-            val newRow = floor((newMovedPieceY - cellsSize * 0.5f) / cellsSize).toInt()
-            val targetFile = if (reversed) 7 - newCol else newCol
-            val targetRank = if (reversed) newRow else 7 - newRow
-            dndState = dndState.copy(
-                movedPieceX = newMovedPieceX,
-                movedPieceY = newMovedPieceY,
-                movedPieceXRatio = newMovedPieceXRatio,
-                movedPieceYRatio = newMovedPieceYRatio,
-                targetFile = targetFile,
-                targetRank = targetRank
-            )
-        }
-    }
-
-    fun dndCancelCallback() {
-        if (gameEnded != GameEndedStatus.GOING_ON) return
-        if (isComputerTurn()) return
-        if (dndState.pendingPromotion) return
-        cancelDragAndDrop()
-    }
-
-    fun dndMoveIsPromotion(): Boolean {
-        return (dndState.targetRank == 0 &&
-                dndState.pieceValue == 'p') ||
-                (dndState.targetRank == 7 && dndState.pieceValue == 'P')
-    }
-
-    fun isValidDndMove(): Boolean {
-        if (dndState.pieceValue == NO_PIECE) return false
-        if (dndState.startFile < 0 || dndState.startFile > 7) return false
-        if (dndState.startRank < 0 || dndState.startRank > 7) return false
-        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
-        if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
-
-        val promotionChar = if (dndMoveIsPromotion()) "Q" else ""
-        val moveString =
-            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
-        val move = Move.getFromString(boardState, moveString, true)
-        val boardCopy = Board()
-        boardCopy.fen = boardState.fen
-        return boardCopy.doMove(move, true, false)
-    }
-
-    fun commitDndMove() {
-        if (!isValidDndMove()) return
-        val moveString =
-            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}"
-        val move = Move.getFromString(boardState, moveString, true)
-        boardState.doMove(move, true, true)
-
-        positionChangedCallback(boardState.fen)
-
-        manageEndStatus(
-            gameEndedCallback = { naturalGameEndCallback(it) },
-        )
-
-        makeComputerMoveRequestIfAppropriate()
-    }
-
-    fun dndValidatingCallback() {
-        if (gameEnded != GameEndedStatus.GOING_ON) return
-        if (isComputerTurn()) return
-        if (dndState.pendingPromotion) return
-        if (isValidDndMove()) {
-            dndState = if (dndMoveIsPromotion()) {
-                dndState.copy(
-                    pendingPromotion = true,
-                    pendingPromotionForBlack = !boardState.turn,
-                    pendingPromotionStartedInReversedMode = reversed
-                )
-            } else {
-                commitDndMove()
-                DndData()
-            }
-        } else {
-            cancelDragAndDrop()
-        }
-    }
-
-    fun commitPromotion(piece: PromotionPiece) {
-        val promotionFen = piece.fen.toLowerCase()
-        val moveString =
-            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionFen"
-        val move = Move.getFromString(boardState, moveString, true)
-        boardState.doMove(move, true, true)
-
-        dndState = DndData()
-        positionChangedCallback(boardState.fen)
-        manageEndStatus(
-            gameEndedCallback = { naturalGameEndCallback(it) },
-        )
-
-        makeComputerMoveRequestIfAppropriate()
-    }
-
-    fun cancelPendingPromotion() {
-        dndState = DndData()
-    }
-
-    fun handleDragStart(offset: Offset) {
-        if (gameEnded != GameEndedStatus.GOING_ON) return
-        val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
-        val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
-
-        val outOfBounds = col < 0 || col > 7 || row < 0 || row > 7
-        if (!outOfBounds) {
-            val file = if (reversed) 7 - col else col
-            val rank = if (reversed) row else 7 - row
-            val square = getSquareFromCellCoordinates(file, rank)
-            val piece = boardState.getPieceAt(square)
-
-            if (piece != NO_PIECE) {
-                dndStartCallback(file, rank, piece)
-            }
-        }
-    }
-
-    fun pointInCircle(
-        pointX: Double,
-        pointY: Double,
-        circleCenterX: Double,
-        circleCenterY: Double,
-        circleRadius: Double
-    ): Boolean {
-        val distance = sqrt(
-            (pointX - circleCenterX) * (pointX - circleCenterX) +
-                    (pointY - circleCenterY) * (pointY - circleCenterY)
-        )
-        return distance <= circleRadius
-    }
-
-    fun handleTap(offset: Offset) {
-        if (dndState.pendingPromotion) {
-            val promotionInBottomPart =
-                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
-            val minBoardSize = cellsSize * 9
-            val buttonsY = minBoardSize * (if (promotionInBottomPart) 0.06f else 0.85f)
-            val buttonsHalfSizeRatio = 0.575f
-            val buttonsGapRatio = 0.2f
-            val buttonsCenterY = buttonsY + cellsSize * buttonsHalfSizeRatio
-            val queenButtonCenterX = minBoardSize * 0.18f + cellsSize * buttonsHalfSizeRatio
-            val rookButtonCenterX =
-                queenButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
-            val bishopButtonCenterX =
-                rookButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
-            val knightButtonCenterX =
-                bishopButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
-            val cancelButtonCenterX =
-                knightButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
-
-            val queenButtonTapped = pointInCircle(
-                pointX = offset.x.toDouble(),
-                pointY = offset.y.toDouble(),
-                circleCenterX = queenButtonCenterX.toDouble(),
-                circleCenterY = buttonsCenterY.toDouble(),
-                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
-            )
-
-            val rookButtonTapped = pointInCircle(
-                pointX = offset.x.toDouble(),
-                pointY = offset.y.toDouble(),
-                circleCenterX = rookButtonCenterX.toDouble(),
-                circleCenterY = buttonsCenterY.toDouble(),
-                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
-            )
-
-            val bishopButtonTapped = pointInCircle(
-                pointX = offset.x.toDouble(),
-                pointY = offset.y.toDouble(),
-                circleCenterX = bishopButtonCenterX.toDouble(),
-                circleCenterY = buttonsCenterY.toDouble(),
-                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
-            )
-
-            val knightButtonTapped = pointInCircle(
-                pointX = offset.x.toDouble(),
-                pointY = offset.y.toDouble(),
-                circleCenterX = knightButtonCenterX.toDouble(),
-                circleCenterY = buttonsCenterY.toDouble(),
-                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
-            )
-
-            val cancelButtonTapped = pointInCircle(
-                pointX = offset.x.toDouble(),
-                pointY = offset.y.toDouble(),
-                circleCenterX = cancelButtonCenterX.toDouble(),
-                circleCenterY = buttonsCenterY.toDouble(),
-                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
-            )
-
-            when {
-                queenButtonTapped -> commitPromotion(piece = PromotionQueen())
-                rookButtonTapped -> commitPromotion(piece = PromotionRook())
-                bishopButtonTapped -> commitPromotion(piece = PromotionBishop())
-                knightButtonTapped -> commitPromotion(piece = PromotionKnight())
-                cancelButtonTapped -> cancelPendingPromotion()
-            }
-
-        }
-    }
-
-    val newGameRequest = newGameRequestState == NewGameRequestState.REQUEST_PENDING
-    if (newGameRequest) {
-        cancelPendingPromotion()
-        boardState = startPosition.toBoard()
-        newGameRequestProcessedCallback()
-        gameEnded = GameEndedStatus.GOING_ON
-    }
-
-    val newComputerMove = newComputerMovePendingState == ComputerMovePendingState.NEW_CPU_MOVE_AVAILABLE
-    if (newComputerMove) {
-        tryCommitComputerMove()
-    }
-
-    // Must also be launched before the first move just after reload.
-    manageEndStatus(
-        gameEndedCallback = {
-            val notYetNotifiedOfEndOfGame = it == GameEndedStatus.GOING_ON
-            if (notYetNotifiedOfEndOfGame) {
-                naturalGameEndCallback(it)
-            }
-        },
-    )
-
-    makeComputerMoveRequestIfAppropriate()
-
-    val currentContext = LocalContext.current
-
-    Canvas(
-        modifier = modifier
-            .background(Color(214, 59, 96))
-            .pointerInput(reversed) {
-                coroutineScope {
-                    launch {
-                        detectDragGestures(
-                            onDragStart = { handleDragStart(it) },
-                            onDragCancel = { dndCancelCallback() },
-                            onDrag = { change, dragAmount ->
-                                change.consumeAllChanges()
-                                dndMoveCallback(dragAmount.x, dragAmount.y)
-                            },
-                            onDragEnd = {
-                                dndValidatingCallback()
-                            })
-                    }
-                    launch {
-                        detectTapGestures(
-                            onTap = { handleTap(it) }
-                        )
-                    }
-                }
-            },
-    ) {
-        val minSize = if (size.width < size.height) size.width else size.height
-        cellsSize = minSize / 9f
-
-        drawCells(cellsSize, reversed, dndData = dndState)
-        drawFilesCoordinates(cellsSize, reversed)
-        drawRanksCoordinates(cellsSize, reversed)
-        drawPlayerTurn(cellsSize, boardState)
-        drawPieces(
-            context = currentContext,
-            cellsSize = cellsSize,
-            position = boardState,
-            reversed = reversed,
-            dndData = dndState,
-        )
-
-        if (dndState.pieceValue != NO_PIECE) {
-            val boardMinSize = cellsSize * 9f
-            var x = boardMinSize * dndState.movedPieceXRatio
-            var y = boardMinSize * dndState.movedPieceYRatio
-
-            if (dndState.pendingPromotion) {
-                val notInitialReversedMode =
-                    reversed != dndState.pendingPromotionStartedInReversedMode
-
-                if (notInitialReversedMode) {
-                    x = boardMinSize - cellsSize - x
-                    y = boardMinSize - cellsSize - y
-                }
-            }
-
-            drawMovedPiece(
-                context = currentContext,
-                cellsSize = cellsSize.toInt(),
-                pieceValue = dndState.pieceValue,
-                x = x,
-                y = y,
-                positionFen = startPosition,
-            )
-        }
-
-        if (dndState.pendingPromotion) {
-            val promotionInBottomPart =
-                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
-            val itemsZoneX = minSize * 0.18f
-            val itemsZoneY = minSize * (if (promotionInBottomPart) 0.06f else 0.85f)
-            val itemsSize = cellsSize * 1.15f
-            val spaceBetweenItems = cellsSize * 0.2f
-
-            drawPromotionValidationZone(
-                context,
-                x = itemsZoneX,
-                y = itemsZoneY,
-                itemsSize = itemsSize,
-                isWhiteTurn = boardState.turn,
-                spaceBetweenItems = spaceBetweenItems,
-            )
-        }
-
-    }
-}
-
-@Composable
-private fun StaticChessBoard(
     modifier: Modifier = Modifier,
     position: String = STANDARD_FEN,
     reversed: Boolean = false,
@@ -758,15 +65,44 @@ private fun StaticChessBoard(
     ) {
         val minSize = if (size.width < size.height) size.width else size.height
         val cellsSize = minSize / 9f
-        drawCells(cellsSize, reversed)
+        drawCells(cellsSize)
         drawFilesCoordinates(cellsSize, reversed)
+        drawRanksCoordinates(cellsSize, reversed)
         drawPlayerTurn(cellsSize, boardLogic)
         drawPieces(
             context = currentContext,
             cellsSize = cellsSize,
             position = boardLogic,
             reversed = reversed,
-            dndData = DndData()
+        )
+
+    }
+}
+
+@Composable
+fun StaticChessBoard(
+    modifier: Modifier = Modifier,
+    position: String = STANDARD_FEN,
+    reversed: Boolean = false,
+) {
+    val boardLogic = position.toBoard()
+    val currentContext = LocalContext.current
+
+    Canvas(
+        modifier = modifier
+            .background(Color(214, 59, 96))
+    ) {
+        val minSize = if (size.width < size.height) size.width else size.height
+        val cellsSize = minSize / 9f
+        drawCells(cellsSize)
+        drawFilesCoordinates(cellsSize, reversed)
+        drawRanksCoordinates(cellsSize, reversed)
+        drawPlayerTurn(cellsSize, boardLogic)
+        drawPieces(
+            context = currentContext,
+            cellsSize = cellsSize,
+            position = boardLogic,
+            reversed = reversed,
         )
 
     }
@@ -776,20 +112,12 @@ private fun getSquareFromCellCoordinates(file: Int, rank: Int): Long {
     return 1L.shl(7 - file + 8 * rank)
 }
 
-private fun DrawScope.drawCells(cellsSize: Float, reversed: Boolean, dndData: DndData = DndData()) {
+private fun DrawScope.drawCells(cellsSize: Float) {
     repeat(8) { row ->
-        val rank = if (reversed) row else 7 - row
         repeat(8) { col ->
-            val file = if (reversed) 7 - col else col
             val isWhiteCell = (row + col) % 2 == 0
-            val isDndStartCell = (file == dndData.startFile) && (rank == dndData.startRank)
-            val isDndTargetCell = (file == dndData.targetFile) && (rank == dndData.targetRank)
-            val isDndCrossCell = (file == dndData.targetFile) || (rank == dndData.targetRank)
             val backgroundColor =
                 when {
-                    isDndTargetCell -> Color(112, 209, 35)
-                    isDndStartCell -> Color(214, 59, 96)
-                    isDndCrossCell -> Color(178, 46, 230)
                     isWhiteCell -> Color(255, 206, 158)
                     else -> Color(209, 139, 71)
                 }
@@ -864,7 +192,6 @@ private fun DrawScope.drawPieces(
     cellsSize: Float,
     position: Board,
     reversed: Boolean,
-    dndData: DndData
 ) {
     repeat(8) { row ->
         val rank = if (reversed) row else 7 - row
@@ -874,162 +201,22 @@ private fun DrawScope.drawPieces(
             val square = getSquareFromCellCoordinates(file, rank)
             val piece = position.getPieceAt(square)
             if (piece != NO_PIECE) {
-                val isDraggedPiece = (dndData.startFile == file) && (dndData.startRank == rank)
-                if (!isDraggedPiece) {
-                    val x = cellsSize * (0.5f + col)
-                    val y = cellsSize * (0.5f + row)
-                    val imageRef = piece.getPieceImageID()
-                    val vectorDrawable =
-                        VectorDrawableCompat.create(context.resources, imageRef, null)
-                    drawIntoCanvas {
-                        if (vectorDrawable != null) it.nativeCanvas.drawVector(
-                            vectorDrawable,
-                            x,
-                            y,
-                            cellsSize.toInt(),
-                            cellsSize.toInt()
-                        )
-                    }
+                val x = cellsSize * (0.5f + col)
+                val y = cellsSize * (0.5f + row)
+                val imageRef = piece.getPieceImageID()
+                val vectorDrawable =
+                    VectorDrawableCompat.create(context.resources, imageRef, null)
+                drawIntoCanvas {
+                    if (vectorDrawable != null) it.nativeCanvas.drawVector(
+                        vectorDrawable,
+                        x,
+                        y,
+                        cellsSize.toInt(),
+                        cellsSize.toInt()
+                    )
                 }
             }
         }
-    }
-}
-
-private fun DrawScope.drawMovedPiece(
-    context: Context,
-    cellsSize: Int,
-    pieceValue: Char,
-    x: Float,
-    y: Float,
-    positionFen: String
-) {
-    val boardLogic = Board()
-    boardLogic.fen = positionFen
-    val imageRef = pieceValue.getPieceImageID()
-
-    val vectorDrawable =
-        VectorDrawableCompat.create(context.resources, imageRef, null)
-    drawIntoCanvas {
-        if (vectorDrawable != null) it.nativeCanvas.drawVector(
-            vectorDrawable,
-            x,
-            y,
-            cellsSize,
-            cellsSize
-        )
-    }
-}
-
-private fun DrawScope.drawPromotionValidationZone(
-    context: Context,
-    x: Float,
-    y: Float,
-    itemsSize: Float,
-    spaceBetweenItems: Float,
-    isWhiteTurn: Boolean,
-) {
-    val xRook = x + itemsSize + spaceBetweenItems
-    val xBishop = xRook + itemsSize + spaceBetweenItems
-    val xKnight = xBishop + itemsSize + spaceBetweenItems
-    val xCancellation = xKnight + itemsSize + spaceBetweenItems
-    drawPromotionValidationItem(context, x, y, itemsSize, PromotionQueen(), whiteTurn = isWhiteTurn)
-    drawPromotionValidationItem(
-        context,
-        xRook,
-        y,
-        itemsSize,
-        PromotionRook(),
-        whiteTurn = isWhiteTurn
-    )
-    drawPromotionValidationItem(
-        context,
-        xBishop,
-        y,
-        itemsSize,
-        PromotionBishop(),
-        whiteTurn = isWhiteTurn
-    )
-    drawPromotionValidationItem(
-        context,
-        xKnight,
-        y,
-        itemsSize,
-        PromotionKnight(),
-        whiteTurn = isWhiteTurn
-    )
-    drawPromotionCancellationItem(
-        context,
-        xCancellation,
-        y,
-        itemsSize,
-        isWhiteTurn = isWhiteTurn
-    )
-}
-
-fun DrawScope.drawPromotionValidationItem(
-    context: Context,
-    x: Float,
-    y: Float,
-    size: Float,
-    pieceValue: PromotionPiece,
-    whiteTurn: Boolean,
-) {
-    val ovalPaint = Paint().apply {
-        if (whiteTurn) setARGB(255, 0, 0, 0)
-        else setARGB(255, 255, 255, 255)
-        style = Paint.Style.FILL
-    }
-    val ovalX = x - size * 0.15f
-    val ovalY = y - size * 0.15f
-
-    val pieceFen = if (whiteTurn) pieceValue.fen.toUpperCase() else pieceValue.fen.toLowerCase()
-    val imageRef = pieceFen.getPieceImageID()
-    val vectorDrawable =
-        VectorDrawableCompat.create(context.resources, imageRef, null)
-
-    val imageSize = size * 0.7f
-    drawIntoCanvas {
-        it.nativeCanvas.drawOval(ovalX, ovalY, ovalX + size, ovalY + size, ovalPaint)
-        if (vectorDrawable != null) it.nativeCanvas.drawVector(
-            vectorDrawable,
-            x,
-            y,
-            imageSize.toInt(),
-            imageSize.toInt()
-        )
-    }
-}
-
-fun DrawScope.drawPromotionCancellationItem(
-    context: Context,
-    x: Float,
-    y: Float,
-    size: Float,
-    isWhiteTurn: Boolean,
-) {
-    val ovalPaint = Paint().apply {
-        if (isWhiteTurn) setARGB(255, 0, 0, 0)
-        else setARGB(255, 255, 255, 255)
-        style = Paint.Style.FILL
-    }
-    val ovalX = x - size * 0.15f
-    val ovalY = y - size * 0.15f
-
-
-    val imageRef = R.drawable.ic_red_cross
-    val vectorDrawable =
-        VectorDrawableCompat.create(context.resources, imageRef, null)
-    val imageSize = size * 0.7f
-    drawIntoCanvas {
-        it.nativeCanvas.drawOval(ovalX, ovalY, ovalX + size, ovalY + size, ovalPaint)
-        if (vectorDrawable != null) it.nativeCanvas.drawVector(
-            vectorDrawable,
-            x,
-            y,
-            imageSize.toInt(),
-            imageSize.toInt()
-        )
     }
 }
 
@@ -1064,7 +251,7 @@ fun DynamicReversedChessBoardPreview() {
 fun DynamicChessBoardCustomPositionPreview() {
     DynamicChessBoard(
         modifier = Modifier.size(300.dp),
-        startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+        //startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }
 
@@ -1074,7 +261,7 @@ fun DynamicChessBoardCustomPositionReversedPreview() {
     DynamicChessBoard(
         modifier = Modifier.size(300.dp),
         reversed = true,
-        startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+        //startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }
 
