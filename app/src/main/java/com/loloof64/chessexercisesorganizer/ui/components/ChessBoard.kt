@@ -36,6 +36,66 @@ import kotlin.math.sqrt
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
 
+fun String.toBoard(): Board {
+    val position = this
+    return Board().apply {
+        fen = position
+    }
+}
+
+
+class PositionHandler(
+    private val startPosition: String = STANDARD_FEN
+) {
+    private var currentPosition = "8/8/8/8/8/8/8/8 w - - 0 1"
+        set(value) {
+            boardLogic = value.toBoard()
+            field = value
+        }
+
+    private var boardLogic = currentPosition.toBoard()
+
+    fun getCurrentPosition() = currentPosition
+
+    fun newGame() {
+        currentPosition = startPosition
+    }
+
+    fun makeMove(moveStr: String) {
+        val move = Move.getFromString(boardLogic, moveStr, true)
+        boardLogic.doMove(move, true, true)
+        currentPosition = boardLogic.fen
+    }
+
+    fun isValidMove(moveStr: String): Boolean {
+        val boardCopy = currentPosition.toBoard()
+        val move = Move.getFromString(boardCopy, moveStr, true)
+        return boardCopy.doMove(move, true, true)
+    }
+
+    fun serialize(): String {
+        val serializedBoard = serializeBoard(boardLogic)
+        return "$startPosition<>$serializedBoard"
+    }
+
+    companion object {
+        fun deserialize(value: String): PositionHandler {
+            val parts = value.split("<>")
+            val startPosition = parts[0]
+            val newBoardLogic = deserializeBoard(parts[1])
+
+            return PositionHandler(startPosition).apply {
+                boardLogic = newBoardLogic
+            }
+        }
+    }
+}
+
+val PositionHandlerSaver = Saver<PositionHandler, String>(
+    save = { it.serialize() },
+    restore = { PositionHandler.deserialize(it) }
+)
+
 sealed class PromotionPiece(val fen: Char)
 
 class PromotionQueen : PromotionPiece('q')
@@ -46,15 +106,14 @@ class PromotionKnight : PromotionPiece('n')
 @Composable
 fun DynamicChessBoard(
     modifier: Modifier = Modifier,
-    position: String = STANDARD_FEN,
     reversed: Boolean = false,
-    positionChangedCallback: (String) -> Unit = { _ -> },
+    position: String = PositionHandler().getCurrentPosition(),
+    validMoveCallback: (String) -> Boolean = { _ -> false },
+    dndMoveCallback: (String) -> Unit = { _ -> },
+    promotionMoveCallback: (String) -> Unit = { _ -> },
+    gameInProgress: Boolean = false,
 ) {
     val composableScope = rememberCoroutineScope()
-
-    val boardState by rememberSaveable(stateSaver = BoardStateSaver) {
-        mutableStateOf(position.toBoard())
-    }
 
     val currentContext = LocalContext.current
 
@@ -69,26 +128,20 @@ fun DynamicChessBoard(
     var cellsSize by remember { mutableStateOf(0f) }
 
     fun commitPromotion(piece: PromotionPiece) {
+        if (!gameInProgress) return
+
         val promotionFen = piece.fen.toLowerCase()
         val moveString =
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
                     "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionFen"
-        val move = Move.getFromString(boardState, moveString, true)
-        boardState.doMove(move, true, true)
-
+        promotionMoveCallback(moveString)
         promotionState = PendingPromotionData()
         dndState = DndData()
-        positionChangedCallback(boardState.fen)
-        /* TODO handle at upper stage
-        manageEndStatus(
-            gameEndedCallback = { naturalGameEndCallback(it) },
-        )
-
-        makeComputerMoveRequestIfAppropriate()
-        */
     }
 
     fun cancelDragAndDropAnimation() {
+        if (!gameInProgress) return
+
         val initialXRatio = dndState.movedPieceXRatio
         val initialYRatio = dndState.movedPieceYRatio
 
@@ -147,6 +200,8 @@ fun DynamicChessBoard(
 
 
     fun handleTap(offset: Offset) {
+        if (!gameInProgress) return
+
         if (promotionState.pendingPromotion) {
             val promotionInBottomPart =
                 (reversed && !promotionState.pendingPromotionForBlack) || (!reversed && promotionState.pendingPromotionForBlack)
@@ -224,8 +279,10 @@ fun DynamicChessBoard(
     }
 
     fun processDragAndDropStart(file: Int, rank: Int, piece: Char) {
+        if (!gameInProgress) return
         if (promotionState.pendingPromotion) return
-        val whiteTurn = boardState.turn
+
+        val whiteTurn = position.toBoard().turn
         val isPieceOfSideToMove =
             (piece.isWhitePiece() && whiteTurn) ||
                     (!piece.isWhitePiece() && !whiteTurn)
@@ -264,34 +321,26 @@ fun DynamicChessBoard(
         val moveString =
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
                     "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
-        val move = Move.getFromString(boardState, moveString, true)
-        val boardCopy = Board()
-        boardCopy.fen = boardState.fen
-        return boardCopy.doMove(move, true, false)
+        return validMoveCallback(moveString)
     }
 
     fun commitDndMove() {
+        if (!gameInProgress) return
         if (!isValidDndMove()) return
+
         val moveString =
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
                     "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}"
-        val move = Move.getFromString(boardState, moveString, true)
-        boardState.doMove(move, true, true)
 
-        positionChangedCallback(boardState.fen)
-
-        /* TODO handle in upper stage
-        manageEndStatus(
-            gameEndedCallback = { naturalGameEndCallback(it) },
-        )
-
-        makeComputerMoveRequestIfAppropriate()
-        */
+        dndMoveCallback(moveString)
+        dndState = DndData()
     }
 
 
     fun handleDragStart(offset: Offset) {
+        if (!gameInProgress) return
         if (promotionState.pendingPromotion) return
+
         val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
         val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
 
@@ -300,7 +349,7 @@ fun DynamicChessBoard(
             val file = if (reversed) 7 - col else col
             val rank = if (reversed) row else 7 - row
             val square = getSquareFromCellCoordinates(file, rank)
-            val piece = boardState.getPieceAt(square)
+            val piece = position.toBoard().getPieceAt(square)
 
             if (piece != NO_PIECE) {
                 processDragAndDropStart(file, rank, piece)
@@ -309,9 +358,10 @@ fun DynamicChessBoard(
     }
 
     fun handleDragMove(change: PointerInputChange, dragAmount: Offset) {
-        change.consumeAllChanges()
-
+        if (!gameInProgress) return
         if (promotionState.pendingPromotion) return
+
+        change.consumeAllChanges()
 
         if (dndState.pieceValue != NO_PIECE) {
             val boardMinSize = cellsSize * 9f
@@ -333,22 +383,25 @@ fun DynamicChessBoard(
     }
 
     fun handleDndCancel() {
+        if (!gameInProgress) return
         if (promotionState.pendingPromotion) return
+
         cancelDragAndDropAnimation()
     }
 
     fun handleDndValidation() {
+        if (!gameInProgress) return
         if (promotionState.pendingPromotion) return
+
         if (isValidDndMove()) {
             if (dndMoveIsPromotion()) {
                 promotionState = promotionState.copy(
                     pendingPromotion = true,
-                    pendingPromotionForBlack = !boardState.turn,
+                    pendingPromotionForBlack = !position.toBoard().turn,
                     pendingPromotionStartedInReversedMode = reversed,
                 )
             } else {
                 commitDndMove()
-                dndState = DndData()
             }
         } else {
             cancelDragAndDropAnimation()
@@ -358,7 +411,7 @@ fun DynamicChessBoard(
     Canvas(
         modifier = modifier
             .background(Color(214, 59, 96))
-            .pointerInput(reversed) {
+            .pointerInput(reversed, gameInProgress, position) {
                 detectDragGestures(
                     onDragStart = { handleDragStart(it) },
                     onDrag = { change, dragAmount ->
@@ -368,7 +421,7 @@ fun DynamicChessBoard(
                     onDragEnd = { handleDndValidation() },
                 )
             }
-            .pointerInput(reversed) {
+            .pointerInput(reversed, gameInProgress, position) {
                 detectTapGestures(
                     onTap = { handleTap(it) }
                 )
@@ -379,11 +432,11 @@ fun DynamicChessBoard(
         drawCells(cellsSize = cellsSize, reversed = reversed, dndData = dndState)
         drawFilesCoordinates(cellsSize, reversed)
         drawRanksCoordinates(cellsSize, reversed)
-        drawPlayerTurn(cellsSize, boardState)
+        drawPlayerTurn(cellsSize, position.toBoard())
         drawPieces(
             context = currentContext,
             cellsSize = cellsSize,
-            position = boardState,
+            position = position.toBoard(),
             reversed = reversed,
             dndData = dndState,
         )
@@ -409,7 +462,7 @@ fun DynamicChessBoard(
                 pieceValue = dndState.pieceValue,
                 x = x,
                 y = y,
-                positionFen = boardState.fen,
+                positionFen = position,
             )
         }
 
@@ -426,7 +479,7 @@ fun DynamicChessBoard(
                 x = itemsZoneX,
                 y = itemsZoneY,
                 itemsSize = itemsSize,
-                isWhiteTurn = boardState.turn,
+                isWhiteTurn = position.toBoard().turn,
                 spaceBetweenItems = spaceBetweenItems,
             )
         }
@@ -520,13 +573,6 @@ private fun Char.getPieceImageID(): Int {
     }
 }
 
-private fun String.toBoard(): Board {
-    val position = this
-    return Board().apply {
-        fen = position
-    }
-}
-
 private fun serializeBoard(board: Board): String {
     val positionPart = board.fen
     val keyHistoryPart = board.keyHistory.joinToString(separator = "@") {
@@ -553,19 +599,13 @@ private fun deserializeBoard(input: String): Board {
     }
 }
 
-private val BoardStateSaver = Saver<Board, String>(
-    save = { state -> serializeBoard(state) },
-    restore = { value ->
-        deserializeBoard(value)
-    }
-)
-
 private data class PendingPromotionData(
     val pendingPromotion: Boolean = false,
     val pendingPromotionForBlack: Boolean = false,
     val pendingPromotionStartedInReversedMode: Boolean = false,
 ) {
-    override fun toString(): String = "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
+    override fun toString(): String =
+        "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
 
     companion object {
         fun parse(valueStr: String): PendingPromotionData {
@@ -584,11 +624,10 @@ private data class PendingPromotionData(
         }
     }
 }
+
 private val PendingPromotionStateSaver = Saver<PendingPromotionData, String>(
-    save = { state -> state.toString() },
-    restore = { value ->
-        PendingPromotionData.parse(value)
-    }
+    save = { it.toString() },
+    restore = { PendingPromotionData.parse(it) }
 )
 
 

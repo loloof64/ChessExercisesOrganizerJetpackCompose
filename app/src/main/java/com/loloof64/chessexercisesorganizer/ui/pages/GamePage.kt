@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.navigate
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
+import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 
 @Composable
@@ -57,12 +57,29 @@ fun AdaptableLayoutGamePageContent(
     navController: NavController? = null,
 ) {
 
+    val restartPosition = STANDARD_FEN
+    val positionHandlerInstance by rememberSaveable(stateSaver = PositionHandlerSaver) {
+        mutableStateOf(
+            PositionHandler(restartPosition)
+        )
+    }
+    var currentPosition by rememberSaveable {
+        mutableStateOf(positionHandlerInstance.getCurrentPosition())
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
     }
 
     var boardReversed by rememberSaveable { mutableStateOf(false) }
+    var gameInProgress by rememberSaveable { mutableStateOf(false) }
+
+    fun startNewGame() {
+        positionHandlerInstance.newGame()
+        currentPosition = positionHandlerInstance.getCurrentPosition()
+        gameInProgress = true
+    }
 
 
     Layout(
@@ -71,7 +88,7 @@ fun AdaptableLayoutGamePageContent(
                 text = stringResource(R.string.new_game),
                 vectorId = R.drawable.ic_start_flag
             ) {
-
+                startNewGame()
             }
             SimpleButton(
                 text = stringResource(R.string.stop_game),
@@ -97,14 +114,25 @@ fun AdaptableLayoutGamePageContent(
 
             DynamicChessBoard(
                 reversed = boardReversed,
+                gameInProgress = gameInProgress,
+                position = currentPosition,
+                validMoveCallback = {
+                    positionHandlerInstance.isValidMove(it)
+                },
+                dndMoveCallback = {
+                    positionHandlerInstance.makeMove(it)
+                    currentPosition = positionHandlerInstance.getCurrentPosition()
+                },
+                promotionMoveCallback = {
+                    positionHandlerInstance.makeMove(it)
+                    currentPosition = positionHandlerInstance.getCurrentPosition()
+                }
             )
 
         }
     ) { allMeasurable, constraints ->
         val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
-        val buttonsCount = /* TODO handle in upper stage
-        if (!gameInProgress) 4 else */
-            3
+        val buttonsCount = if (!gameInProgress) 4 else 3
 
         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
             val isBoard = index == buttonsCount
