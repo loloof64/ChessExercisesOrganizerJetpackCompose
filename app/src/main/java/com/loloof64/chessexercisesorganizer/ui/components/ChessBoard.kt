@@ -7,6 +7,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
@@ -31,155 +32,23 @@ import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.floor
+import kotlin.math.sqrt
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
 
-const val NO_PIECE = '.'
+sealed class PromotionPiece(val fen: Char)
 
-fun Char.isWhitePiece(): Boolean {
-    return when (this) {
-        'P', 'N', 'B', 'R', 'Q', 'K' -> true
-        'p', 'n', 'b', 'r', 'q', 'k' -> false
-        else -> throw IllegalArgumentException("Not a valid piece : $this !")
-    }
-}
-
-fun Int.asFileChar(): Char {
-    return when (this) {
-        0 -> 'a'
-        1 -> 'b'
-        2 -> 'c'
-        3 -> 'd'
-        4 -> 'e'
-        5 -> 'f'
-        6 -> 'g'
-        7 -> 'h'
-        else -> 'X'
-    }
-}
-
-fun Int.asRankChar(): Char {
-    return when (this) {
-        0 -> '1'
-        1 -> '2'
-        2 -> '3'
-        3 -> '4'
-        4 -> '5'
-        5 -> '6'
-        6 -> '7'
-        7 -> '8'
-        else -> 'X'
-    }
-}
-
-
-fun Char.getPieceImageID(): Int {
-    return when (this) {
-        'P' -> R.drawable.ic_chess_plt45
-        'N' -> R.drawable.ic_chess_nlt45
-        'B' -> R.drawable.ic_chess_blt45
-        'R' -> R.drawable.ic_chess_rlt45
-        'Q' -> R.drawable.ic_chess_qlt45
-        'K' -> R.drawable.ic_chess_klt45
-        'p' -> R.drawable.ic_chess_pdt45
-        'n' -> R.drawable.ic_chess_ndt45
-        'b' -> R.drawable.ic_chess_bdt45
-        'r' -> R.drawable.ic_chess_rdt45
-        'q' -> R.drawable.ic_chess_qdt45
-        'k' -> R.drawable.ic_chess_kdt45
-        else -> throw RuntimeException("Not a valid piece: $this !")
-    }
-}
-
-fun String.toBoard(): Board {
-    val position = this
-    return Board().apply {
-        fen = position
-    }
-}
-
-fun serializeBoard(board: Board): String {
-    val positionPart = board.fen
-    val keyHistoryPart = board.keyHistory.joinToString(separator = "@") {
-        "${it[0]};${it[1]}"
-    }
-    val keyPart = "${board.key[0]};${board.key[1]}"
-    return "$positionPart|$keyHistoryPart|$keyPart"
-}
-
-fun deserializeBoard(input: String): Board {
-    val parts = input.split("|")
-    val fen = parts[0]
-    val keyHistory = parts[1].split('@').map { entryPairString ->
-        val entryPair = entryPairString.split(';')
-        val whitePart = entryPair[0].toLong()
-        val blackPart = entryPair[1].toLong()
-        arrayOf(whitePart, blackPart).toLongArray()
-    }.toTypedArray()
-    val keyParts = parts[2].split(';')
-    val key = arrayOf(keyParts[0].toLong(), keyParts[1].toLong()).toLongArray()
-    return fen.toBoard().apply {
-        this.keyHistory = keyHistory
-        this.key = key
-    }
-}
-
-val BoardStateSaver = Saver<Board, String>(
-    save = { state -> serializeBoard(state) },
-    restore = { value ->
-        deserializeBoard(value)
-    }
-)
-
-data class DndData(
-    val pieceValue: Char = NO_PIECE,
-    val startFile: Int = Int.MIN_VALUE,
-    val startRank: Int = Int.MIN_VALUE,
-    val targetFile: Int = Int.MIN_VALUE,
-    val targetRank: Int = Int.MIN_VALUE,
-    val movedPieceXRatio: Float = Float.MIN_VALUE,
-    val movedPieceYRatio: Float = Float.MAX_VALUE,
-) {
-    override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
-            "$movedPieceXRatio|$movedPieceYRatio"
-
-    companion object {
-        fun parse(valueStr: String): DndData {
-            try {
-                val parts = valueStr.split("|")
-                return DndData(
-                    pieceValue = parts[0][0],
-                    startFile = parts[1].toInt(),
-                    startRank = parts[2].toInt(),
-                    targetFile = parts[3].toInt(),
-                    targetRank = parts[4].toInt(),
-                    movedPieceXRatio = parts[5].toFloat(),
-                    movedPieceYRatio = parts[6].toFloat(),
-                )
-            } catch (ex: NumberFormatException) {
-                return DndData()
-            } catch (ex: ArrayIndexOutOfBoundsException) {
-                return DndData()
-            }
-        }
-    }
-}
-
-
-val DndDataStateSaver = Saver<DndData, String>(
-    save = { state -> state.toString() },
-    restore = { value ->
-        DndData.parse(value)
-    }
-)
-
+class PromotionQueen : PromotionPiece('q')
+class PromotionRook : PromotionPiece('r')
+class PromotionBishop : PromotionPiece('b')
+class PromotionKnight : PromotionPiece('n')
 
 @Composable
 fun DynamicChessBoard(
     modifier: Modifier = Modifier,
     position: String = STANDARD_FEN,
     reversed: Boolean = false,
-    positionChangedCallback : (String) -> Unit = { _ -> },
+    positionChangedCallback: (String) -> Unit = { _ -> },
 ) {
     val composableScope = rememberCoroutineScope()
 
@@ -195,27 +64,23 @@ fun DynamicChessBoard(
 
     var cellsSize by remember { mutableStateOf(0f) }
 
-    fun processDragAndDropStart(file: Int, rank: Int, piece: Char) {
-        val whiteTurn = boardState.turn
-        val isPieceOfSideToMove =
-            (piece.isWhitePiece() && whiteTurn) ||
-                    (!piece.isWhitePiece() && !whiteTurn)
-        if (isPieceOfSideToMove) {
-            val col = if (reversed) 7 - file else file
-            val row = if (reversed) rank else 7 - rank
-            val boardMinSize = cellsSize * 9f
-            val newMovedPieceX = cellsSize * (0.5f + col.toFloat())
-            val newMovedPieceY = cellsSize * (0.5f + row.toFloat())
-            val newMovedPieceXRatio = newMovedPieceX / boardMinSize
-            val newMovedPieceYRatio = newMovedPieceY / boardMinSize
-            dndState = dndState.copy(
-                startFile = file,
-                startRank = rank,
-                movedPieceXRatio = newMovedPieceXRatio,
-                movedPieceYRatio = newMovedPieceYRatio,
-                pieceValue = piece
-            )
-        }
+    fun commitPromotion(piece: PromotionPiece) {
+        val promotionFen = piece.fen.toLowerCase()
+        val moveString =
+            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
+                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionFen"
+        val move = Move.getFromString(boardState, moveString, true)
+        boardState.doMove(move, true, true)
+
+        dndState = DndData()
+        positionChangedCallback(boardState.fen)
+        /* TODO handle at upper stage
+        manageEndStatus(
+            gameEndedCallback = { naturalGameEndCallback(it) },
+        )
+
+        makeComputerMoveRequestIfAppropriate()
+        */
     }
 
     fun cancelDragAndDropAnimation() {
@@ -275,6 +140,113 @@ fun DynamicChessBoard(
         }
     }
 
+
+    fun handleTap(offset: Offset) {
+        if (dndState.pendingPromotion) {
+            val promotionInBottomPart =
+                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
+            val minBoardSize = cellsSize * 9
+            val buttonsY = minBoardSize * (if (promotionInBottomPart) 0.06f else 0.85f)
+            val buttonsHalfSizeRatio = 0.575f
+            val buttonsGapRatio = 0.2f
+            val buttonsCenterY = buttonsY + cellsSize * buttonsHalfSizeRatio
+            val queenButtonCenterX = minBoardSize * 0.18f + cellsSize * buttonsHalfSizeRatio
+            val rookButtonCenterX =
+                queenButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+            val bishopButtonCenterX =
+                rookButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+            val knightButtonCenterX =
+                bishopButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+            val cancelButtonCenterX =
+                knightButtonCenterX + cellsSize * (2 * buttonsHalfSizeRatio + buttonsGapRatio)
+
+            val queenButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = queenButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val rookButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = rookButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val bishopButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = bishopButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val knightButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = knightButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            val cancelButtonTapped = pointInCircle(
+                pointX = offset.x.toDouble(),
+                pointY = offset.y.toDouble(),
+                circleCenterX = cancelButtonCenterX.toDouble(),
+                circleCenterY = buttonsCenterY.toDouble(),
+                circleRadius = (cellsSize * buttonsHalfSizeRatio).toDouble()
+            )
+
+            when {
+                queenButtonTapped -> commitPromotion(piece = PromotionQueen())
+                rookButtonTapped -> commitPromotion(piece = PromotionRook())
+                bishopButtonTapped -> commitPromotion(piece = PromotionBishop())
+                knightButtonTapped -> commitPromotion(piece = PromotionKnight())
+                cancelButtonTapped -> {
+                    dndState = dndState.copy(
+                        targetFile = Int.MIN_VALUE,
+                        targetRank = Int.MIN_VALUE,
+                    )
+                    cancelDragAndDropAnimation()
+                }
+            }
+
+        }
+    }
+
+    fun processDragAndDropStart(file: Int, rank: Int, piece: Char) {
+        if (dndState.pendingPromotion) return
+        val whiteTurn = boardState.turn
+        val isPieceOfSideToMove =
+            (piece.isWhitePiece() && whiteTurn) ||
+                    (!piece.isWhitePiece() && !whiteTurn)
+        if (isPieceOfSideToMove) {
+            val col = if (reversed) 7 - file else file
+            val row = if (reversed) rank else 7 - rank
+            val boardMinSize = cellsSize * 9f
+            val newMovedPieceX = cellsSize * (0.5f + col.toFloat())
+            val newMovedPieceY = cellsSize * (0.5f + row.toFloat())
+            val newMovedPieceXRatio = newMovedPieceX / boardMinSize
+            val newMovedPieceYRatio = newMovedPieceY / boardMinSize
+            dndState = dndState.copy(
+                startFile = file,
+                startRank = rank,
+                movedPieceXRatio = newMovedPieceXRatio,
+                movedPieceYRatio = newMovedPieceYRatio,
+                pieceValue = piece
+            )
+        }
+    }
+
+    fun dndMoveIsPromotion(): Boolean {
+        return (dndState.targetRank == 0 &&
+                dndState.pieceValue == 'p') ||
+                (dndState.targetRank == 7 && dndState.pieceValue == 'P')
+    }
+
     fun isValidDndMove(): Boolean {
         if (dndState.pieceValue == NO_PIECE) return false
         if (dndState.startFile < 0 || dndState.startFile > 7) return false
@@ -282,8 +254,7 @@ fun DynamicChessBoard(
         if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
         if (dndState.targetFile < 0 || dndState.targetFile > 7) return false
 
-        val promotionChar = /* TODO handle in upper stage
-        if (dndMoveIsPromotion()) "Q" else */ ""
+        val promotionChar = if (dndMoveIsPromotion()) "Q" else ""
         val moveString =
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
                     "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
@@ -314,6 +285,7 @@ fun DynamicChessBoard(
 
 
     fun handleDragStart(offset: Offset) {
+        if (dndState.pendingPromotion) return
         val col = floor((offset.x - cellsSize * 0.5f) / cellsSize).toInt()
         val row = floor((offset.y - cellsSize * 0.5f) / cellsSize).toInt()
 
@@ -332,6 +304,8 @@ fun DynamicChessBoard(
 
     fun handleDragMove(change: PointerInputChange, dragAmount: Offset) {
         change.consumeAllChanges()
+
+        if (dndState.pendingPromotion) return
 
         if (dndState.pieceValue != NO_PIECE) {
             val boardMinSize = cellsSize * 9f
@@ -353,13 +327,23 @@ fun DynamicChessBoard(
     }
 
     fun handleDndCancel() {
+        if (dndState.pendingPromotion) return
         cancelDragAndDropAnimation()
     }
 
     fun handleDndValidation() {
+        if (dndState.pendingPromotion) return
         if (isValidDndMove()) {
-            commitDndMove()
-            dndState = DndData()
+            dndState = if (dndMoveIsPromotion()) {
+                dndState.copy(
+                    pendingPromotion = true,
+                    pendingPromotionForBlack = !boardState.turn,
+                    pendingPromotionStartedInReversedMode = reversed
+                )
+            } else {
+                commitDndMove()
+                DndData()
+            }
         } else {
             cancelDragAndDropAnimation()
         }
@@ -376,6 +360,11 @@ fun DynamicChessBoard(
                     },
                     onDragCancel = { handleDndCancel() },
                     onDragEnd = { handleDndValidation() },
+                )
+            }
+            .pointerInput(reversed) {
+                detectTapGestures(
+                    onTap = {handleTap(it)}
                 )
             }
     ) {
@@ -395,8 +384,18 @@ fun DynamicChessBoard(
 
         if (dndState.pieceValue != NO_PIECE) {
             val boardMinSize = cellsSize * 9f
-            val x = boardMinSize * dndState.movedPieceXRatio
-            val y = boardMinSize * dndState.movedPieceYRatio
+            var x = boardMinSize * dndState.movedPieceXRatio
+            var y = boardMinSize * dndState.movedPieceYRatio
+
+            if (dndState.pendingPromotion) {
+                val notInitialReversedMode =
+                    reversed != dndState.pendingPromotionStartedInReversedMode
+
+                if (notInitialReversedMode) {
+                    x = boardMinSize - cellsSize - x
+                    y = boardMinSize - cellsSize - y
+                }
+            }
 
             drawMovedPiece(
                 context = currentContext,
@@ -405,6 +404,24 @@ fun DynamicChessBoard(
                 x = x,
                 y = y,
                 positionFen = boardState.fen,
+            )
+        }
+
+        if (dndState.pendingPromotion) {
+            val promotionInBottomPart =
+                (reversed && !dndState.pendingPromotionForBlack) || (!reversed && dndState.pendingPromotionForBlack)
+            val itemsZoneX = minSize * 0.18f
+            val itemsZoneY = minSize * (if (promotionInBottomPart) 0.06f else 0.85f)
+            val itemsSize = cellsSize * 1.15f
+            val spaceBetweenItems = cellsSize * 0.2f
+
+            drawPromotionValidationZone(
+                context = currentContext,
+                x = itemsZoneX,
+                y = itemsZoneY,
+                itemsSize = itemsSize,
+                isWhiteTurn = boardState.turn,
+                spaceBetweenItems = spaceBetweenItems,
             )
         }
 
@@ -439,6 +456,152 @@ fun StaticChessBoard(
 
     }
 }
+
+private const val NO_PIECE = '.'
+
+private fun Char.isWhitePiece(): Boolean {
+    return when (this) {
+        'P', 'N', 'B', 'R', 'Q', 'K' -> true
+        'p', 'n', 'b', 'r', 'q', 'k' -> false
+        else -> throw IllegalArgumentException("Not a valid piece : $this !")
+    }
+}
+
+private fun Int.asFileChar(): Char {
+    return when (this) {
+        0 -> 'a'
+        1 -> 'b'
+        2 -> 'c'
+        3 -> 'd'
+        4 -> 'e'
+        5 -> 'f'
+        6 -> 'g'
+        7 -> 'h'
+        else -> 'X'
+    }
+}
+
+private fun Int.asRankChar(): Char {
+    return when (this) {
+        0 -> '1'
+        1 -> '2'
+        2 -> '3'
+        3 -> '4'
+        4 -> '5'
+        5 -> '6'
+        6 -> '7'
+        7 -> '8'
+        else -> 'X'
+    }
+}
+
+
+private fun Char.getPieceImageID(): Int {
+    return when (this) {
+        'P' -> R.drawable.ic_chess_plt45
+        'N' -> R.drawable.ic_chess_nlt45
+        'B' -> R.drawable.ic_chess_blt45
+        'R' -> R.drawable.ic_chess_rlt45
+        'Q' -> R.drawable.ic_chess_qlt45
+        'K' -> R.drawable.ic_chess_klt45
+        'p' -> R.drawable.ic_chess_pdt45
+        'n' -> R.drawable.ic_chess_ndt45
+        'b' -> R.drawable.ic_chess_bdt45
+        'r' -> R.drawable.ic_chess_rdt45
+        'q' -> R.drawable.ic_chess_qdt45
+        'k' -> R.drawable.ic_chess_kdt45
+        else -> throw RuntimeException("Not a valid piece: $this !")
+    }
+}
+
+private fun String.toBoard(): Board {
+    val position = this
+    return Board().apply {
+        fen = position
+    }
+}
+
+private fun serializeBoard(board: Board): String {
+    val positionPart = board.fen
+    val keyHistoryPart = board.keyHistory.joinToString(separator = "@") {
+        "${it[0]};${it[1]}"
+    }
+    val keyPart = "${board.key[0]};${board.key[1]}"
+    return "$positionPart|$keyHistoryPart|$keyPart"
+}
+
+private fun deserializeBoard(input: String): Board {
+    val parts = input.split("|")
+    val fen = parts[0]
+    val keyHistory = parts[1].split('@').map { entryPairString ->
+        val entryPair = entryPairString.split(';')
+        val whitePart = entryPair[0].toLong()
+        val blackPart = entryPair[1].toLong()
+        arrayOf(whitePart, blackPart).toLongArray()
+    }.toTypedArray()
+    val keyParts = parts[2].split(';')
+    val key = arrayOf(keyParts[0].toLong(), keyParts[1].toLong()).toLongArray()
+    return fen.toBoard().apply {
+        this.keyHistory = keyHistory
+        this.key = key
+    }
+}
+
+private val BoardStateSaver = Saver<Board, String>(
+    save = { state -> serializeBoard(state) },
+    restore = { value ->
+        deserializeBoard(value)
+    }
+)
+
+private data class DndData(
+    val pieceValue: Char = NO_PIECE,
+    val startFile: Int = Int.MIN_VALUE,
+    val startRank: Int = Int.MIN_VALUE,
+    val targetFile: Int = Int.MIN_VALUE,
+    val targetRank: Int = Int.MIN_VALUE,
+    val movedPieceXRatio: Float = Float.MIN_VALUE,
+    val movedPieceYRatio: Float = Float.MAX_VALUE,
+    val pendingPromotion: Boolean = false,
+    val pendingPromotionForBlack: Boolean = false,
+    val pendingPromotionStartedInReversedMode: Boolean = false,
+) {
+    override fun toString(): String = "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
+            "$movedPieceXRatio|$movedPieceYRatio|" +
+            "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
+
+    companion object {
+        fun parse(valueStr: String): DndData {
+            try {
+                val parts = valueStr.split("|")
+                return DndData(
+                    pieceValue = parts[0][0],
+                    startFile = parts[1].toInt(),
+                    startRank = parts[2].toInt(),
+                    targetFile = parts[3].toInt(),
+                    targetRank = parts[4].toInt(),
+                    movedPieceXRatio = parts[5].toFloat(),
+                    movedPieceYRatio = parts[6].toFloat(),
+                    pendingPromotion = parts[7].toBoolean(),
+                    pendingPromotionForBlack = parts[8].toBoolean(),
+                    pendingPromotionStartedInReversedMode = parts[9].toBoolean(),
+                )
+            } catch (ex: NumberFormatException) {
+                return DndData()
+            } catch (ex: ArrayIndexOutOfBoundsException) {
+                return DndData()
+            }
+        }
+    }
+}
+
+
+private val DndDataStateSaver = Saver<DndData, String>(
+    save = { state -> state.toString() },
+    restore = { value ->
+        DndData.parse(value)
+    }
+)
 
 private fun getSquareFromCellCoordinates(file: Int, rank: Int): Long {
     return 1L.shl(7 - file + 8 * rank)
@@ -605,6 +768,132 @@ private fun Canvas.drawVector(
     translate(x, y)
     drawable.draw(this)
     restore()
+}
+
+private fun DrawScope.drawPromotionValidationZone(
+    context: Context,
+    x: Float,
+    y: Float,
+    itemsSize: Float,
+    spaceBetweenItems: Float,
+    isWhiteTurn: Boolean,
+) {
+    val xRook = x + itemsSize + spaceBetweenItems
+    val xBishop = xRook + itemsSize + spaceBetweenItems
+    val xKnight = xBishop + itemsSize + spaceBetweenItems
+    val xCancellation = xKnight + itemsSize + spaceBetweenItems
+    drawPromotionValidationItem(context, x, y, itemsSize, PromotionQueen(), whiteTurn = isWhiteTurn)
+    drawPromotionValidationItem(
+        context,
+        xRook,
+        y,
+        itemsSize,
+        PromotionRook(),
+        whiteTurn = isWhiteTurn
+    )
+    drawPromotionValidationItem(
+        context,
+        xBishop,
+        y,
+        itemsSize,
+        PromotionBishop(),
+        whiteTurn = isWhiteTurn
+    )
+    drawPromotionValidationItem(
+        context,
+        xKnight,
+        y,
+        itemsSize,
+        PromotionKnight(),
+        whiteTurn = isWhiteTurn
+    )
+    drawPromotionCancellationItem(
+        context,
+        xCancellation,
+        y,
+        itemsSize,
+        isWhiteTurn = isWhiteTurn
+    )
+}
+
+fun DrawScope.drawPromotionValidationItem(
+    context: Context,
+    x: Float,
+    y: Float,
+    size: Float,
+    pieceValue: PromotionPiece,
+    whiteTurn: Boolean,
+) {
+    val ovalPaint = Paint().apply {
+        if (whiteTurn) setARGB(255, 0, 0, 0)
+        else setARGB(255, 255, 255, 255)
+        style = Paint.Style.FILL
+    }
+    val ovalX = x - size * 0.15f
+    val ovalY = y - size * 0.15f
+
+    val pieceFen = if (whiteTurn) pieceValue.fen.toUpperCase() else pieceValue.fen.toLowerCase()
+    val imageRef = pieceFen.getPieceImageID()
+    val vectorDrawable =
+        VectorDrawableCompat.create(context.resources, imageRef, null)
+
+    val imageSize = size * 0.7f
+    drawIntoCanvas {
+        it.nativeCanvas.drawOval(ovalX, ovalY, ovalX + size, ovalY + size, ovalPaint)
+        if (vectorDrawable != null) it.nativeCanvas.drawVector(
+            vectorDrawable,
+            x,
+            y,
+            imageSize.toInt(),
+            imageSize.toInt()
+        )
+    }
+}
+
+fun DrawScope.drawPromotionCancellationItem(
+    context: Context,
+    x: Float,
+    y: Float,
+    size: Float,
+    isWhiteTurn: Boolean,
+) {
+    val ovalPaint = Paint().apply {
+        if (isWhiteTurn) setARGB(255, 0, 0, 0)
+        else setARGB(255, 255, 255, 255)
+        style = Paint.Style.FILL
+    }
+    val ovalX = x - size * 0.15f
+    val ovalY = y - size * 0.15f
+
+
+    val imageRef = R.drawable.ic_red_cross
+    val vectorDrawable =
+        VectorDrawableCompat.create(context.resources, imageRef, null)
+    val imageSize = size * 0.7f
+    drawIntoCanvas {
+        it.nativeCanvas.drawOval(ovalX, ovalY, ovalX + size, ovalY + size, ovalPaint)
+        if (vectorDrawable != null) it.nativeCanvas.drawVector(
+            vectorDrawable,
+            x,
+            y,
+            imageSize.toInt(),
+            imageSize.toInt()
+        )
+    }
+}
+
+private fun pointInCircle(
+    pointX: Double,
+    pointY: Double,
+    circleCenterX: Double,
+    circleCenterY: Double,
+    circleRadius: Double
+): Boolean {
+    val distance = sqrt(
+        (pointX - circleCenterX) * (pointX - circleCenterX) +
+                (pointY - circleCenterY) * (pointY - circleCenterY)
+    )
+    return distance <= circleRadius
 }
 
 @Preview
