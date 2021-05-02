@@ -48,4 +48,6 @@
     <string name="no_installed_engine_error">No hay motor instalado localmente. Juego cancelado. Compruebe la configuración de los motores.</string>
     <string name="select_engine_title">Elige el motor</string>
     <string name="error_launching_engine">Erreur de démarrage du moteur.</string>
+    <string name="confirm_new_game_title">¿Empezar un nuevo juego?</string>
+    <string name="confirm_new_game_message">¿Está seguro de que desea iniciar un juego nuevo y detener el juego actual?</string>
 </resources>

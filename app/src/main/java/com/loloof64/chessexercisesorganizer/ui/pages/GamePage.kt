@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,8 +60,12 @@ fun AdaptableLayoutGamePageContent(
             PositionHandler(restartPosition)
         )
     }
-    var currentPosition by rememberSaveable {
+    var currentPosition by remember {
         mutableStateOf(positionHandlerInstance.getCurrentPosition())
+    }
+
+    var pendingNewGameRequest by rememberSaveable {
+        mutableStateOf(false)
     }
 
     var promotionState by rememberSaveable(stateSaver = PendingPromotionStateSaver) {
@@ -79,11 +80,17 @@ fun AdaptableLayoutGamePageContent(
     var boardReversed by rememberSaveable { mutableStateOf(false) }
     var gameInProgress by rememberSaveable { mutableStateOf(false) }
 
-    fun startNewGame() {
+    fun doStartNewGame() {
         promotionState = PendingPromotionData()
         positionHandlerInstance.newGame()
         currentPosition = positionHandlerInstance.getCurrentPosition()
         gameInProgress = true
+    }
+
+    fun newGameRequest() {
+        val isInInitialPosition = currentPosition == EMPTY_FEN
+        if (isInInitialPosition) doStartNewGame()
+        else pendingNewGameRequest = true
     }
 
     Layout(
@@ -92,7 +99,7 @@ fun AdaptableLayoutGamePageContent(
                 text = stringResource(R.string.new_game),
                 vectorId = R.drawable.ic_start_flag
             ) {
-                startNewGame()
+                newGameRequest()
             }
             SimpleButton(
                 text = stringResource(R.string.stop_game),
@@ -140,6 +147,13 @@ fun AdaptableLayoutGamePageContent(
                     promotionState = it
                 }
             )
+
+            ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
+                pendingNewGameRequest = false
+                doStartNewGame()
+            }, dismissCallback = {
+                pendingNewGameRequest = false
+            })
 
         }
     ) { allMeasurable, constraints ->
@@ -226,6 +240,41 @@ fun AdaptableLayoutGamePageContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ConfirmNewGameDialog(
+    isOpen: Boolean,
+    validateCallback: () -> Unit,
+    dismissCallback: () -> Unit
+) {
+    if (isOpen) {
+        AlertDialog(onDismissRequest = { dismissCallback() },
+            title = {
+                Text(stringResource(R.string.confirm_new_game_title))
+            },
+            text = {
+                Text(stringResource(R.string.confirm_new_game_message))
+            },
+            confirmButton = {
+                Button(
+                    onClick = { validateCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { dismissCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
+                ) {
+                    Text(stringResource(R.string.Cancel))
+                }
+            }
+        )
+
     }
 }
 

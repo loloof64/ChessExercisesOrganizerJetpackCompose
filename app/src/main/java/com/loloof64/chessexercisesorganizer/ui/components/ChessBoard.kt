@@ -35,6 +35,7 @@ import kotlin.math.floor
 import kotlin.math.sqrt
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
+const val EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1"
 
 fun String.toBoard(): Board {
     val position = this
@@ -47,7 +48,7 @@ fun String.toBoard(): Board {
 class PositionHandler(
     private val startPosition: String = STANDARD_FEN
 ) {
-    private var currentPosition = "8/8/8/8/8/8/8/8 w - - 0 1"
+    private var currentPosition = EMPTY_FEN
         set(value) {
             boardLogic = value.toBoard()
             field = value

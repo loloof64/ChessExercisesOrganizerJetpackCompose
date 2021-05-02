@@ -48,4 +48,6 @@
     <string name="no_installed_engine_error">Aucun moteur installé localement. Partie annulée. Veuillez vérifier la configuration des moteurs.</string>
     <string name="select_engine_title">Veuillez choisir le moteur</string>
     <string name="error_launching_engine">Erreur d\'exécution du moteur</string>
+    <string name="confirm_new_game_title">Démarrer une nouvelle partie ?</string>
+    <string name="confirm_new_game_message">Voulez-vous vraiment démarrer une nouvelle partie et arrêter la partie en cours ?</string>
 </resources>
