@@ -44,34 +44,48 @@ fun String.toBoard(): Board {
     }
 }
 
+enum class GameEndedStatus {
+    NOT_ENDED,
+    CHECKMATE_WHITE,
+    CHECKMATE_BLACK,
+    STALEMATE,
+    DRAW_THREE_FOLD_REPETITION,
+    DRAW_FIFTY_MOVES_RULE,
+    DRAW_MISSING_MATERIAL,
+}
+
 
 class PositionHandler(
     private val startPosition: String = STANDARD_FEN
 ) {
-    private var currentPosition = EMPTY_FEN
-        set(value) {
-            boardLogic = value.toBoard()
-            field = value
-        }
+    private var boardLogic = EMPTY_FEN.toBoard()
 
-    private var boardLogic = currentPosition.toBoard()
-
-    fun getCurrentPosition() = currentPosition
+    fun getCurrentPosition() = boardLogic.fen
 
     fun newGame() {
-        currentPosition = startPosition
+        boardLogic = startPosition.toBoard()
     }
 
     fun makeMove(moveStr: String) {
         val move = Move.getFromString(boardLogic, moveStr, true)
         boardLogic.doMove(move, true, true)
-        currentPosition = boardLogic.fen
     }
 
     fun isValidMove(moveStr: String): Boolean {
-        val boardCopy = currentPosition.toBoard()
+        val boardCopy = boardLogic.fen.toBoard()
         val move = Move.getFromString(boardCopy, moveStr, true)
         return boardCopy.doMove(move, true, true)
+    }
+
+    fun getNaturalEndGameStatus(): GameEndedStatus {
+        return when  {
+            boardLogic.isMate -> if (boardLogic.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
+            boardLogic.isStalemate -> GameEndedStatus.STALEMATE
+            boardLogic.isDrawByThreeFoldRepetitions -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
+            boardLogic.isDrawByFiftyMovesRule -> GameEndedStatus.DRAW_FIFTY_MOVES_RULE
+            boardLogic.isDrawByMissingMaterial -> GameEndedStatus.DRAW_MISSING_MATERIAL
+            else -> GameEndedStatus.NOT_ENDED
+        }
     }
 
     fun serialize(): String {
@@ -87,7 +101,6 @@ class PositionHandler(
 
             return PositionHandler(startPosition).apply {
                 boardLogic = newBoardLogic
-                currentPosition = newBoardLogic.fen
             }
         }
     }

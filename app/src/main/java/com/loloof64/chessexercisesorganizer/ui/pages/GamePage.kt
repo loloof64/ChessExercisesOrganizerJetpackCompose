@@ -28,11 +28,13 @@ import androidx.navigation.compose.navigate
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun GamePage(navController: NavController? = null) {
 
     val scaffoldState = rememberScaffoldState()
+    val scope = rememberCoroutineScope()
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
@@ -42,6 +44,14 @@ fun GamePage(navController: NavController? = null) {
                 Surface(color = MaterialTheme.colors.background) {
                     AdaptableLayoutGamePageContent(
                         navController,
+                        showMinutedSnackbarAction = { text, duration ->
+                            scope.launch {
+                                scaffoldState.snackbarHostState.showSnackbar(
+                                    message = text,
+                                    duration = duration,
+                                )
+                            }
+                        }
                     )
                 }
             },
@@ -52,9 +62,10 @@ fun GamePage(navController: NavController? = null) {
 @Composable
 fun AdaptableLayoutGamePageContent(
     navController: NavController? = null,
+    showMinutedSnackbarAction: (String, SnackbarDuration) -> Unit,
 ) {
 
-    val restartPosition = STANDARD_FEN
+    val restartPosition = "8/8/7b/8/1k6/pp6/8/K7 w - - 0 1" // STANDARD_FEN
     val positionHandlerInstance by rememberSaveable(stateSaver = PositionHandlerSaver) {
         mutableStateOf(
             PositionHandler(restartPosition)
@@ -80,6 +91,13 @@ fun AdaptableLayoutGamePageContent(
     var boardReversed by rememberSaveable { mutableStateOf(false) }
     var gameInProgress by rememberSaveable { mutableStateOf(false) }
 
+    val checkmateWhiteText = stringResource(R.string.chessmate_white)
+    val checkmateBlackText = stringResource(R.string.chessmate_black)
+    val stalemateText = stringResource(R.string.stalemate)
+    val threeFoldRepetitionText = stringResource(R.string.three_fold_repetition)
+    val fiftyMovesText = stringResource(R.string.fifty_moves_rule_draw)
+    val missingMaterialText = stringResource(R.string.missing_material_draw)
+
     fun doStartNewGame() {
         promotionState = PendingPromotionData()
         positionHandlerInstance.newGame()
@@ -91,6 +109,22 @@ fun AdaptableLayoutGamePageContent(
         val isInInitialPosition = currentPosition == EMPTY_FEN
         if (isInInitialPosition) doStartNewGame()
         else pendingNewGameRequest = true
+    }
+
+    fun handleNaturalEndgame() {
+        if (!gameInProgress) return
+        val endedStatus = positionHandlerInstance.getNaturalEndGameStatus()
+        val message = when (endedStatus) {
+            GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
+            GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
+            GameEndedStatus.STALEMATE -> stalemateText
+            GameEndedStatus.DRAW_THREE_FOLD_REPETITION -> threeFoldRepetitionText
+            GameEndedStatus.DRAW_FIFTY_MOVES_RULE -> fiftyMovesText
+            GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
+            else -> null
+        }
+        message?.let {showMinutedSnackbarAction(message, SnackbarDuration.Long)}
+        if (endedStatus != GameEndedStatus.NOT_ENDED) gameInProgress = false
     }
 
     Layout(
@@ -134,18 +168,20 @@ fun AdaptableLayoutGamePageContent(
                 dndMoveCallback = {
                     positionHandlerInstance.makeMove(it)
                     currentPosition = positionHandlerInstance.getCurrentPosition()
+                    handleNaturalEndgame()
                 },
                 promotionMoveCallback = {
                     positionHandlerInstance.makeMove(it)
                     promotionState = PendingPromotionData()
                     currentPosition = positionHandlerInstance.getCurrentPosition()
+                    handleNaturalEndgame()
                 },
                 cancelPendingPromotionCallback = {
                     promotionState = PendingPromotionData()
                 },
                 setPendingPromotionCallback = {
                     promotionState = it
-                }
+                },
             )
 
             ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
