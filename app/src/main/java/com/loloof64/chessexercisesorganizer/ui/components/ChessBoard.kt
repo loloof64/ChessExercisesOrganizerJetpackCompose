@@ -86,6 +86,7 @@ class PositionHandler(
 
             return PositionHandler(startPosition).apply {
                 boardLogic = newBoardLogic
+                currentPosition = newBoardLogic.fen
             }
         }
     }

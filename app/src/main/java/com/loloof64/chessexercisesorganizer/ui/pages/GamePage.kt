@@ -86,7 +86,6 @@ fun AdaptableLayoutGamePageContent(
         gameInProgress = true
     }
 
-
     Layout(
         content = {
             SimpleButton(
