@@ -100,9 +100,18 @@ data class PendingPromotionData(
     val pendingPromotion: Boolean = false,
     val pendingPromotionForBlack: Boolean = false,
     val pendingPromotionStartedInReversedMode: Boolean = false,
+    val pieceValue: Char = NO_PIECE,
+    val startFile: Int = Int.MIN_VALUE,
+    val startRank: Int = Int.MIN_VALUE,
+    val targetFile: Int = Int.MIN_VALUE,
+    val targetRank: Int = Int.MIN_VALUE,
+    val movedPieceXRatio: Float = Float.MIN_VALUE,
+    val movedPieceYRatio: Float = Float.MAX_VALUE,
 ) {
     override fun toString(): String =
-        "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode"
+        "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode|" +
+                "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
+                "$movedPieceXRatio|$movedPieceYRatio"
 
     companion object {
         fun parse(valueStr: String): PendingPromotionData {
@@ -112,6 +121,13 @@ data class PendingPromotionData(
                     pendingPromotion = parts[0].toBoolean(),
                     pendingPromotionForBlack = parts[1].toBoolean(),
                     pendingPromotionStartedInReversedMode = parts[2].toBoolean(),
+                    pieceValue = parts[3][0],
+                    startFile = parts[4].toInt(),
+                    startRank = parts[5].toInt(),
+                    targetFile = parts[6].toInt(),
+                    targetRank = parts[7].toInt(),
+                    movedPieceXRatio = parts[8].toFloat(),
+                    movedPieceYRatio = parts[9].toFloat()
                 )
             } catch (ex: NumberFormatException) {
                 PendingPromotionData()
@@ -142,7 +158,7 @@ fun DynamicChessBoard(
     promotionState: PendingPromotionData = PendingPromotionData(),
     validMoveCallback: (String) -> Boolean = { _ -> false },
     dndMoveCallback: (String) -> Unit = { _ -> },
-    setPendingPromotionCallback: () -> Unit = { },
+    setPendingPromotionCallback: (PendingPromotionData) -> Unit = { _ -> },
     cancelPendingPromotionCallback: () -> Unit = { },
     promotionMoveCallback: (String) -> Unit = { _ -> },
     gameInProgress: Boolean = false,
@@ -162,10 +178,10 @@ fun DynamicChessBoard(
 
         val promotionFen = piece.fen.toLowerCase()
         val moveString =
-            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionFen"
+            "${promotionState.startFile.asFileChar()}${promotionState.startRank.asRankChar()}" +
+                    "${promotionState.targetFile.asFileChar()}${promotionState.targetRank.asRankChar()}$promotionFen"
         promotionMoveCallback(moveString)
-        dndState = DndData()
+        setPendingPromotionCallback(PendingPromotionData())
     }
 
     fun cancelDragAndDropAnimation() {
@@ -225,6 +241,24 @@ fun DynamicChessBoard(
             delay(animationDurationMillis.toLong())
             dndState = DndData()
         }
+    }
+
+    fun cancelPendingPromotionAnimation() {
+        if (!gameInProgress) return
+
+        dndState = DndData(
+            pieceValue = promotionState.pieceValue,
+            startFile = promotionState.startFile,
+            startRank = promotionState.startRank,
+            targetFile = promotionState.targetFile,
+            targetRank = promotionState.targetRank,
+            movedPieceXRatio = promotionState.movedPieceXRatio,
+            movedPieceYRatio = promotionState.movedPieceYRatio,
+        )
+
+        setPendingPromotionCallback(PendingPromotionData())
+
+        cancelDragAndDropAnimation()
     }
 
 
@@ -300,7 +334,7 @@ fun DynamicChessBoard(
                         targetFile = Int.MIN_VALUE,
                         targetRank = Int.MIN_VALUE,
                     )
-                    cancelDragAndDropAnimation()
+                    cancelPendingPromotionAnimation()
                 }
             }
 
@@ -424,7 +458,22 @@ fun DynamicChessBoard(
 
         if (isValidDndMove()) {
             if (dndMoveIsPromotion()) {
-                setPendingPromotionCallback()
+                setPendingPromotionCallback(
+                    promotionState.copy(
+                        pendingPromotion = true,
+                        pendingPromotionForBlack = !position.toBoard().turn,
+                        pendingPromotionStartedInReversedMode = reversed,
+                        pieceValue = dndState.pieceValue,
+                        startFile = dndState.startFile,
+                        startRank = dndState.startRank,
+                        targetFile = dndState.targetFile,
+                        targetRank = dndState.targetRank,
+                        movedPieceXRatio = dndState.movedPieceXRatio,
+                        movedPieceYRatio = dndState.movedPieceYRatio,
+                    )
+                )
+                dndState = DndData()
+
             } else {
                 commitDndMove()
             }
@@ -455,6 +504,11 @@ fun DynamicChessBoard(
         val minSize = if (size.width < size.height) size.width else size.height
         cellsSize = minSize / 9f
         drawCells(cellsSize = cellsSize, reversed = reversed, dndData = dndState)
+        drawPendingPromotionCells(
+            cellsSize = cellsSize,
+            reversed = reversed,
+            promotionData = promotionState
+        )
         drawFilesCoordinates(cellsSize, reversed)
         drawRanksCoordinates(cellsSize, reversed)
         drawPlayerTurn(cellsSize, position.toBoard())
@@ -464,27 +518,38 @@ fun DynamicChessBoard(
             position = position.toBoard(),
             reversed = reversed,
             dndData = dndState,
+            promotionData = promotionState,
         )
 
         if (dndState.pieceValue != NO_PIECE) {
             val boardMinSize = cellsSize * 9f
-            var x = boardMinSize * dndState.movedPieceXRatio
-            var y = boardMinSize * dndState.movedPieceYRatio
-
-            if (promotionState.pendingPromotion) {
-                val notInitialReversedMode =
-                    reversed != promotionState.pendingPromotionStartedInReversedMode
-
-                if (notInitialReversedMode) {
-                    x = boardMinSize - cellsSize - x
-                    y = boardMinSize - cellsSize - y
-                }
-            }
+            val x = boardMinSize * dndState.movedPieceXRatio
+            val y = boardMinSize * dndState.movedPieceYRatio
 
             drawMovedPiece(
                 context = currentContext,
                 cellsSize = cellsSize.toInt(),
                 pieceValue = dndState.pieceValue,
+                x = x,
+                y = y,
+                positionFen = position,
+            )
+        } else if (promotionState.pieceValue != NO_PIECE) {
+            val boardMinSize = cellsSize * 9f
+            var x = boardMinSize * promotionState.movedPieceXRatio
+            var y = boardMinSize * promotionState.movedPieceYRatio
+
+            val notInitialReversedMode =
+                reversed != promotionState.pendingPromotionStartedInReversedMode
+            if (notInitialReversedMode) {
+                x = boardMinSize - cellsSize - x
+                y = boardMinSize - cellsSize - y
+            }
+
+            drawMovedPiece(
+                context = currentContext,
+                cellsSize = cellsSize.toInt(),
+                pieceValue = promotionState.pieceValue,
                 x = x,
                 y = y,
                 positionFen = position,
@@ -703,6 +768,43 @@ private fun DrawScope.drawCells(
     }
 }
 
+private fun DrawScope.drawPendingPromotionCells(
+    cellsSize: Float,
+    reversed: Boolean = false,
+    promotionData: PendingPromotionData = PendingPromotionData()
+) {
+    if (promotionData.pendingPromotion) {
+        repeat(8) { row ->
+            val rank = if (reversed) row else 7 - row
+            repeat(8) { col ->
+                val file = if (reversed) 7 - col else col
+                val isDndStartCell =
+                    (file == promotionData.startFile) && (rank == promotionData.startRank)
+                val isDndTargetCell =
+                    (file == promotionData.targetFile) && (rank == promotionData.targetRank)
+                val isDndCrossCell =
+                    (file == promotionData.targetFile) || (rank == promotionData.targetRank)
+                val isWhiteCell = (row + col) % 2 == 0
+                val backgroundColor =
+                    when {
+                        isDndTargetCell -> Color(112, 209, 35)
+                        isDndStartCell -> Color(214, 59, 96)
+                        isDndCrossCell -> Color(178, 46, 230)
+                        isWhiteCell -> Color(255, 206, 158)
+                        else -> Color(209, 139, 71)
+                    }
+                val x = cellsSize * (0.5f + col)
+                val y = cellsSize * (0.5f + row)
+                drawRect(
+                    color = backgroundColor,
+                    topLeft = Offset(x, y),
+                    size = Size(cellsSize, cellsSize)
+                )
+            }
+        }
+    }
+}
+
 private fun DrawScope.drawPlayerTurn(
     cellsSize: Float,
     positionState: Board
@@ -764,6 +866,7 @@ private fun DrawScope.drawPieces(
     position: Board,
     reversed: Boolean,
     dndData: DndData = DndData(),
+    promotionData: PendingPromotionData = PendingPromotionData(),
 ) {
     repeat(8) { row ->
         val rank = if (reversed) row else 7 - row
@@ -774,7 +877,9 @@ private fun DrawScope.drawPieces(
             val piece = position.getPieceAt(square)
             if (piece != NO_PIECE) {
                 val isDraggedPiece = (dndData.startFile == file) && (dndData.startRank == rank)
-                if (!isDraggedPiece) {
+                val isPendingPromotionPiece =
+                    (promotionData.startFile == file) && (promotionData.startRank == rank)
+                if (!isDraggedPiece && !isPendingPromotionPiece) {
                     val x = cellsSize * (0.5f + col)
                     val y = cellsSize * (0.5f + row)
                     val imageRef = piece.getPieceImageID()

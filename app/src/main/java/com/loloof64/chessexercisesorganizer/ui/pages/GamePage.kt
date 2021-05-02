@@ -138,11 +138,7 @@ fun AdaptableLayoutGamePageContent(
                     promotionState = PendingPromotionData()
                 },
                 setPendingPromotionCallback = {
-                    promotionState = promotionState.copy(
-                        pendingPromotion = true,
-                        pendingPromotionStartedInReversedMode = boardReversed,
-                        pendingPromotionForBlack = !(currentPosition.toBoard().turn)
-                    )
+                    promotionState = it
                 }
             )
 
