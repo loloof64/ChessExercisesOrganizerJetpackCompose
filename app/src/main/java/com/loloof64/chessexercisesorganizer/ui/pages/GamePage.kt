@@ -65,7 +65,7 @@ fun AdaptableLayoutGamePageContent(
     showMinutedSnackbarAction: (String, SnackbarDuration) -> Unit,
 ) {
 
-    val restartPosition = "8/8/7b/8/1k6/pp6/8/K7 w - - 0 1" // STANDARD_FEN
+    val restartPosition = STANDARD_FEN
     val positionHandlerInstance by rememberSaveable(stateSaver = PositionHandlerSaver) {
         mutableStateOf(
             PositionHandler(restartPosition)
@@ -76,6 +76,10 @@ fun AdaptableLayoutGamePageContent(
     }
 
     var pendingNewGameRequest by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var pendingStopGameRequest by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -97,6 +101,7 @@ fun AdaptableLayoutGamePageContent(
     val threeFoldRepetitionText = stringResource(R.string.three_fold_repetition)
     val fiftyMovesText = stringResource(R.string.fifty_moves_rule_draw)
     val missingMaterialText = stringResource(R.string.missing_material_draw)
+    val gameStopedMessage = stringResource(R.string.user_stopped_game)
 
     fun doStartNewGame() {
         promotionState = PendingPromotionData()
@@ -111,6 +116,18 @@ fun AdaptableLayoutGamePageContent(
         else pendingNewGameRequest = true
     }
 
+    fun stopGameRequest() {
+        if (!gameInProgress) return
+        pendingStopGameRequest = true
+    }
+
+    fun doStopCurrentGame() {
+        if (!gameInProgress) return
+        promotionState = PendingPromotionData()
+        gameInProgress = false
+        showMinutedSnackbarAction(gameStopedMessage, SnackbarDuration.Short)
+    }
+
     fun handleNaturalEndgame() {
         if (!gameInProgress) return
         val endedStatus = positionHandlerInstance.getNaturalEndGameStatus()
@@ -123,7 +140,7 @@ fun AdaptableLayoutGamePageContent(
             GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
             else -> null
         }
-        message?.let {showMinutedSnackbarAction(message, SnackbarDuration.Long)}
+        message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
         if (endedStatus != GameEndedStatus.NOT_ENDED) gameInProgress = false
     }
 
@@ -139,7 +156,7 @@ fun AdaptableLayoutGamePageContent(
                 text = stringResource(R.string.stop_game),
                 vectorId = R.drawable.ic_stop
             ) {
-
+                stopGameRequest()
             }
             SimpleButton(
                 text = stringResource(R.string.reverse_board),
@@ -189,6 +206,13 @@ fun AdaptableLayoutGamePageContent(
                 doStartNewGame()
             }, dismissCallback = {
                 pendingNewGameRequest = false
+            })
+
+            ConfirmStopGameDialog(isOpen = pendingStopGameRequest, validateCallback = {
+                pendingStopGameRequest = false
+                doStopCurrentGame()
+            }, dismissCallback = {
+                pendingStopGameRequest = false
             })
 
         }
@@ -313,6 +337,46 @@ fun ConfirmNewGameDialog(
 
     }
 }
+
+@Composable
+fun ConfirmStopGameDialog(
+    isOpen: Boolean,
+    validateCallback: () -> Unit,
+    dismissCallback: () -> Unit
+) {
+    if (isOpen) {
+        AlertDialog(onDismissRequest = { dismissCallback() },
+            title = {
+                Text(stringResource(R.string.confirm_stop_game_title))
+            },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.confirm_stop_game_message
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { validateCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { dismissCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
+                ) {
+                    Text(stringResource(R.string.Cancel))
+                }
+            }
+        )
+
+    }
+}
+
 
 @Composable
 fun SimpleButton(

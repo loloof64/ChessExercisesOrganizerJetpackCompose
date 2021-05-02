@@ -60,7 +60,7 @@ class PositionHandler(
 ) {
     private var boardLogic = EMPTY_FEN.toBoard()
 
-    fun getCurrentPosition() = boardLogic.fen
+    fun getCurrentPosition(): String = boardLogic.fen!!
 
     fun newGame() {
         boardLogic = startPosition.toBoard()
