@@ -54,6 +54,24 @@ enum class GameEndedStatus {
     DRAW_MISSING_MATERIAL,
 }
 
+enum class PlayerType {
+    Human,
+    Computer
+}
+
+fun checkComputerMove(computerMove: String) {
+    val startFile = computerMove[0].toByte().toInt() - 'a'.toByte().toInt()
+    val startRank = computerMove[1].toByte().toInt() - '1'.toByte().toInt()
+    val targetFile = computerMove[2].toByte().toInt() - 'a'.toByte().toInt()
+    val targetRank = computerMove[3].toByte().toInt() - '1'.toByte().toInt()
+
+    val invalidComputerMove = startFile < 0 || startFile > 7
+            || startRank < 0 || startRank > 7
+            || targetFile < 0 || targetFile > 7
+            || targetRank < 0 || targetRank > 7
+
+    if (invalidComputerMove) throw IllegalArgumentException("Invalid computer move $computerMove")
+}
 
 class PositionHandler(
     private val startPosition: String = STANDARD_FEN
@@ -78,7 +96,7 @@ class PositionHandler(
     }
 
     fun getNaturalEndGameStatus(): GameEndedStatus {
-        return when  {
+        return when {
             boardLogic.isMate -> if (boardLogic.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
             boardLogic.isStalemate -> GameEndedStatus.STALEMATE
             boardLogic.isDrawByThreeFoldRepetitions -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
@@ -171,12 +189,15 @@ fun DynamicChessBoard(
     reversed: Boolean = false,
     position: String = PositionHandler().getCurrentPosition(),
     promotionState: PendingPromotionData = PendingPromotionData(),
-    validMoveCallback: (String) -> Boolean = { _ -> false },
+    isValidMoveCallback: (String) -> Boolean = { _ -> false },
     dndMoveCallback: (String) -> Unit = { _ -> },
     setPendingPromotionCallback: (PendingPromotionData) -> Unit = { _ -> },
     cancelPendingPromotionCallback: () -> Unit = { },
     promotionMoveCallback: (String) -> Unit = { _ -> },
     gameInProgress: Boolean = false,
+    computerMoveRequestCallback: (String) -> Unit = { _ -> },
+    whiteSideType: PlayerType = PlayerType.Human,
+    blackSideType: PlayerType = PlayerType.Human,
 ) {
     val composableScope = rememberCoroutineScope()
 
@@ -187,6 +208,20 @@ fun DynamicChessBoard(
     }
 
     var cellsSize by remember { mutableStateOf(0f) }
+
+    fun isComputerTurn(): Boolean {
+        val boardState = position.toBoard()
+        return (boardState.turn && whiteSideType == PlayerType.Computer)
+                || (!boardState.turn && blackSideType == PlayerType.Computer)
+    }
+
+    fun makeComputerMoveRequestIfAppropriate() {
+        if (!gameInProgress) return
+
+        if (!isComputerTurn()) return
+        computerMoveRequestCallback(position)
+    }
+
 
     fun commitPromotion(piece: PromotionPiece) {
         if (!gameInProgress) return
@@ -399,7 +434,7 @@ fun DynamicChessBoard(
         val moveString =
             "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
                     "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}$promotionChar"
-        return validMoveCallback(moveString)
+        return isValidMoveCallback(moveString)
     }
 
     fun commitDndMove() {
@@ -496,6 +531,9 @@ fun DynamicChessBoard(
             cancelDragAndDropAnimation()
         }
     }
+
+    makeComputerMoveRequestIfAppropriate()
+
 
     Canvas(
         modifier = modifier

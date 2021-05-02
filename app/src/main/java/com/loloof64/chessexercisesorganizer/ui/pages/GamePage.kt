@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,13 +30,19 @@ import androidx.navigation.compose.navigate
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun GamePage(navController: NavController? = null) {
 
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
+
+    val okString = stringResource(R.string.ok)
+
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
@@ -44,6 +52,15 @@ fun GamePage(navController: NavController? = null) {
                 Surface(color = MaterialTheme.colors.background) {
                     AdaptableLayoutGamePageContent(
                         navController,
+                        showInfiniteSnackbarAction = { text ->
+                            scope.launch {
+                                scaffoldState.snackbarHostState.showSnackbar(
+                                    message = text,
+                                    actionLabel = okString,
+                                    duration = SnackbarDuration.Indefinite
+                                )
+                            }
+                        },
                         showMinutedSnackbarAction = { text, duration ->
                             scope.launch {
                                 scaffoldState.snackbarHostState.showSnackbar(
@@ -62,8 +79,10 @@ fun GamePage(navController: NavController? = null) {
 @Composable
 fun AdaptableLayoutGamePageContent(
     navController: NavController? = null,
+    showInfiniteSnackbarAction: (String) -> Unit,
     showMinutedSnackbarAction: (String, SnackbarDuration) -> Unit,
 ) {
+    val context = LocalContext.current
 
     val restartPosition = STANDARD_FEN
     val positionHandlerInstance by rememberSaveable(stateSaver = PositionHandlerSaver) {
@@ -83,6 +102,10 @@ fun AdaptableLayoutGamePageContent(
         mutableStateOf(false)
     }
 
+    var pendingSelectEngineDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     var promotionState by rememberSaveable(stateSaver = PendingPromotionStateSaver) {
         mutableStateOf(PendingPromotionData())
     }
@@ -92,8 +115,17 @@ fun AdaptableLayoutGamePageContent(
         else -> false
     }
 
+    val coroutineScope = rememberCoroutineScope()
+    var readEngineOutputJob by remember {
+        mutableStateOf<Job?>(null)
+    }
+
     var boardReversed by rememberSaveable { mutableStateOf(false) }
     var gameInProgress by rememberSaveable { mutableStateOf(false) }
+
+    var computerThinking by rememberSaveable {
+        mutableStateOf(false)
+    }
 
     val checkmateWhiteText = stringResource(R.string.chessmate_white)
     val checkmateBlackText = stringResource(R.string.chessmate_black)
@@ -101,7 +133,13 @@ fun AdaptableLayoutGamePageContent(
     val threeFoldRepetitionText = stringResource(R.string.three_fold_repetition)
     val fiftyMovesText = stringResource(R.string.fifty_moves_rule_draw)
     val missingMaterialText = stringResource(R.string.missing_material_draw)
-    val gameStopedMessage = stringResource(R.string.user_stopped_game)
+    val gameStoppedMessage = stringResource(R.string.user_stopped_game)
+
+    val errorLaunchingEngineText = stringResource(R.string.error_launching_engine)
+    val noInstalledEngineText = stringResource(R.string.no_installed_engine_error)
+
+    val enginesFolder = File(context.filesDir, "engines")
+    val enginesList = listInstalledEngines(enginesFolder)
 
     fun doStartNewGame() {
         promotionState = PendingPromotionData()
@@ -112,7 +150,9 @@ fun AdaptableLayoutGamePageContent(
 
     fun newGameRequest() {
         val isInInitialPosition = currentPosition == EMPTY_FEN
-        if (isInInitialPosition) doStartNewGame()
+        if (isInInitialPosition) {
+            pendingSelectEngineDialog = true
+        }
         else pendingNewGameRequest = true
     }
 
@@ -123,9 +163,11 @@ fun AdaptableLayoutGamePageContent(
 
     fun doStopCurrentGame() {
         if (!gameInProgress) return
+        stopCurrentRunningEngine()
+        computerThinking = false
         promotionState = PendingPromotionData()
         gameInProgress = false
-        showMinutedSnackbarAction(gameStopedMessage, SnackbarDuration.Short)
+        showMinutedSnackbarAction(gameStoppedMessage, SnackbarDuration.Short)
     }
 
     fun handleNaturalEndgame() {
@@ -141,7 +183,53 @@ fun AdaptableLayoutGamePageContent(
             else -> null
         }
         message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
-        if (endedStatus != GameEndedStatus.NOT_ENDED) gameInProgress = false
+        if (endedStatus != GameEndedStatus.NOT_ENDED) {
+            stopCurrentRunningEngine()
+            computerThinking = false
+            gameInProgress = false
+        }
+    }
+
+    fun generateComputerMove(oldPosition: String) {
+        computerThinking = true
+        sendCommandToRunningEngine("position fen $oldPosition")
+        sendCommandToRunningEngine("go depth 10")
+        readEngineOutputJob = coroutineScope.launch {
+            var mustExitLoop = false
+            var moveLine: String? = null
+
+            while (!mustExitLoop) {
+                val nextEngineLine = readNextEngineOutput()
+                if (nextEngineLine != null && nextEngineLine.startsWith("bestmove")) {
+                    moveLine = nextEngineLine
+                    mustExitLoop = true
+                }
+                delay(100)
+            }
+
+            val moveParts = moveLine!!.split(" ")
+            val move = moveParts[1]
+
+            computerThinking = false
+            readEngineOutputJob?.cancel()
+            readEngineOutputJob = null
+
+            positionHandlerInstance.makeMove(move)
+            currentPosition = positionHandlerInstance.getCurrentPosition()
+            handleNaturalEndgame()
+        }
+    }
+
+    fun abortGameIfNoEngineInstalled() {
+        val engineAvailable = enginesList.isNotEmpty()
+        if (!engineAvailable) {
+            gameInProgress = false
+            showInfiniteSnackbarAction(noInstalledEngineText)
+        }
+    }
+
+    if (gameInProgress) {
+        abortGameIfNoEngineInstalled()
     }
 
     Layout(
@@ -164,22 +252,26 @@ fun AdaptableLayoutGamePageContent(
             ) {
                 boardReversed = !boardReversed
             }
-            SimpleButton(
-                navController = navController,
-                text = stringResource(R.string.chess_engines),
-                vectorId = R.drawable.ic_car_engine
-            ) {
-                it?.navigate("engines") {
-                    launchSingleTop = true
+            if (!gameInProgress) {
+                SimpleButton(
+                    navController = navController,
+                    text = stringResource(R.string.chess_engines),
+                    vectorId = R.drawable.ic_car_engine
+                ) {
+                    it?.navigate("engines") {
+                        launchSingleTop = true
+                    }
                 }
             }
 
             DynamicChessBoard(
+                whiteSideType = PlayerType.Human,
+                blackSideType = PlayerType.Computer,
                 reversed = boardReversed,
                 gameInProgress = gameInProgress,
                 position = currentPosition,
                 promotionState = promotionState,
-                validMoveCallback = {
+                isValidMoveCallback = {
                     positionHandlerInstance.isValidMove(it)
                 },
                 dndMoveCallback = {
@@ -199,11 +291,12 @@ fun AdaptableLayoutGamePageContent(
                 setPendingPromotionCallback = {
                     promotionState = it
                 },
+                computerMoveRequestCallback = { generateComputerMove(it) },
             )
 
             ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
                 pendingNewGameRequest = false
-                doStartNewGame()
+                pendingSelectEngineDialog = true
             }, dismissCallback = {
                 pendingNewGameRequest = false
             })
@@ -215,6 +308,30 @@ fun AdaptableLayoutGamePageContent(
                 pendingStopGameRequest = false
             })
 
+            SelectEngineDialog(
+                isOpen = pendingSelectEngineDialog,
+                enginesList = enginesList,
+                validateCallback = {
+                    pendingSelectEngineDialog = false
+                    coroutineScope.launch {
+                        executeInstalledEngine(
+                            enginesFolder = enginesFolder,
+                            index = it,
+                            errorCallback = {
+                                showInfiniteSnackbarAction(errorLaunchingEngineText)
+                                doStopCurrentGame()
+                            })
+                    }
+                    doStartNewGame()
+                },
+                dismissCallback = {
+                    pendingSelectEngineDialog = false
+                })
+            if (computerThinking) {
+                CircularProgressIndicator(modifier = Modifier.size(50.dp))
+            }
+
+
         }
     ) { allMeasurable, constraints ->
         val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
@@ -222,7 +339,7 @@ fun AdaptableLayoutGamePageContent(
 
         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
             val isBoard = index == buttonsCount
-            val isCircularProgressBar = index == allMeasurable.size - 1
+            val isCircularProgressBar = index == allMeasurable.size - 1 && computerThinking
 
             if (isBoard || isCircularProgressBar) measurable.measure(
                 constraints.copy(
@@ -363,6 +480,47 @@ fun ConfirmStopGameDialog(
                 ) {
                     Text(stringResource(R.string.ok))
                 }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { dismissCallback() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
+                ) {
+                    Text(stringResource(R.string.Cancel))
+                }
+            }
+        )
+
+    }
+}
+
+@Composable
+fun SelectEngineDialog(
+    isOpen: Boolean,
+    enginesList: Array<String>,
+    validateCallback: (Int) -> Unit,
+    dismissCallback: () -> Unit
+) {
+    if (isOpen) {
+        AlertDialog(onDismissRequest = { dismissCallback() },
+            title = {
+                Text(stringResource(R.string.select_engine_title))
+            },
+            text = {
+                LazyColumn {
+                    enginesList.mapIndexed { index, caption ->
+                        item {
+                            Button(onClick = {
+                                validateCallback(index)
+                            }) {
+                                Text(text = caption)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+
             },
             dismissButton = {
                 Button(
