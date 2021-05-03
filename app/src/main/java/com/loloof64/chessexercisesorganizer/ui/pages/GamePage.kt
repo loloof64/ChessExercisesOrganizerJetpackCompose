@@ -149,6 +149,11 @@ fun AdaptableLayoutGamePageContent(
     }
 
     fun newGameRequest() {
+        val noEngineInstalledLocally = enginesList.isEmpty()
+        if (noEngineInstalledLocally) {
+            showInfiniteSnackbarAction(noInstalledEngineText)
+            return
+        }
         val isInInitialPosition = currentPosition == EMPTY_FEN
         if (isInInitialPosition) {
             pendingSelectEngineDialog = true
@@ -218,18 +223,6 @@ fun AdaptableLayoutGamePageContent(
             currentPosition = positionHandlerInstance.getCurrentPosition()
             handleNaturalEndgame()
         }
-    }
-
-    fun abortGameIfNoEngineInstalled() {
-        val engineAvailable = enginesList.isNotEmpty()
-        if (!engineAvailable) {
-            gameInProgress = false
-            showInfiniteSnackbarAction(noInstalledEngineText)
-        }
-    }
-
-    if (gameInProgress) {
-        abortGameIfNoEngineInstalled()
     }
 
     Layout(
