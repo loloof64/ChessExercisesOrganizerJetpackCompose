@@ -38,7 +38,6 @@ private var currentRunner: ChessEngineRunner? = null
 private const val ENGINE_PROVIDER_LICENSE_MARKER = "intent.chess.provider.ACTIVATION"
 private const val ENGINE_PROVIDER_MARKER = "intent.chess.provider.ENGINE"
 
-@OptIn(ExperimentalCoroutinesApi::class)
 fun getAvailableEngines(context: Context): Flow<List<String>> = callbackFlow {
     var currentEngines: List<ChessEngine>
 
@@ -167,7 +166,7 @@ private fun getEngines(context: Context): List<ChessEngine> {
     updateLicenseCheckActivities(context)
     val result = mutableListOf<ChessEngine>()
 
-    val targetCpu = if (Build.CPU_ABI.startsWith("armeabi-v6")) "armeabi" else Build.CPU_ABI
+    val targetCpu = if (Build.SUPPORTED_ABIS[0].startsWith("armeabi-v6")) "armeabi" else Build.SUPPORTED_ABIS[0]
 
     val engineIntent = Intent(ENGINE_PROVIDER_MARKER)
     val engineProviderList = context.packageManager.queryIntentActivities(
@@ -259,7 +258,7 @@ private fun getEnginesForPackageNameAndGivenParser(
         val targets = targetSpecification.split("|")
         for (currentCpuTarget in targets) {
             if (targetCPU == currentCpuTarget) {
-                var versionCode = 0
+                var versionCode: Int
                 try {
                     versionCode = context.packageManager
                         .getPackageInfo(packageName, 0).versionCode
