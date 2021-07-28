@@ -197,7 +197,7 @@ fun AdaptableLayoutGamePageContent(
     fun generateComputerMove(oldPosition: String) {
         computerThinking = true
         sendCommandToRunningEngine("position fen $oldPosition")
-        sendCommandToRunningEngine("go depth 10")
+        sendCommandToRunningEngine("go movetime 1000")
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
             var moveLine: String? = null
