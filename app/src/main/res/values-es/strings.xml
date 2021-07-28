@@ -38,7 +38,7 @@
     <string name="no_chess_oex_application_installed">No se instaló ninguna aplicación de motor de ajedrez OEX.</string>
     <string name="chess_oex_application_samples_header">Algunos ejemplos de motores OEX gratuitos:</string>
     <string name="chess_oex_application_samples_1">* \"Stockfish Engine OEX\" de Karl Schreiner</string>
-    <string name="chess_oex_application_samples_2">* \"Komodo 10\" de komodochess.com</string>
+    <string name="chess_oex_application_samples_2">* \"Stockfish Chess Engine\" por Javiolo (más antiguo pero más preciso)</string>
     <string name="no_local_engine">No hay motor instalado en la carpeta de la aplicación.</string>
     <string name="install_from_store_possibility">Puede instalar un motor disponible haciendo clic en él y luego confirmando.</string>
     <string name="store_click_and_confirm">(Haga clic y confirmación: instale el motor en la carpeta de la aplicación)</string>
