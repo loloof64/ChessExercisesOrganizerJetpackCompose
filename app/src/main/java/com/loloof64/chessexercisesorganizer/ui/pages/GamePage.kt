@@ -42,45 +42,9 @@ fun GamePage(navController: NavController? = null) {
 
     val okString = stringResource(R.string.ok)
 
+    var boardReversed by rememberSaveable { mutableStateOf(false) }
+    var gameInProgress by rememberSaveable { mutableStateOf(false) }
 
-    ChessExercisesOrganizerJetpackComposeTheme {
-        Scaffold(
-            scaffoldState = scaffoldState,
-            topBar = { TopAppBar(title = { Text(stringResource(R.string.game_page)) }) },
-            content = {
-                Surface(color = MaterialTheme.colors.background) {
-                    AdaptableLayoutGamePageContent(
-                        navController,
-                        showInfiniteSnackbarAction = { text ->
-                            scope.launch {
-                                scaffoldState.snackbarHostState.showSnackbar(
-                                    message = text,
-                                    actionLabel = okString,
-                                    duration = SnackbarDuration.Indefinite
-                                )
-                            }
-                        },
-                        showMinutedSnackbarAction = { text, duration ->
-                            scope.launch {
-                                scaffoldState.snackbarHostState.showSnackbar(
-                                    message = text,
-                                    duration = duration,
-                                )
-                            }
-                        }
-                    )
-                }
-            },
-        )
-    }
-}
-
-@Composable
-fun AdaptableLayoutGamePageContent(
-    navController: NavController? = null,
-    showInfiniteSnackbarAction: (String) -> Unit,
-    showMinutedSnackbarAction: (String, SnackbarDuration) -> Unit,
-) {
     val context = LocalContext.current
 
     val restartPosition = STANDARD_FEN
@@ -119,9 +83,6 @@ fun AdaptableLayoutGamePageContent(
         mutableStateOf<Job?>(null)
     }
 
-    var boardReversed by rememberSaveable { mutableStateOf(false) }
-    var gameInProgress by rememberSaveable { mutableStateOf(false) }
-
     var computerThinking by rememberSaveable {
         mutableStateOf(false)
     }
@@ -147,6 +108,27 @@ fun AdaptableLayoutGamePageContent(
         gameInProgress = true
     }
 
+    fun showInfiniteSnackbarAction(text: String) {
+        scope.launch {
+            scaffoldState.snackbarHostState.showSnackbar(
+                message = text,
+                actionLabel = okString,
+                duration = SnackbarDuration.Indefinite
+            )
+        }
+
+    }
+
+    fun showMinutedSnackbarAction(text: String, duration: SnackbarDuration) {
+        scope.launch {
+            scaffoldState.snackbarHostState.showSnackbar(
+                message = text,
+                duration = duration,
+            )
+        }
+
+    }
+
     fun newGameRequest() {
         val noEngineInstalledLocally = enginesList.isEmpty()
         if (noEngineInstalledLocally) {
@@ -156,8 +138,7 @@ fun AdaptableLayoutGamePageContent(
         val isInInitialPosition = currentPosition == EMPTY_FEN
         if (isInInitialPosition) {
             pendingSelectEngineDialog = true
-        }
-        else pendingNewGameRequest = true
+        } else pendingNewGameRequest = true
     }
 
     fun stopGameRequest() {
@@ -224,191 +205,159 @@ fun AdaptableLayoutGamePageContent(
         }
     }
 
-    Layout(
-        content = {
-            SimpleButton(
-                text = stringResource(R.string.new_game),
-                vectorId = R.drawable.ic_start_flag
-            ) {
-                newGameRequest()
-            }
-            SimpleButton(
-                text = stringResource(R.string.stop_game),
-                vectorId = R.drawable.ic_stop
-            ) {
-                stopGameRequest()
-            }
-            SimpleButton(
-                text = stringResource(R.string.reverse_board),
-                vectorId = R.drawable.ic_reverse,
-            ) {
-                boardReversed = !boardReversed
-            }
-            if (!gameInProgress) {
-                SimpleButton(
-                    navController = navController,
-                    text = stringResource(R.string.chess_engines),
-                    vectorId = R.drawable.ic_car_engine
-                ) {
-                    it?.navigate("engines") {
-                        launchSingleTop = true
+
+    ChessExercisesOrganizerJetpackComposeTheme {
+        Scaffold(
+            scaffoldState = scaffoldState,
+            topBar = {
+                TopAppBar(title = { Text(stringResource(R.string.game_page)) }, actions = {
+                    SimpleButton(
+                        text = stringResource(R.string.new_game),
+                        vectorId = R.drawable.ic_start_flag
+                    ) {
+                        newGameRequest()
                     }
-                }
-            }
-
-            DynamicChessBoard(
-                whiteSideType = PlayerType.Human,
-                blackSideType = PlayerType.Computer,
-                reversed = boardReversed,
-                gameInProgress = gameInProgress,
-                position = currentPosition,
-                promotionState = promotionState,
-                isValidMoveCallback = {
-                    positionHandlerInstance.isValidMove(it)
-                },
-                dndMoveCallback = {
-                    positionHandlerInstance.makeMove(it)
-                    currentPosition = positionHandlerInstance.getCurrentPosition()
-                    handleNaturalEndgame()
-                },
-                promotionMoveCallback = {
-                    positionHandlerInstance.makeMove(it)
-                    promotionState = PendingPromotionData()
-                    currentPosition = positionHandlerInstance.getCurrentPosition()
-                    handleNaturalEndgame()
-                },
-                cancelPendingPromotionCallback = {
-                    promotionState = PendingPromotionData()
-                },
-                setPendingPromotionCallback = {
-                    promotionState = it
-                },
-                computerMoveRequestCallback = { generateComputerMove(it) },
-            )
-
-            ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
-                pendingNewGameRequest = false
-                pendingSelectEngineDialog = true
-            }, dismissCallback = {
-                pendingNewGameRequest = false
-            })
-
-            ConfirmStopGameDialog(isOpen = pendingStopGameRequest, validateCallback = {
-                pendingStopGameRequest = false
-                doStopCurrentGame()
-            }, dismissCallback = {
-                pendingStopGameRequest = false
-            })
-
-            SelectEngineDialog(
-                isOpen = pendingSelectEngineDialog,
-                enginesList = enginesList,
-                validateCallback = {
-                    pendingSelectEngineDialog = false
-                    coroutineScope.launch {
-                        executeInstalledEngine(
-                            enginesFolder = enginesFolder,
-                            index = it,
-                            errorCallback = {
-                                showInfiniteSnackbarAction(errorLaunchingEngineText)
-                                doStopCurrentGame()
-                            })
+                    SimpleButton(
+                        text = stringResource(R.string.stop_game),
+                        vectorId = R.drawable.ic_stop
+                    ) {
+                        stopGameRequest()
                     }
-                    doStartNewGame()
-                },
-                dismissCallback = {
-                    pendingSelectEngineDialog = false
+                    SimpleButton(
+                        text = stringResource(R.string.reverse_board),
+                        vectorId = R.drawable.ic_reverse,
+                    ) {
+                        boardReversed = !boardReversed
+                    }
+                    if (!gameInProgress) {
+                        SimpleButton(
+                            navController = navController,
+                            text = stringResource(R.string.chess_engines),
+                            vectorId = R.drawable.ic_car_engine
+                        ) {
+                            it?.navigate("engines") {
+                                launchSingleTop = true
+                            }
+                        }
+                    }
                 })
-            if (computerThinking) {
-                CircularProgressIndicator(modifier = Modifier.size(50.dp))
-            }
+            },
+            content = {
+                Surface(color = MaterialTheme.colors.background) {
+
+                    Layout(
+                        content = {
+                            DynamicChessBoard(
+                                whiteSideType = PlayerType.Human,
+                                blackSideType = PlayerType.Computer,
+                                reversed = boardReversed,
+                                gameInProgress = gameInProgress,
+                                position = currentPosition,
+                                promotionState = promotionState,
+                                isValidMoveCallback = {
+                                    positionHandlerInstance.isValidMove(it)
+                                },
+                                dndMoveCallback = {
+                                    positionHandlerInstance.makeMove(it)
+                                    currentPosition = positionHandlerInstance.getCurrentPosition()
+                                    handleNaturalEndgame()
+                                },
+                                promotionMoveCallback = {
+                                    positionHandlerInstance.makeMove(it)
+                                    promotionState = PendingPromotionData()
+                                    currentPosition = positionHandlerInstance.getCurrentPosition()
+                                    handleNaturalEndgame()
+                                },
+                                cancelPendingPromotionCallback = {
+                                    promotionState = PendingPromotionData()
+                                },
+                                setPendingPromotionCallback = {
+                                    promotionState = it
+                                },
+                                computerMoveRequestCallback = { generateComputerMove(it) },
+                            )
+
+                            ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
+                                pendingNewGameRequest = false
+                                pendingSelectEngineDialog = true
+                            }, dismissCallback = {
+                                pendingNewGameRequest = false
+                            })
+
+                            ConfirmStopGameDialog(isOpen = pendingStopGameRequest, validateCallback = {
+                                pendingStopGameRequest = false
+                                doStopCurrentGame()
+                            }, dismissCallback = {
+                                pendingStopGameRequest = false
+                            })
+
+                            SelectEngineDialog(
+                                isOpen = pendingSelectEngineDialog,
+                                enginesList = enginesList,
+                                validateCallback = {
+                                    pendingSelectEngineDialog = false
+                                    coroutineScope.launch {
+                                        executeInstalledEngine(
+                                            enginesFolder = enginesFolder,
+                                            index = it,
+                                            errorCallback = {
+                                                scope.launch {
+                                                    scaffoldState.snackbarHostState.showSnackbar(
+                                                        message = errorLaunchingEngineText,
+                                                        actionLabel = okString,
+                                                        duration = SnackbarDuration.Indefinite
+                                                    )
+                                                }
+                                                doStopCurrentGame()
+                                            })
+                                    }
+                                    doStartNewGame()
+                                },
+                                dismissCallback = {
+                                    pendingSelectEngineDialog = false
+                                })
+                            if (computerThinking) {
+                                CircularProgressIndicator(modifier = Modifier.size(50.dp))
+                            }
+                        }
+                    ) { allMeasurable, constraints ->
+                        val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
+                        val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
+                            val isBoard = index == 0
+                            val isCircularProgressBar = index == allMeasurable.size - 1 && computerThinking
+
+                            if (isBoard || isCircularProgressBar) measurable.measure(
+                                constraints.copy(
+                                    minWidth = boardSize,
+                                    minHeight = boardSize,
+                                    maxWidth = boardSize,
+                                    maxHeight = boardSize
+                                )
+                            )
+                            else measurable.measure(constraints)
+                        }
+
+                        layout(constraints.maxWidth, constraints.maxHeight) {
+                            fun placeStdComponent(placeable: Placeable, location: Int) {
+                                if (isLandscape) {
+                                    placeable.place(location, 0)
+                                } else {
+                                    placeable.place(0, location)
+                                }
+                            }
+
+                            allPlaceable.forEachIndexed { index, placeable ->
+                                /*val isBoard = index == 0
+                                val isCircularProgressBar = index == allPlaceable.size - 1 && computerThinking*/
+                                placeStdComponent(placeable, 0)
+                            }
+                        }
+                    }
 
 
-        }
-    ) { allMeasurable, constraints ->
-        val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
-        val buttonsCount = if (!gameInProgress) 4 else 3
-
-        val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
-            val isBoard = index == buttonsCount
-            val isCircularProgressBar = index == allMeasurable.size - 1 && computerThinking
-
-            if (isBoard || isCircularProgressBar) measurable.measure(
-                constraints.copy(
-                    minWidth = boardSize,
-                    minHeight = boardSize,
-                    maxWidth = boardSize,
-                    maxHeight = boardSize
-                )
-            )
-            else measurable.measure(constraints)
-        }
-
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            val minOfMaxSize =
-                if (constraints.maxWidth < constraints.maxHeight) constraints.maxWidth else constraints.maxHeight
-            val buttonGap = minOfMaxSize * 0.01
-
-            var buttonsZoneEnd = buttonGap
-            var accumulatedLocation = buttonGap
-            var furtherLineButton = 0.0
-            var crossLocation = buttonGap
-
-            fun placeStdComponent(placeable: Placeable, location: Int) {
-                if (isLandscape) {
-                    placeable.place(location, 0)
-                } else {
-                    placeable.place(0, location)
                 }
-            }
-
-            allPlaceable.forEachIndexed { index, placeable ->
-                val isAButton = index < buttonsCount
-                val isBoard = index == buttonsCount
-                val isCircularProgressBar = index == allPlaceable.size - 1
-                if (isAButton) {
-                    val buttonColumnIndex = index % 3
-                    if (buttonColumnIndex == 0) {
-                        crossLocation = buttonGap
-                        accumulatedLocation += furtherLineButton + buttonGap
-                        buttonsZoneEnd = accumulatedLocation
-                        furtherLineButton = 0.0
-                    }
-                    if (isLandscape) {
-                        val x = accumulatedLocation
-                        val y = crossLocation
-                        val currentEndX = placeable.width
-                        if (currentEndX > furtherLineButton) furtherLineButton =
-                            currentEndX.toDouble()
-
-                        placeable.place(x.toInt(), y.toInt())
-                        crossLocation += placeable.height + buttonGap
-                    } else {
-                        val x = crossLocation
-                        val y = accumulatedLocation
-                        val currentEndY = placeable.height
-                        if (currentEndY > furtherLineButton) furtherLineButton =
-                            currentEndY.toDouble()
-
-                        placeable.place(x.toInt(), y.toInt())
-                        crossLocation += placeable.width + buttonGap
-                    }
-                } else if (isBoard) {
-                    accumulatedLocation += furtherLineButton + buttonGap
-                    buttonsZoneEnd = accumulatedLocation
-                    placeStdComponent(placeable, accumulatedLocation.toInt())
-                } else if (isCircularProgressBar) {
-                    if (isLandscape) {
-                        placeable.place(buttonsZoneEnd.toInt(), 0)
-                    } else {
-                        placeable.place(0, buttonsZoneEnd.toInt())
-                    }
-                } else {
-                    accumulatedLocation += furtherLineButton + buttonGap
-                    placeStdComponent(placeable, accumulatedLocation.toInt())
-                }
-            }
-        }
+            },
+        )
     }
 }
 
@@ -536,7 +485,7 @@ fun SimpleButton(
     vectorId: Int,
     imageContentDescription: String = text,
     imageSize: Dp = 30.dp,
-    textSize: TextUnit = 20.sp,
+    textSize: TextUnit = 12.sp,
     callback: (NavController?) -> Unit
 ) {
     Column(
