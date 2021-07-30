@@ -277,6 +277,20 @@ fun GamePage(navController: NavController? = null) {
                                 computerMoveRequestCallback = { generateComputerMove(it) },
                             )
 
+                            MovesNavigator(elements = arrayOf(
+                                MoveNumber("1."),
+                                HalfMoveSAN("e4"),
+                                HalfMoveSAN("e5"),
+
+                                MoveNumber("2."),
+                                HalfMoveSAN("\u2658f3"),
+                                HalfMoveSAN("\u265ec6"),
+
+                                MoveNumber("3."),
+                                HalfMoveSAN("\u2657b5"),
+
+                                ))
+
                             ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
                                 pendingNewGameRequest = false
                                 pendingSelectEngineDialog = true
@@ -347,9 +361,15 @@ fun GamePage(navController: NavController? = null) {
                             }
 
                             allPlaceable.forEachIndexed { index, placeable ->
-                                /*val isBoard = index == 0
-                                val isCircularProgressBar = index == allPlaceable.size - 1 && computerThinking*/
-                                placeStdComponent(placeable, 0)
+                                val isBoard = index == 0
+                                val isCircularProgressBar = index == allPlaceable.size - 1 && computerThinking
+                                if (isBoard || isCircularProgressBar) {
+                                    placeStdComponent(placeable, 0)
+                                }
+                                else { // movesNavigator
+                                    val componentsGap = 5
+                                    placeStdComponent(placeable, boardSize + componentsGap)
+                                }
                             }
                         }
                     }
