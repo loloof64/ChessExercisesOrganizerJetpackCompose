@@ -59,20 +59,6 @@ enum class PlayerType {
     Computer
 }
 
-fun checkComputerMove(computerMove: String) {
-    val startFile = computerMove[0].toByte().toInt() - 'a'.toByte().toInt()
-    val startRank = computerMove[1].toByte().toInt() - '1'.toByte().toInt()
-    val targetFile = computerMove[2].toByte().toInt() - 'a'.toByte().toInt()
-    val targetRank = computerMove[3].toByte().toInt() - '1'.toByte().toInt()
-
-    val invalidComputerMove = startFile < 0 || startFile > 7
-            || startRank < 0 || startRank > 7
-            || targetFile < 0 || targetFile > 7
-            || targetRank < 0 || targetRank > 7
-
-    if (invalidComputerMove) throw IllegalArgumentException("Invalid computer move $computerMove")
-}
-
 class PositionHandler(
     private val startPosition: String = STANDARD_FEN
 ) {
@@ -226,7 +212,7 @@ fun DynamicChessBoard(
     fun commitPromotion(piece: PromotionPiece) {
         if (!gameInProgress) return
 
-        val promotionFen = piece.fen.toLowerCase()
+        val promotionFen = piece.fen.lowercaseChar()
         val moveString =
             "${promotionState.startFile.asFileChar()}${promotionState.startRank.asRankChar()}" +
                     "${promotionState.targetFile.asFileChar()}${promotionState.targetRank.asRankChar()}$promotionFen"
@@ -875,7 +861,7 @@ private fun DrawScope.drawFilesCoordinates(
     val fontSize = cellsSize * 0.3f
     repeat(8) { col ->
         val file = if (reversed) 7 - col else col
-        val coordinateText = "${('A'.toInt() + file).toChar()}"
+        val coordinateText = "${('A'.code + file).toChar()}"
         val x = cellsSize * (0.90f + col)
         val y1 = cellsSize * 0.375f
         val y2 = cellsSize * 8.875f
@@ -897,7 +883,7 @@ private fun DrawScope.drawRanksCoordinates(
     val fontSize = cellsSize * 0.3f
     repeat(8) { row ->
         val rank = if (reversed) row else 7 - row
-        val coordinateText = "${('1'.toInt() + rank).toChar()}"
+        val coordinateText = "${('1'.code + rank).toChar()}"
         val y = cellsSize * (1.125f + row)
         val x1 = cellsSize * 0.15f
         val x2 = cellsSize * 8.65f
@@ -1054,7 +1040,7 @@ fun DrawScope.drawPromotionValidationItem(
     val ovalX = x - size * 0.15f
     val ovalY = y - size * 0.15f
 
-    val pieceFen = if (whiteTurn) pieceValue.fen.toUpperCase() else pieceValue.fen.toLowerCase()
+    val pieceFen = if (whiteTurn) pieceValue.fen.uppercaseChar() else pieceValue.fen.lowercaseChar()
     val imageRef = pieceFen.getPieceImageID()
     val vectorDrawable =
         VectorDrawableCompat.create(context.resources, imageRef, null)
