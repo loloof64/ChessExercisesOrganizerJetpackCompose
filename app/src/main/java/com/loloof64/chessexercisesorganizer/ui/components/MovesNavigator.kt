@@ -1,10 +1,10 @@
 package com.loloof64.chessexercisesorganizer.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -20,12 +20,14 @@ data class HalfMoveSAN(override val text: String) : MovesNavigatorElement(text)
 
 @Composable
 fun MovesNavigator(modifier: Modifier = Modifier, elements: Array<MovesNavigatorElement>) {
-    FlowRow(modifier = modifier
-        .fillMaxWidth()
-        .fillMaxHeight()
-        .background(color = Color.Yellow.copy(alpha = 0.3f)),
+    val vertScrollState = rememberScrollState()
+    FlowRow(
+        modifier = modifier
+            .background(color = Color.Yellow.copy(alpha = 0.3f))
+            .verticalScroll(vertScrollState),
         mainAxisSpacing = 10.dp,
-        crossAxisSpacing = 15.dp,) {
+        crossAxisSpacing = 15.dp,
+    ) {
         elements.map {
             Text(text = it.text, fontSize = 34.sp, color = Color.Blue)
         }
@@ -35,7 +37,10 @@ fun MovesNavigator(modifier: Modifier = Modifier, elements: Array<MovesNavigator
 @Preview
 @Composable
 fun MovesNavigatorPreview() {
-    MovesNavigator(modifier = Modifier.width(400.dp).height(450.dp),
+    MovesNavigator(
+        modifier = Modifier
+            .width(400.dp)
+            .height(450.dp),
         elements = arrayOf(
             MoveNumber("1."),
             HalfMoveSAN("e4"),
@@ -47,6 +52,7 @@ fun MovesNavigatorPreview() {
 
             MoveNumber("3."),
             HalfMoveSAN("\u2657b5"),
-
-            ))
+            HalfMoveSAN("\u265ef6"),
+        )
+    )
 }

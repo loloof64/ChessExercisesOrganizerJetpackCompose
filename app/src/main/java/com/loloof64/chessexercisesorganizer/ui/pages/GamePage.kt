@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -205,6 +206,68 @@ fun GamePage(navController: NavController? = null) {
         }
     }
 
+    val elements = arrayOf(
+        MoveNumber("1."),
+        HalfMoveSAN("e4"),
+        HalfMoveSAN("e5"),
+
+        MoveNumber("2."),
+        HalfMoveSAN("\u2658f3"),
+        HalfMoveSAN("\u265ec6"),
+
+        MoveNumber("3."),
+        HalfMoveSAN("\u2657b5"),
+        HalfMoveSAN("\u265ef6"),
+
+        MoveNumber("1."),
+        HalfMoveSAN("e4"),
+        HalfMoveSAN("e5"),
+
+        MoveNumber("2."),
+        HalfMoveSAN("\u2658f3"),
+        HalfMoveSAN("\u265ec6"),
+
+        MoveNumber("3."),
+        HalfMoveSAN("\u2657b5"),
+        HalfMoveSAN("\u265ef6"),
+
+        MoveNumber("1."),
+        HalfMoveSAN("e4"),
+        HalfMoveSAN("e5"),
+
+        MoveNumber("2."),
+        HalfMoveSAN("\u2658f3"),
+        HalfMoveSAN("\u265ec6"),
+
+        MoveNumber("3."),
+        HalfMoveSAN("\u2657b5"),
+        HalfMoveSAN("\u265ef6"),
+
+        MoveNumber("1."),
+        HalfMoveSAN("e4"),
+        HalfMoveSAN("e5"),
+
+        MoveNumber("2."),
+        HalfMoveSAN("\u2658f3"),
+        HalfMoveSAN("\u265ec6"),
+
+        MoveNumber("3."),
+        HalfMoveSAN("\u2657b5"),
+        HalfMoveSAN("\u265ef6"),
+
+        MoveNumber("1."),
+        HalfMoveSAN("e4"),
+        HalfMoveSAN("e5"),
+
+        MoveNumber("2."),
+        HalfMoveSAN("\u2658f3"),
+        HalfMoveSAN("\u265ec6"),
+
+        MoveNumber("3."),
+        HalfMoveSAN("\u2657b5"),
+        HalfMoveSAN("\u265ef6"),
+    )
+
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
@@ -277,19 +340,7 @@ fun GamePage(navController: NavController? = null) {
                                 computerMoveRequestCallback = { generateComputerMove(it) },
                             )
 
-                            MovesNavigator(elements = arrayOf(
-                                MoveNumber("1."),
-                                HalfMoveSAN("e4"),
-                                HalfMoveSAN("e5"),
-
-                                MoveNumber("2."),
-                                HalfMoveSAN("\u2658f3"),
-                                HalfMoveSAN("\u265ec6"),
-
-                                MoveNumber("3."),
-                                HalfMoveSAN("\u2657b5"),
-
-                                ))
+                            MovesNavigator(elements = elements)
 
                             ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
                                 pendingNewGameRequest = false
@@ -348,7 +399,16 @@ fun GamePage(navController: NavController? = null) {
                                     maxHeight = boardSize
                                 )
                             )
-                            else measurable.measure(constraints)
+                            else { // movesNavigator
+                                val width = if (isLandscape) constraints.maxWidth - boardSize else constraints.maxWidth
+                                val height = if (isLandscape) constraints.maxHeight else constraints.maxHeight - boardSize
+                                measurable.measure(constraints.copy(
+                                    minWidth = width,
+                                    minHeight = height,
+                                    maxWidth = width,
+                                    maxHeight = height
+                                ))
+                            }
                         }
 
                         layout(constraints.maxWidth, constraints.maxHeight) {
