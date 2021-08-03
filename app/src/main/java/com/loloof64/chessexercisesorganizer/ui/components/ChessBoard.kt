@@ -25,6 +25,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
@@ -59,61 +61,38 @@ enum class PlayerType {
     Computer
 }
 
-class PositionHandler(
+class BoardViewModel(
     private val startPosition: String = STANDARD_FEN
-) {
-    private var boardLogic = EMPTY_FEN.toBoard()
-
-    fun getCurrentPosition(): String = boardLogic.fen!!
+) : ViewModel() {
+    private val _boardLogic = MutableLiveData(EMPTY_FEN.toBoard())
+    fun getCurrentPosition(): String = _boardLogic.value?.fen ?: EMPTY_FEN
 
     fun newGame() {
-        boardLogic = startPosition.toBoard()
+        _boardLogic.value = startPosition.toBoard()
     }
 
     fun makeMove(moveStr: String) {
-        val move = Move.getFromString(boardLogic, moveStr, true)
-        boardLogic.doMove(move, true, true)
+        val move = Move.getFromString(_boardLogic.value, moveStr, true)
+        _boardLogic.value?.doMove(move, true, true)
     }
 
     fun isValidMove(moveStr: String): Boolean {
-        val boardCopy = boardLogic.fen.toBoard()
+        val boardCopy = _boardLogic.value?.fen?.toBoard()
         val move = Move.getFromString(boardCopy, moveStr, true)
-        return boardCopy.doMove(move, true, true)
+        return boardCopy?.doMove(move, true, true) ?: false
     }
 
     fun getNaturalEndGameStatus(): GameEndedStatus {
         return when {
-            boardLogic.isMate -> if (boardLogic.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
-            boardLogic.isStalemate -> GameEndedStatus.STALEMATE
-            boardLogic.isDrawByThreeFoldRepetitions -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
-            boardLogic.isDrawByFiftyMovesRule -> GameEndedStatus.DRAW_FIFTY_MOVES_RULE
-            boardLogic.isDrawByMissingMaterial -> GameEndedStatus.DRAW_MISSING_MATERIAL
+            _boardLogic.value?.isMate ?: false -> if (_boardLogic.value?.turn == true) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
+            _boardLogic.value?.isStalemate ?: false -> GameEndedStatus.STALEMATE
+            _boardLogic.value?.isDrawByThreeFoldRepetitions ?: false -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
+            _boardLogic.value?.isDrawByFiftyMovesRule ?: false -> GameEndedStatus.DRAW_FIFTY_MOVES_RULE
+            _boardLogic.value?.isDrawByMissingMaterial ?: false -> GameEndedStatus.DRAW_MISSING_MATERIAL
             else -> GameEndedStatus.NOT_ENDED
         }
     }
-
-    fun serialize(): String {
-        val serializedBoard = serializeBoard(boardLogic)
-        return "$startPosition<>$serializedBoard"
-    }
-
-    companion object {
-        fun deserialize(value: String): PositionHandler {
-            val parts = value.split("<>")
-            val startPosition = parts[0]
-            val newBoardLogic = deserializeBoard(parts[1])
-
-            return PositionHandler(startPosition).apply {
-                boardLogic = newBoardLogic
-            }
-        }
-    }
 }
-
-val PositionHandlerSaver = Saver<PositionHandler, String>(
-    save = { it.serialize() },
-    restore = { PositionHandler.deserialize(it) }
-)
 
 data class PendingPromotionData(
     val pendingPromotion: Boolean = false,
@@ -172,8 +151,8 @@ class PromotionKnight : PromotionPiece('n')
 @Composable
 fun DynamicChessBoard(
     modifier: Modifier = Modifier,
+    position: String,
     reversed: Boolean = false,
-    position: String = PositionHandler().getCurrentPosition(),
     promotionState: PendingPromotionData = PendingPromotionData(),
     isValidMoveCallback: (String) -> Boolean = { _ -> false },
     dndMoveCallback: (String) -> Unit = { _ -> },
@@ -702,33 +681,6 @@ private fun Char.getPieceImageID(): Int {
     }
 }
 
-private fun serializeBoard(board: Board): String {
-    val positionPart = board.fen
-    val keyHistoryPart = board.keyHistory.joinToString(separator = "@") {
-        "${it[0]};${it[1]}"
-    }
-    val keyPart = "${board.key[0]};${board.key[1]}"
-    return "$positionPart|$keyHistoryPart|$keyPart"
-}
-
-private fun deserializeBoard(input: String): Board {
-    val parts = input.split("|")
-    val fen = parts[0]
-    val keyHistory = parts[1].split('@').map { entryPairString ->
-        val entryPair = entryPairString.split(';')
-        val whitePart = entryPair[0].toLong()
-        val blackPart = entryPair[1].toLong()
-        arrayOf(whitePart, blackPart).toLongArray()
-    }.toTypedArray()
-    val keyParts = parts[2].split(';')
-    val key = arrayOf(keyParts[0].toLong(), keyParts[1].toLong()).toLongArray()
-    return fen.toBoard().apply {
-        this.keyHistory = keyHistory
-        this.key = key
-    }
-}
-
-
 private data class DndData(
     val pieceValue: Char = NO_PIECE,
     val startFile: Int = Int.MIN_VALUE,
@@ -1107,13 +1059,13 @@ private fun pointInCircle(
 @Preview
 @Composable
 fun DynamicChessBoardPreview() {
-    DynamicChessBoard(modifier = Modifier.size(300.dp))
+    DynamicChessBoard(modifier = Modifier.size(300.dp), position = STANDARD_FEN)
 }
 
 @Preview
 @Composable
 fun DynamicReversedChessBoardPreview() {
-    DynamicChessBoard(modifier = Modifier.size(300.dp), reversed = true)
+    DynamicChessBoard(modifier = Modifier.size(300.dp), reversed = true, position = STANDARD_FEN)
 }
 
 @Preview
@@ -1121,6 +1073,7 @@ fun DynamicReversedChessBoardPreview() {
 fun DynamicChessBoardCustomPositionPreview() {
     DynamicChessBoard(
         modifier = Modifier.size(300.dp),
+        position = STANDARD_FEN,
         //startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }
@@ -1131,6 +1084,7 @@ fun DynamicChessBoardCustomPositionReversedPreview() {
     DynamicChessBoard(
         modifier = Modifier.size(300.dp),
         reversed = true,
+        position = STANDARD_FEN,
         //startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
     )
 }

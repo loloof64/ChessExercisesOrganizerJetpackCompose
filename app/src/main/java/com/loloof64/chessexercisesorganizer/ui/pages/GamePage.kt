@@ -5,7 +5,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
-fun GamePage(navController: NavController? = null) {
+fun GamePage(navController: NavController? = null, boardViewModel: BoardViewModel = viewModel()) {
 
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
@@ -48,14 +48,8 @@ fun GamePage(navController: NavController? = null) {
 
     val context = LocalContext.current
 
-    val restartPosition = STANDARD_FEN
-    val positionHandlerInstance by rememberSaveable(stateSaver = PositionHandlerSaver) {
-        mutableStateOf(
-            PositionHandler(restartPosition)
-        )
-    }
     var currentPosition by remember {
-        mutableStateOf(positionHandlerInstance.getCurrentPosition())
+        mutableStateOf(boardViewModel.getCurrentPosition())
     }
 
     var pendingNewGameRequest by rememberSaveable {
@@ -104,8 +98,8 @@ fun GamePage(navController: NavController? = null) {
 
     fun doStartNewGame() {
         promotionState = PendingPromotionData()
-        positionHandlerInstance.newGame()
-        currentPosition = positionHandlerInstance.getCurrentPosition()
+        boardViewModel.newGame()
+        currentPosition = boardViewModel.getCurrentPosition()
         gameInProgress = true
     }
 
@@ -136,7 +130,7 @@ fun GamePage(navController: NavController? = null) {
             showInfiniteSnackbarAction(noInstalledEngineText)
             return
         }
-        val isInInitialPosition = currentPosition == EMPTY_FEN
+        val isInInitialPosition = boardViewModel.getCurrentPosition() == EMPTY_FEN
         if (isInInitialPosition) {
             pendingSelectEngineDialog = true
         } else pendingNewGameRequest = true
@@ -158,7 +152,7 @@ fun GamePage(navController: NavController? = null) {
 
     fun handleNaturalEndgame() {
         if (!gameInProgress) return
-        val endedStatus = positionHandlerInstance.getNaturalEndGameStatus()
+        val endedStatus = boardViewModel.getNaturalEndGameStatus()
         val message = when (endedStatus) {
             GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
             GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
@@ -200,8 +194,8 @@ fun GamePage(navController: NavController? = null) {
             readEngineOutputJob?.cancel()
             readEngineOutputJob = null
 
-            positionHandlerInstance.makeMove(move)
-            currentPosition = positionHandlerInstance.getCurrentPosition()
+            boardViewModel.makeMove(move)
+            currentPosition = boardViewModel.getCurrentPosition()
             handleNaturalEndgame()
         }
     }
@@ -318,17 +312,17 @@ fun GamePage(navController: NavController? = null) {
                                 position = currentPosition,
                                 promotionState = promotionState,
                                 isValidMoveCallback = {
-                                    positionHandlerInstance.isValidMove(it)
+                                    boardViewModel.isValidMove(it)
                                 },
                                 dndMoveCallback = {
-                                    positionHandlerInstance.makeMove(it)
-                                    currentPosition = positionHandlerInstance.getCurrentPosition()
+                                    boardViewModel.makeMove(it)
+                                    currentPosition = boardViewModel.getCurrentPosition()
                                     handleNaturalEndgame()
                                 },
                                 promotionMoveCallback = {
-                                    positionHandlerInstance.makeMove(it)
+                                    boardViewModel.makeMove(it)
                                     promotionState = PendingPromotionData()
-                                    currentPosition = positionHandlerInstance.getCurrentPosition()
+                                    currentPosition = boardViewModel.getCurrentPosition()
                                     handleNaturalEndgame()
                                 },
                                 cancelPendingPromotionCallback = {
