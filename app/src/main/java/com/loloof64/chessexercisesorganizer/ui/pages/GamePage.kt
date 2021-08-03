@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.R
@@ -35,37 +35,65 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
+class GamePageState {
+    var boardReversed = false
+    var gameInProgress = false
+    var pendingNewGameRequest = false
+    var pendingStopGameRequest = false
+    var pendingSelectEngineDialog = false
+    var promotionState = PendingPromotionData()
+    var readEngineOutputJob: Job? = null
+    var computerThinking = false
+}
+
+class GamePageViewModel : ViewModel() {
+    var pageState = GamePageState()
+    var boardState = DynamicBoardDataHandler()
+}
+
 @Composable
-fun GamePage(navController: NavController? = null, boardViewModel: BoardViewModel = viewModel()) {
+fun GamePage(
+    navController: NavController? = null,
+    gamePageViewModel: GamePageViewModel = viewModel(),
+) {
 
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
 
     val okString = stringResource(R.string.ok)
 
-    var boardReversed by rememberSaveable { mutableStateOf(false) }
-    var gameInProgress by rememberSaveable { mutableStateOf(false) }
-
     val context = LocalContext.current
 
     var currentPosition by remember {
-        mutableStateOf(boardViewModel.getCurrentPosition())
+        mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
     }
 
-    var pendingNewGameRequest by rememberSaveable {
-        mutableStateOf(false)
+    var boardReversed by remember {
+        mutableStateOf(gamePageViewModel.pageState.boardReversed)
     }
 
-    var pendingStopGameRequest by rememberSaveable {
-        mutableStateOf(false)
+    var gameInProgress by remember {
+        mutableStateOf(gamePageViewModel.pageState.gameInProgress)
     }
 
-    var pendingSelectEngineDialog by rememberSaveable {
-        mutableStateOf(false)
+    var pendingNewGameRequest by remember {
+        mutableStateOf(gamePageViewModel.pageState.pendingNewGameRequest)
     }
 
-    var promotionState by rememberSaveable(stateSaver = PendingPromotionStateSaver) {
-        mutableStateOf(PendingPromotionData())
+    var pendingStopGameRequest by remember {
+        mutableStateOf(gamePageViewModel.pageState.pendingStopGameRequest)
+    }
+
+    var pendingSelectEngineDialog by remember {
+        mutableStateOf(gamePageViewModel.pageState.pendingSelectEngineDialog)
+    }
+
+    var promotionState by remember {
+        mutableStateOf(gamePageViewModel.pageState.promotionState)
+    }
+
+    var computerThinking by remember {
+        mutableStateOf(gamePageViewModel.pageState.computerThinking)
     }
 
     val isLandscape = when (LocalConfiguration.current.orientation) {
@@ -74,13 +102,6 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
     }
 
     val coroutineScope = rememberCoroutineScope()
-    var readEngineOutputJob by remember {
-        mutableStateOf<Job?>(null)
-    }
-
-    var computerThinking by rememberSaveable {
-        mutableStateOf(false)
-    }
 
     val checkmateWhiteText = stringResource(R.string.chessmate_white)
     val checkmateBlackText = stringResource(R.string.chessmate_black)
@@ -97,9 +118,10 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
     val enginesList = listInstalledEngines(enginesFolder)
 
     fun doStartNewGame() {
-        promotionState = PendingPromotionData()
-        boardViewModel.newGame()
-        currentPosition = boardViewModel.getCurrentPosition()
+        gamePageViewModel.pageState.promotionState = PendingPromotionData()
+        gamePageViewModel.boardState.newGame()
+        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+        gamePageViewModel.pageState.gameInProgress = true
         gameInProgress = true
     }
 
@@ -130,29 +152,37 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
             showInfiniteSnackbarAction(noInstalledEngineText)
             return
         }
-        val isInInitialPosition = boardViewModel.getCurrentPosition() == EMPTY_FEN
+        val isInInitialPosition = gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
         if (isInInitialPosition) {
+            gamePageViewModel.pageState.pendingSelectEngineDialog = true
             pendingSelectEngineDialog = true
-        } else pendingNewGameRequest = true
+        } else  {
+            gamePageViewModel.pageState.pendingNewGameRequest = true
+            pendingNewGameRequest = true
+        }
     }
 
     fun stopGameRequest() {
-        if (!gameInProgress) return
+        if (!gamePageViewModel.pageState.gameInProgress) return
+        gamePageViewModel.pageState.pendingStopGameRequest = true
         pendingStopGameRequest = true
     }
 
     fun doStopCurrentGame() {
-        if (!gameInProgress) return
+        if (!gamePageViewModel.pageState.gameInProgress) return
         stopCurrentRunningEngine()
+        gamePageViewModel.pageState.computerThinking = false
         computerThinking = false
-        promotionState = PendingPromotionData()
+        gamePageViewModel.pageState.promotionState = PendingPromotionData()
+        promotionState = gamePageViewModel.pageState.promotionState
+        gamePageViewModel.pageState.gameInProgress = false
         gameInProgress = false
         showMinutedSnackbarAction(gameStoppedMessage, SnackbarDuration.Short)
     }
 
     fun handleNaturalEndgame() {
-        if (!gameInProgress) return
-        val endedStatus = boardViewModel.getNaturalEndGameStatus()
+        if (!gamePageViewModel.pageState.gameInProgress) return
+        val endedStatus = gamePageViewModel.boardState.getNaturalEndGameStatus()
         val message = when (endedStatus) {
             GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
             GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
@@ -165,16 +195,19 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
         message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
         if (endedStatus != GameEndedStatus.NOT_ENDED) {
             stopCurrentRunningEngine()
+            gamePageViewModel.pageState.computerThinking = false
             computerThinking = false
+            gamePageViewModel.pageState.gameInProgress = false
             gameInProgress = false
         }
     }
 
     fun generateComputerMove(oldPosition: String) {
+        gamePageViewModel.pageState.computerThinking = true
         computerThinking = true
         sendCommandToRunningEngine("position fen $oldPosition")
         sendCommandToRunningEngine("go movetime 1000")
-        readEngineOutputJob = coroutineScope.launch {
+        gamePageViewModel.pageState.readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
             var moveLine: String? = null
 
@@ -190,12 +223,13 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
             val moveParts = moveLine!!.split(" ")
             val move = moveParts[1]
 
+            gamePageViewModel.pageState.computerThinking = false
             computerThinking = false
-            readEngineOutputJob?.cancel()
-            readEngineOutputJob = null
+            gamePageViewModel.pageState.readEngineOutputJob?.cancel()
+            gamePageViewModel.pageState.readEngineOutputJob = null
 
-            boardViewModel.makeMove(move)
-            currentPosition = boardViewModel.getCurrentPosition()
+            gamePageViewModel.boardState.makeMove(move)
+            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             handleNaturalEndgame()
         }
     }
@@ -284,7 +318,9 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
                         text = stringResource(R.string.reverse_board),
                         vectorId = R.drawable.ic_reverse,
                     ) {
-                        boardReversed = !boardReversed
+                        gamePageViewModel.pageState.boardReversed =
+                            !gamePageViewModel.pageState.boardReversed
+                        boardReversed = gamePageViewModel.pageState.boardReversed
                     }
                     if (!gameInProgress) {
                         SimpleButton(
@@ -312,48 +348,65 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
                                 position = currentPosition,
                                 promotionState = promotionState,
                                 isValidMoveCallback = {
-                                    boardViewModel.isValidMove(it)
+                                    gamePageViewModel.boardState.isValidMove(it)
                                 },
                                 dndMoveCallback = {
-                                    boardViewModel.makeMove(it)
-                                    currentPosition = boardViewModel.getCurrentPosition()
+                                    gamePageViewModel.boardState.makeMove(it)
+                                    currentPosition =
+                                        gamePageViewModel.boardState.getCurrentPosition()
                                     handleNaturalEndgame()
                                 },
                                 promotionMoveCallback = {
-                                    boardViewModel.makeMove(it)
-                                    promotionState = PendingPromotionData()
-                                    currentPosition = boardViewModel.getCurrentPosition()
+                                    gamePageViewModel.boardState.makeMove(it)
+                                    gamePageViewModel.pageState.promotionState =
+                                        PendingPromotionData()
+                                    promotionState = gamePageViewModel.pageState.promotionState
+                                    currentPosition =
+                                        gamePageViewModel.boardState.getCurrentPosition()
                                     handleNaturalEndgame()
                                 },
                                 cancelPendingPromotionCallback = {
-                                    promotionState = PendingPromotionData()
+                                    gamePageViewModel.pageState.promotionState =
+                                        PendingPromotionData()
                                 },
                                 setPendingPromotionCallback = {
-                                    promotionState = it
+                                    gamePageViewModel.pageState.promotionState = it
                                 },
                                 computerMoveRequestCallback = { generateComputerMove(it) },
                             )
 
                             MovesNavigator(elements = elements)
 
-                            ConfirmNewGameDialog(isOpen = pendingNewGameRequest, validateCallback = {
-                                pendingNewGameRequest = false
-                                pendingSelectEngineDialog = true
-                            }, dismissCallback = {
-                                pendingNewGameRequest = false
-                            })
+                            ConfirmNewGameDialog(
+                                isOpen = pendingNewGameRequest,
+                                validateCallback = {
+                                    gamePageViewModel.pageState.pendingNewGameRequest = false
+                                    gamePageViewModel.pageState.pendingSelectEngineDialog = true
+                                    pendingNewGameRequest = false
+                                    pendingSelectEngineDialog = true
+                                },
+                                dismissCallback = {
+                                    gamePageViewModel.pageState.pendingNewGameRequest = false
+                                    pendingNewGameRequest = false
+                                })
 
-                            ConfirmStopGameDialog(isOpen = pendingStopGameRequest, validateCallback = {
-                                pendingStopGameRequest = false
-                                doStopCurrentGame()
-                            }, dismissCallback = {
-                                pendingStopGameRequest = false
-                            })
+                            ConfirmStopGameDialog(
+                                isOpen = pendingStopGameRequest,
+                                validateCallback = {
+                                    gamePageViewModel.pageState.pendingStopGameRequest = false
+                                    pendingStopGameRequest = false
+                                    doStopCurrentGame()
+                                },
+                                dismissCallback = {
+                                    gamePageViewModel.pageState.pendingStopGameRequest = false
+                                    pendingStopGameRequest = false
+                                })
 
                             SelectEngineDialog(
                                 isOpen = pendingSelectEngineDialog,
                                 enginesList = enginesList,
                                 validateCallback = {
+                                    gamePageViewModel.pageState.pendingSelectEngineDialog = false
                                     pendingSelectEngineDialog = false
                                     coroutineScope.launch {
                                         executeInstalledEngine(
@@ -373,6 +426,7 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
                                     doStartNewGame()
                                 },
                                 dismissCallback = {
+                                    gamePageViewModel.pageState.pendingSelectEngineDialog = false
                                     pendingSelectEngineDialog = false
                                 })
                             if (computerThinking) {
@@ -380,10 +434,13 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
                             }
                         }
                     ) { allMeasurable, constraints ->
-                        val boardSize = if (isLandscape) constraints.maxHeight else constraints.maxWidth
+                        val boardSize =
+                            if (isLandscape) constraints.maxHeight else constraints.maxWidth
                         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
                             val isBoard = index == 0
-                            val isCircularProgressBar = index == allMeasurable.size - 1 && computerThinking
+                            val isCircularProgressBar =
+                                index == allMeasurable.size - 1 && (gamePageViewModel.pageState.computerThinking
+                                        )
 
                             if (isBoard || isCircularProgressBar) measurable.measure(
                                 constraints.copy(
@@ -394,14 +451,18 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
                                 )
                             )
                             else { // movesNavigator
-                                val width = if (isLandscape) constraints.maxWidth - boardSize else constraints.maxWidth
-                                val height = if (isLandscape) constraints.maxHeight else constraints.maxHeight - boardSize
-                                measurable.measure(constraints.copy(
-                                    minWidth = width,
-                                    minHeight = height,
-                                    maxWidth = width,
-                                    maxHeight = height
-                                ))
+                                val width =
+                                    if (isLandscape) constraints.maxWidth - boardSize else constraints.maxWidth
+                                val height =
+                                    if (isLandscape) constraints.maxHeight else constraints.maxHeight - boardSize
+                                measurable.measure(
+                                    constraints.copy(
+                                        minWidth = width,
+                                        minHeight = height,
+                                        maxWidth = width,
+                                        maxHeight = height
+                                    )
+                                )
                             }
                         }
 
@@ -416,11 +477,12 @@ fun GamePage(navController: NavController? = null, boardViewModel: BoardViewMode
 
                             allPlaceable.forEachIndexed { index, placeable ->
                                 val isBoard = index == 0
-                                val isCircularProgressBar = index == allPlaceable.size - 1 && computerThinking
+                                val isCircularProgressBar =
+                                    index == allPlaceable.size - 1 && (gamePageViewModel.pageState.computerThinking
+                                            )
                                 if (isBoard || isCircularProgressBar) {
                                     placeStdComponent(placeable, 0)
-                                }
-                                else { // movesNavigator
+                                } else { // movesNavigator
                                     val componentsGap = 5
                                     placeStdComponent(placeable, boardSize + componentsGap)
                                 }

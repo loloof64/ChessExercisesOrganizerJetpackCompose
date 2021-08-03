@@ -25,7 +25,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.alonsoruibal.chess.Board
@@ -61,34 +60,38 @@ enum class PlayerType {
     Computer
 }
 
-class BoardViewModel(
-    private val startPosition: String = STANDARD_FEN
-) : ViewModel() {
-    private val _boardLogic = MutableLiveData(EMPTY_FEN.toBoard())
-    fun getCurrentPosition(): String = _boardLogic.value?.fen ?: EMPTY_FEN
+class DynamicBoardDataHandler {
+    private var startPosition: String = STANDARD_FEN
+    private var boardLogic = EMPTY_FEN.toBoard()
+
+    fun setStartPosition(position: String) {
+        startPosition = position
+    }
+    
+    fun getCurrentPosition(): String = boardLogic.fen ?: EMPTY_FEN
 
     fun newGame() {
-        _boardLogic.value = startPosition.toBoard()
+        boardLogic = startPosition.toBoard()
     }
 
     fun makeMove(moveStr: String) {
-        val move = Move.getFromString(_boardLogic.value, moveStr, true)
-        _boardLogic.value?.doMove(move, true, true)
+        val move = Move.getFromString(boardLogic, moveStr, true)
+        boardLogic.doMove(move, true, true)
     }
 
     fun isValidMove(moveStr: String): Boolean {
-        val boardCopy = _boardLogic.value?.fen?.toBoard()
+        val boardCopy = boardLogic.fen?.toBoard()
         val move = Move.getFromString(boardCopy, moveStr, true)
         return boardCopy?.doMove(move, true, true) ?: false
     }
 
     fun getNaturalEndGameStatus(): GameEndedStatus {
         return when {
-            _boardLogic.value?.isMate ?: false -> if (_boardLogic.value?.turn == true) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
-            _boardLogic.value?.isStalemate ?: false -> GameEndedStatus.STALEMATE
-            _boardLogic.value?.isDrawByThreeFoldRepetitions ?: false -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
-            _boardLogic.value?.isDrawByFiftyMovesRule ?: false -> GameEndedStatus.DRAW_FIFTY_MOVES_RULE
-            _boardLogic.value?.isDrawByMissingMaterial ?: false -> GameEndedStatus.DRAW_MISSING_MATERIAL
+            boardLogic.isMate -> if (boardLogic.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
+            boardLogic.isStalemate -> GameEndedStatus.STALEMATE
+            boardLogic.isDrawByThreeFoldRepetitions  -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
+            boardLogic.isDrawByFiftyMovesRule -> GameEndedStatus.DRAW_FIFTY_MOVES_RULE
+            boardLogic.isDrawByMissingMaterial -> GameEndedStatus.DRAW_MISSING_MATERIAL
             else -> GameEndedStatus.NOT_ENDED
         }
     }
