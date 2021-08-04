@@ -49,6 +49,7 @@ class GamePageState {
 class GamePageViewModel : ViewModel() {
     var pageState = GamePageState()
     var boardState = DynamicBoardDataHandler()
+    var movesElements = mutableListOf<MovesNavigatorElement>()
 }
 
 @Composable
@@ -120,6 +121,8 @@ fun GamePage(
     fun doStartNewGame() {
         gamePageViewModel.pageState.promotionState = PendingPromotionData()
         gamePageViewModel.boardState.newGame()
+        gamePageViewModel.movesElements.clear()
+        gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
         gamePageViewModel.pageState.gameInProgress = true
         gameInProgress = true
@@ -202,6 +205,14 @@ fun GamePage(
         }
     }
 
+    fun addMoveFanToHistory() {
+        val lastMoveFan = gamePageViewModel.boardState.getLastMoveFan()
+        gamePageViewModel.movesElements.add(HalfMoveSAN(text = lastMoveFan!!))
+        if (gamePageViewModel.boardState.whiteTurn()) {
+            gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
+        }
+    }
+
     fun generateComputerMove(oldPosition: String) {
         gamePageViewModel.pageState.computerThinking = true
         computerThinking = true
@@ -229,73 +240,11 @@ fun GamePage(
             gamePageViewModel.pageState.readEngineOutputJob = null
 
             gamePageViewModel.boardState.makeMove(move)
+            addMoveFanToHistory()
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             handleNaturalEndgame()
         }
     }
-
-    val elements = arrayOf(
-        MoveNumber("1."),
-        HalfMoveSAN("e4"),
-        HalfMoveSAN("e5"),
-
-        MoveNumber("2."),
-        HalfMoveSAN("\u2658f3"),
-        HalfMoveSAN("\u265ec6"),
-
-        MoveNumber("3."),
-        HalfMoveSAN("\u2657b5"),
-        HalfMoveSAN("\u265ef6"),
-
-        MoveNumber("1."),
-        HalfMoveSAN("e4"),
-        HalfMoveSAN("e5"),
-
-        MoveNumber("2."),
-        HalfMoveSAN("\u2658f3"),
-        HalfMoveSAN("\u265ec6"),
-
-        MoveNumber("3."),
-        HalfMoveSAN("\u2657b5"),
-        HalfMoveSAN("\u265ef6"),
-
-        MoveNumber("1."),
-        HalfMoveSAN("e4"),
-        HalfMoveSAN("e5"),
-
-        MoveNumber("2."),
-        HalfMoveSAN("\u2658f3"),
-        HalfMoveSAN("\u265ec6"),
-
-        MoveNumber("3."),
-        HalfMoveSAN("\u2657b5"),
-        HalfMoveSAN("\u265ef6"),
-
-        MoveNumber("1."),
-        HalfMoveSAN("e4"),
-        HalfMoveSAN("e5"),
-
-        MoveNumber("2."),
-        HalfMoveSAN("\u2658f3"),
-        HalfMoveSAN("\u265ec6"),
-
-        MoveNumber("3."),
-        HalfMoveSAN("\u2657b5"),
-        HalfMoveSAN("\u265ef6"),
-
-        MoveNumber("1."),
-        HalfMoveSAN("e4"),
-        HalfMoveSAN("e5"),
-
-        MoveNumber("2."),
-        HalfMoveSAN("\u2658f3"),
-        HalfMoveSAN("\u265ec6"),
-
-        MoveNumber("3."),
-        HalfMoveSAN("\u2657b5"),
-        HalfMoveSAN("\u265ef6"),
-    )
-
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
@@ -354,6 +303,7 @@ fun GamePage(
                                     gamePageViewModel.boardState.makeMove(it)
                                     currentPosition =
                                         gamePageViewModel.boardState.getCurrentPosition()
+                                    addMoveFanToHistory()
                                     handleNaturalEndgame()
                                 },
                                 promotionMoveCallback = {
@@ -363,6 +313,7 @@ fun GamePage(
                                     promotionState = gamePageViewModel.pageState.promotionState
                                     currentPosition =
                                         gamePageViewModel.boardState.getCurrentPosition()
+                                    addMoveFanToHistory()
                                     handleNaturalEndgame()
                                 },
                                 cancelPendingPromotionCallback = {
@@ -375,7 +326,7 @@ fun GamePage(
                                 computerMoveRequestCallback = { generateComputerMove(it) },
                             )
 
-                            MovesNavigator(elements = elements)
+                            MovesNavigator(elements = gamePageViewModel.movesElements.toTypedArray())
 
                             ConfirmNewGameDialog(
                                 isOpen = pendingNewGameRequest,

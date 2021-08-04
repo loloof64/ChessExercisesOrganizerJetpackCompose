@@ -25,7 +25,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
@@ -67,6 +66,10 @@ class DynamicBoardDataHandler {
     fun setStartPosition(position: String) {
         startPosition = position
     }
+
+    fun whiteTurn() = boardLogic.turn
+
+    fun moveNumber() = (boardLogic.moveNumber shr 1) + 1
     
     fun getCurrentPosition(): String = boardLogic.fen ?: EMPTY_FEN
 
@@ -77,6 +80,37 @@ class DynamicBoardDataHandler {
     fun makeMove(moveStr: String) {
         val move = Move.getFromString(boardLogic, moveStr, true)
         boardLogic.doMove(move, true, true)
+    }
+
+    fun getLastMoveFan(): String? {
+        val forBlackTurn = boardLogic.turn
+        var lastMoveSan = boardLogic.lastMoveSan
+        if (lastMoveSan != null) {
+            val referenceChars = "NBRQK".toCharArray()
+            var firstOccurrenceIndex = -1
+            for (i in 0.until(lastMoveSan.length)) {
+                val currentElement = lastMoveSan.toCharArray()[i]
+                if (referenceChars.contains(currentElement)) {
+                    firstOccurrenceIndex = i
+                    break
+                }
+            }
+            if (firstOccurrenceIndex > -1) {
+                val replacement = when (val element = lastMoveSan.toCharArray()[firstOccurrenceIndex]) {
+                    'N' -> if (forBlackTurn) "\u265e" else "\u2658"
+                    'B' -> if (forBlackTurn) "\u265d" else "\u2657"
+                    'R' -> if (forBlackTurn) "\u265c" else "\u2656"
+                    'Q' -> if (forBlackTurn) "\u265b" else "\u2655"
+                    'K' -> if (forBlackTurn) "\u265a" else "\u2654"
+                    else -> throw java.lang.RuntimeException("Unrecognized piece char $element into SAN $lastMoveSan")
+                }
+                val firstPart = lastMoveSan.substring(0, firstOccurrenceIndex)
+                val lastPart = lastMoveSan.substring(firstOccurrenceIndex + 1)
+
+                lastMoveSan = "$firstPart$replacement$lastPart"
+            }
+        }
+        return lastMoveSan
     }
 
     fun isValidMove(moveStr: String): Boolean {
@@ -138,11 +172,6 @@ data class PendingPromotionData(
         }
     }
 }
-
-val PendingPromotionStateSaver = Saver<PendingPromotionData, String>(
-    save = { it.toString() },
-    restore = { PendingPromotionData.parse(it) }
-)
 
 sealed class PromotionPiece(val fen: Char)
 
