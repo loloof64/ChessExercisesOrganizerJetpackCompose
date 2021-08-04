@@ -22,7 +22,6 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 fun MainContent() {
-
     val navController = rememberNavController()
     NavHost(navController, startDestination = "game") {
         composable("game") { GamePage(navController = navController) }

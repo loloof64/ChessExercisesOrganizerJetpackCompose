@@ -180,6 +180,10 @@ class PromotionRook : PromotionPiece('r')
 class PromotionBishop : PromotionPiece('b')
 class PromotionKnight : PromotionPiece('n')
 
+/**
+ * Be careful !  computerMoveRequestCallback may be called on each recomposition : you should check
+ * that you have not its logic active before starting it again.
+ */
 @Composable
 fun DynamicChessBoard(
     modifier: Modifier = Modifier,

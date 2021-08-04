@@ -42,8 +42,6 @@ class GamePageState {
     var pendingStopGameRequest = false
     var pendingSelectEngineDialog = false
     var promotionState = PendingPromotionData()
-    var readEngineOutputJob: Job? = null
-    var computerThinking = false
 }
 
 class GamePageViewModel : ViewModel() {
@@ -57,7 +55,6 @@ fun GamePage(
     navController: NavController? = null,
     gamePageViewModel: GamePageViewModel = viewModel(),
 ) {
-
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
 
@@ -94,7 +91,11 @@ fun GamePage(
     }
 
     var computerThinking by remember {
-        mutableStateOf(gamePageViewModel.pageState.computerThinking)
+        mutableStateOf(false)
+    }
+
+    var readEngineOutputJob by remember {
+        mutableStateOf<Job?>(null)
     }
 
     val isLandscape = when (LocalConfiguration.current.orientation) {
@@ -159,7 +160,7 @@ fun GamePage(
         if (isInInitialPosition) {
             gamePageViewModel.pageState.pendingSelectEngineDialog = true
             pendingSelectEngineDialog = true
-        } else  {
+        } else {
             gamePageViewModel.pageState.pendingNewGameRequest = true
             pendingNewGameRequest = true
         }
@@ -174,7 +175,6 @@ fun GamePage(
     fun doStopCurrentGame() {
         if (!gamePageViewModel.pageState.gameInProgress) return
         stopCurrentRunningEngine()
-        gamePageViewModel.pageState.computerThinking = false
         computerThinking = false
         gamePageViewModel.pageState.promotionState = PendingPromotionData()
         promotionState = gamePageViewModel.pageState.promotionState
@@ -198,7 +198,6 @@ fun GamePage(
         message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
         if (endedStatus != GameEndedStatus.NOT_ENDED) {
             stopCurrentRunningEngine()
-            gamePageViewModel.pageState.computerThinking = false
             computerThinking = false
             gamePageViewModel.pageState.gameInProgress = false
             gameInProgress = false
@@ -214,11 +213,14 @@ fun GamePage(
     }
 
     fun generateComputerMove(oldPosition: String) {
-        gamePageViewModel.pageState.computerThinking = true
+        //////////////////////////////////
+        println(computerThinking)
+        //////////////////////////////////
+        if (computerThinking) return
         computerThinking = true
         sendCommandToRunningEngine("position fen $oldPosition")
         sendCommandToRunningEngine("go movetime 1000")
-        gamePageViewModel.pageState.readEngineOutputJob = coroutineScope.launch {
+        readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
             var moveLine: String? = null
 
@@ -234,10 +236,9 @@ fun GamePage(
             val moveParts = moveLine!!.split(" ")
             val move = moveParts[1]
 
-            gamePageViewModel.pageState.computerThinking = false
             computerThinking = false
-            gamePageViewModel.pageState.readEngineOutputJob?.cancel()
-            gamePageViewModel.pageState.readEngineOutputJob = null
+            readEngineOutputJob?.cancel()
+            readEngineOutputJob = null
 
             gamePageViewModel.boardState.makeMove(move)
             addMoveFanToHistory()
@@ -390,8 +391,8 @@ fun GamePage(
                         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
                             val isBoard = index == 0
                             val isCircularProgressBar =
-                                index == allMeasurable.size - 1 && (gamePageViewModel.pageState.computerThinking
-                                        )
+                                index == allMeasurable.size - 1 && computerThinking
+
 
                             if (isBoard || isCircularProgressBar) measurable.measure(
                                 constraints.copy(
@@ -429,8 +430,8 @@ fun GamePage(
                             allPlaceable.forEachIndexed { index, placeable ->
                                 val isBoard = index == 0
                                 val isCircularProgressBar =
-                                    index == allPlaceable.size - 1 && (gamePageViewModel.pageState.computerThinking
-                                            )
+                                    index == allPlaceable.size - 1 && computerThinking
+
                                 if (isBoard || isCircularProgressBar) {
                                     placeStdComponent(placeable, 0)
                                 } else { // movesNavigator
