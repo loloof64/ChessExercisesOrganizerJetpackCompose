@@ -213,9 +213,6 @@ fun GamePage(
     }
 
     fun generateComputerMove(oldPosition: String) {
-        //////////////////////////////////
-        println(computerThinking)
-        //////////////////////////////////
         if (computerThinking) return
         computerThinking = true
         sendCommandToRunningEngine("position fen $oldPosition")
@@ -236,9 +233,9 @@ fun GamePage(
             val moveParts = moveLine!!.split(" ")
             val move = moveParts[1]
 
-            computerThinking = false
             readEngineOutputJob?.cancel()
             readEngineOutputJob = null
+            computerThinking = false
 
             gamePageViewModel.boardState.makeMove(move)
             addMoveFanToHistory()

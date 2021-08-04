@@ -400,7 +400,8 @@ fun DynamicChessBoard(
         val isPieceOfSideToMove =
             (piece.isWhitePiece() && whiteTurn) ||
                     (!piece.isWhitePiece() && !whiteTurn)
-        if (isPieceOfSideToMove) {
+        val humanTurn = (whiteTurn && whiteSideType == PlayerType.Human) || (!whiteTurn && blackSideType == PlayerType.Human)
+        if (isPieceOfSideToMove && humanTurn) {
             val col = if (reversed) 7 - file else file
             val row = if (reversed) rank else 7 - rank
             val boardMinSize = cellsSize * 9f
