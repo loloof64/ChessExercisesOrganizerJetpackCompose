@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ChessExercisesOrganizerJetpackCompose</string>
+    <string name="app_name">Chess exercises organizer</string>
     <string name="white_pawn">Pion blanc</string>
     <string name="white_knight">Cavalier blanc</string>
     <string name="white_bishop">Fou blanc</string>

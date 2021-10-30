@@ -298,7 +298,12 @@ fun GamePage(
                                     gamePageViewModel.boardState.isValidMove(it)
                                 },
                                 dndMoveCallback = {
-                                    gamePageViewModel.boardState.makeMove(it)
+                                    val moveProcessed = gamePageViewModel.boardState.makeMove(it)
+                                    //if (!moveProcessed) return
+
+                                    ////////////////////////////////////
+                                    println("processing dnd move")
+                                    ////////////////////////////////////
                                     currentPosition =
                                         gamePageViewModel.boardState.getCurrentPosition()
                                     addMoveFanToHistory()

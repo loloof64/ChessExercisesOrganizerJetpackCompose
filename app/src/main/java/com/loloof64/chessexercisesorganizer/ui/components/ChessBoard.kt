@@ -77,9 +77,9 @@ class DynamicBoardDataHandler {
         boardLogic = startPosition.toBoard()
     }
 
-    fun makeMove(moveStr: String) {
+    fun makeMove(moveStr: String) : Boolean {
         val move = Move.getFromString(boardLogic, moveStr, true)
-        boardLogic.doMove(move, true, true)
+        return boardLogic.doMove(move, true, true)
     }
 
     fun getLastMoveFan(): String? {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -17,15 +18,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun EnginesPage(navController: NavController? = null) {
 
     val currentContext = LocalContext.current
-    val storeEnginesState = getAvailableEngines(currentContext).collectAsState(listOf())
-    val storeEngines by remember { storeEnginesState }
+    var storeEngines by remember { mutableStateOf(getAvailableEngines(currentContext)) }
     val enginesFolder = File(currentContext.filesDir, "engines")
     var installedEngines by remember { mutableStateOf(listInstalledEngines(enginesFolder)) }
 
@@ -37,6 +39,15 @@ fun EnginesPage(navController: NavController? = null) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
                             contentDescription = Icons.Filled.ArrowBack.name
+                        )
+                    }
+                }, actions = {
+                    IconButton(
+                        onClick = {storeEngines = getAvailableEngines(currentContext)}
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = Icons.Filled.Refresh.name
                         )
                     }
                 })

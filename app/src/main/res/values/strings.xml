@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ChessExercisesOrganizerJetpackCompose</string>
+    <string name="app_name">Chess exercises organizer</string>
     <string name="white_pawn">White pawn</string>
     <string name="white_knight">White knight</string>
     <string name="white_bishop">White bishop</string>
