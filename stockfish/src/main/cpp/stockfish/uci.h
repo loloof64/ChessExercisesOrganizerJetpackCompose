@@ -16,6 +16,10 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabe
+ */
+
 #ifndef UCI_H_INCLUDED
 #define UCI_H_INCLUDED
 
@@ -68,7 +72,7 @@ private:
 };
 
 void init(OptionsMap&);
-void loop(int argc, char* argv[]);
+void loop();
 std::string value(Value v);
 std::string square(Square s);
 std::string move(Move m, bool chess960);

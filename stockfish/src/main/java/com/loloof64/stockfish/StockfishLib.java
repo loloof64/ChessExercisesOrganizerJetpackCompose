@@ -14,11 +14,11 @@ public class StockfishLib {
     public native void mainLoop();
 
     /**
-     * Stops the process : sends the command "exit".
+     * Stops the process : sends the command "quit".
      * This is better to do this in the Application subclass.
      */
     public void stop() {
-        sendCommand("exit");
+        sendCommand("quit");
     }
 
     /**
@@ -31,7 +31,7 @@ public class StockfishLib {
     /**
      * Sends a command to the stockfish process.
      *
-     * If you want to stop the process, send the command "exit".
+     * If you want to stop the process, send the command "quit".
      * This is better to do this in the Application subclass.
      *
      * @param command - String - the command to send to the stockfish process.

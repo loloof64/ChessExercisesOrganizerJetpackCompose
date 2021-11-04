@@ -16,13 +16,18 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
 #include <algorithm>
-#include <iostream>
 #include <sstream>
 
 #include "types.h"
 #include "misc.h"
 #include "uci.h"
+
+#include "sharedioqueues.h"
 
 using std::string;
 
@@ -70,12 +75,13 @@ static void make_option(const string& n, int v, const SetRange& r) {
   LastOption = &Options[n];
 
   // Print formatted parameters, ready to be copy-pasted in Fishtest
-  std::cout << n << ","
+  std::stringstream  fishtest_msg;
+  fishtest_msg << n << ","
             << v << ","
             << r(v).first << "," << r(v).second << ","
             << (r(v).second - r(v).first) / 20.0 << ","
-            << "0.0020"
-            << std::endl;
+            << "0.0020";
+  outputs.push(fishtest_msg.str());
 }
 
 template<> void Tune::Entry<int>::init_option() { make_option(name, value, range); }

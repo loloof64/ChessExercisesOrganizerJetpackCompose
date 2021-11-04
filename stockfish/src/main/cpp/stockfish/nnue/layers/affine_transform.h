@@ -18,12 +18,18 @@
 
 // Definition of layer AffineTransform of NNUE evaluation function
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
+
 #ifndef NNUE_LAYERS_AFFINE_TRANSFORM_H_INCLUDED
 #define NNUE_LAYERS_AFFINE_TRANSFORM_H_INCLUDED
 
-#include <iostream>
 #include <algorithm>
 #include <type_traits>
+#include <istream>
+#include <ostream>
 #include "../nnue_common.h"
 #include "../../simd.h"
 

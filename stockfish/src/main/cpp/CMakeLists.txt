@@ -36,6 +36,7 @@ add_library(
         stockfish/position.cpp
         stockfish/psqt.cpp
         stockfish/search.cpp
+        stockfish/sharedioqueues.h
         stockfish/stockfish.cpp
         stockfish/thread.cpp
         stockfish/timeman.cpp

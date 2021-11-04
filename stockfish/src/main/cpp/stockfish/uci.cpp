@@ -16,9 +16,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabe
+ */
+
 #include <cassert>
 #include <cmath>
-#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -31,6 +34,8 @@
 #include "tt.h"
 #include "uci.h"
 #include "syzygy/tbprobe.h"
+
+#include "sharedioqueues.h"
 
 using namespace std;
 
@@ -89,7 +94,9 @@ namespace {
 
     Eval::NNUE::verify();
 
-    sync_cout << "\n" << Eval::trace(p) << sync_endl;
+    std::stringstream eval_msg;
+    eval_msg << "\n" << Eval::trace(p);
+    outputs.push(eval_msg.str());
   }
 
 
@@ -110,10 +117,14 @@ namespace {
     while (is >> token)
         value += (value.empty() ? "" : " ") + token;
 
-    if (Options.count(name))
+    if (Options.count(name)) {
         Options[name] = value;
-    else
-        sync_cout << "No such option: " << name << sync_endl;
+    }
+    else {
+        std::stringstream  option_err_msg;
+        option_err_msg << "No such option: " << name;
+        outputs.push(option_err_msg.str());
+    }
   }
 
 
@@ -172,7 +183,10 @@ namespace {
 
         if (token == "go" || token == "eval")
         {
-            cerr << "\nPosition: " << cnt++ << '/' << num << " (" << pos.fen() << ")" << endl;
+            std::stringstream position_msg;
+            position_msg << "\nPosition: " << cnt++ << '/' << num << " (" << pos.fen() << ")";
+            outputs.push(position_msg.str());
+
             if (token == "go")
             {
                go(pos, is, states);
@@ -191,10 +205,12 @@ namespace {
 
     dbg_print(); // Just before exiting
 
-    cerr << "\n==========================="
+    std::stringstream err_stats_msg;
+    err_stats_msg << "\n==========================="
          << "\nTotal time (ms) : " << elapsed
          << "\nNodes searched  : " << nodes
-         << "\nNodes/second    : " << 1000 * nodes / elapsed << endl;
+         << "\nNodes/second    : " << 1000 * nodes / elapsed;
+    outputs.push(err_stats_msg.str());
   }
 
   // The win rate model returns the probability (per mille) of winning given an eval
@@ -222,13 +238,11 @@ namespace {
 } // namespace
 
 
-/// UCI::loop() waits for a command from stdin, parses it and calls the appropriate
-/// function. Also intercepts EOF from stdin to ensure gracefully exiting if the
-/// GUI dies unexpectedly. When called with some command line arguments, e.g. to
-/// run 'bench', once the command is executed the function returns immediately.
+/// UCI::loop() waits for a command from inputs queue, parses it and calls the appropriate
+/// function. Outputs are placed inside outputs queue.
 /// In addition to the UCI ones, also some additional debug commands are supported.
 
-void UCI::loop(int argc, char* argv[]) {
+void UCI::loop() {
 
   Position pos;
   string token, cmd;
@@ -236,12 +250,10 @@ void UCI::loop(int argc, char* argv[]) {
 
   pos.set(StartFEN, false, &states->back(), Threads.main());
 
-  for (int i = 1; i < argc; ++i)
-      cmd += std::string(argv[i]) + " ";
-
   do {
-      if (argc == 1 && !getline(cin, cmd)) // Block here waiting for input or EOF
-          cmd = "quit";
+      if (!inputs.empty()){
+          cmd = inputs.pullNext();
+      }
 
       istringstream is(cmd);
 
@@ -259,24 +271,35 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "ponderhit")
           Threads.main()->ponder = false; // Switch to normal search
 
-      else if (token == "uci")
-          sync_cout << "id name " << engine_info(true)
+      else if (token == "uci") {
+          std::stringstream uci_msg;
+          uci_msg << "id name " << engine_info(true)
                     << "\n"       << Options
-                    << "\nuciok"  << sync_endl;
+                    << "\nuciok";
+          outputs.push(uci_msg.str());
+      }
 
       else if (token == "setoption")  setoption(is);
       else if (token == "go")         go(pos, is, states);
       else if (token == "position")   position(pos, is, states);
       else if (token == "ucinewgame") Search::clear();
-      else if (token == "isready")    sync_cout << "readyok" << sync_endl;
+      else if (token == "isready")    outputs.push("readyok");
 
       // Additional custom non-UCI commands, mainly for debugging.
       // Do not use these commands during a search!
       else if (token == "flip")     pos.flip();
       else if (token == "bench")    bench(pos, is, states);
-      else if (token == "d")        sync_cout << pos << sync_endl;
+      else if (token == "d")        {
+          std::stringstream  pos_msg;
+          pos_msg << pos;
+          outputs.push(pos_msg.str());
+      }
       else if (token == "eval")     trace_eval(pos);
-      else if (token == "compiler") sync_cout << compiler_info() << sync_endl;
+      else if (token == "compiler") {
+          std::stringstream compiler_msg;
+          compiler_msg << compiler_info();
+          outputs.push(compiler_msg.str());
+      }
       else if (token == "export_net")
       {
           std::optional<std::string> filename;
@@ -285,10 +308,13 @@ void UCI::loop(int argc, char* argv[]) {
               filename = f;
           Eval::NNUE::save_eval(filename);
       }
-      else if (!token.empty() && token[0] != '#')
-          sync_cout << "Unknown command: " << cmd << sync_endl;
+      else if (!token.empty() && token[0] != '#') {
+          std::stringstream command_err_msg;
+          command_err_msg << "Unknown command: " << cmd;
+          outputs.push(command_err_msg.str());
+      }
 
-  } while (token != "quit" && argc == 1); // Command line args are one-shot
+  } while (token != "quit"); // Command line args are one-shot
 }
 
 

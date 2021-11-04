@@ -16,6 +16,10 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
 #ifdef _WIN32
 #if _WIN32_WINNT < 0x0601
 #undef  _WIN32_WINNT
@@ -41,10 +45,11 @@ typedef bool(*fun3_t)(HANDLE, CONST GROUP_AFFINITY*, PGROUP_AFFINITY);
 
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <sstream>
 #include <vector>
 #include <cstdlib>
+
+#include "sharedioqueues.h"
 
 #if defined(__linux__) && !defined(__ANDROID__)
 #include <stdlib.h>
@@ -75,6 +80,7 @@ const string Version = "14.1";
 /// usual I/O functionality, all without changing a single line of code!
 /// Idea from http://groups.google.com/group/comp.lang.c++/msg/1d941c0f26ea0d81
 
+/*
 struct Tie: public streambuf { // MSVC requires split streambuf for cin and cout
 
   Tie(streambuf* b, streambuf* l) : buf(b), logBuf(l) {}
@@ -96,7 +102,9 @@ struct Tie: public streambuf { // MSVC requires split streambuf for cin and cout
     return last = logBuf->sputc((char)c);
   }
 };
+*/
 
+/*
 class Logger {
 
   Logger() : in(cin.rdbuf(), file.rdbuf()), out(cout.rdbuf(), file.rdbuf()) {}
@@ -123,7 +131,9 @@ public:
 
         if (!l.file.is_open())
         {
-            cerr << "Unable to open debug log file " << fname << endl;
+            std::stringstream file_err_msg;
+            file_err_msg << "Unable to open debug log file " << fname;
+            outputs.push(file_err_msg.str());
             exit(EXIT_FAILURE);
         }
 
@@ -132,6 +142,7 @@ public:
     }
   }
 };
+*/
 
 } // namespace
 
@@ -287,13 +298,19 @@ void dbg_mean_of(int v) { ++means[0]; means[1] += v; }
 
 void dbg_print() {
 
-  if (hits[0])
-      cerr << "Total " << hits[0] << " Hits " << hits[1]
-           << " hit rate (%) " << 100 * hits[1] / hits[0] << endl;
+  if (hits[0]) {
+      std::stringstream total_msg;
+      total_msg << "Total " << hits[0] << " Hits " << hits[1]
+           << " hit rate (%) " << 100 * hits[1] / hits[0];
+      outputs.push(total_msg.str());
+  }
 
-  if (means[0])
-      cerr << "Total " << means[0] << " Mean "
-           << (double)means[1] / means[0] << endl;
+  if (means[0]) {
+      std::stringstream mean_msg;
+      mean_msg << "Total " << means[0] << " Mean "
+           << (double) means[1] / means[0];
+      outputs.push(mean_msg.str());
+  }
 }
 
 
@@ -315,7 +332,7 @@ std::ostream& operator<<(std::ostream& os, SyncCout sc) {
 
 
 /// Trampoline helper to avoid moving Logger to misc.h
-void start_logger(const std::string& fname) { Logger::start(fname); }
+// void start_logger(const std::string& fname) { Logger::start(fname); }
 
 
 /// prefetch() preloads the given address in L1/L2 cache. This is a non-blocking

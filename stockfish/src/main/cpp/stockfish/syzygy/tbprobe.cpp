@@ -16,13 +16,16 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <cstring>   // For std::memset and std::memcpy
 #include <deque>
 #include <fstream>
-#include <iostream>
 #include <list>
 #include <sstream>
 #include <type_traits>
@@ -36,6 +39,8 @@
 #include "../uci.h"
 
 #include "tbprobe.h"
+
+#include "sharedioqueues.h"
 
 #ifndef _WIN32
 #include <fcntl.h>
@@ -217,7 +222,9 @@ public:
 
         if (statbuf.st_size % 64 != 16)
         {
-            std::cerr << "Corrupt tablebase file " << fname << std::endl;
+            std::stringstream tablebase_err_msg;
+            tablebase_err_msg << "Corrupt tablebase file " << fname;
+            outputs.push(tablebase_err_msg.str());
             exit(EXIT_FAILURE);
         }
 
@@ -230,7 +237,9 @@ public:
 
         if (*baseAddress == MAP_FAILED)
         {
-            std::cerr << "Could not mmap() " << fname << std::endl;
+            std::stringstream mmap_err_msg;
+            mmap_err_msg << "Could not mmap() " << fname;
+            outputs.push(mmap_err_msg.str());
             exit(EXIT_FAILURE);
         }
 #else
@@ -276,7 +285,9 @@ public:
 
         if (memcmp(data, Magics[type == WDL], 4))
         {
-            std::cerr << "Corrupted table in file " << fname << std::endl;
+            std::stringstream table_err_msg;
+            table_err_msg << "Corrupted table in file " << fname;
+            outputs.push(table_err_msg.str());
             unmap(*baseAddress, *mapping);
             return *baseAddress = nullptr, nullptr;
         }
@@ -445,7 +456,9 @@ class TBTables {
                 homeBucket = otherHomeBucket;
             }
         }
-        std::cerr << "TB hash table size too low!" << std::endl;
+        std::stringstream table_size_err_msg;
+        table_size_err_msg << "TB hash table size too low!";
+        outputs.push(table_size_err_msg.str());
         exit(EXIT_FAILURE);
     }
 
@@ -1402,7 +1415,9 @@ void Tablebases::init(const std::string& paths) {
         }
     }
 
-    sync_cout << "info string Found " << TBTables.size() << " tablebases" << sync_endl;
+    std::stringstream info_string_msg;
+    info_string_msg << "info string Found " << TBTables.size() << " tablebases";
+    outputs.push(info_string_msg.str());
 }
 
 // Probe the WDL table for a particular position.

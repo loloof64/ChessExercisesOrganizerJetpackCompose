@@ -5,27 +5,40 @@
 #include <string>
 #include <chrono>
 #include <thread>
-#include "lockedstringqueue.h"
+#include "bitboard.h"
+#include "endgame.h"
+#include "position.h"
+#include "psqt.h"
+#include "search.h"
+#include "syzygy/tbprobe.h"
+#include "thread.h"
+#include "tt.h"
+#include "uci.h"
+
+#include "sharedioqueues.h"
 
 loloof64::LockedStringQueue inputs;
 loloof64::LockedStringQueue outputs;
 
+using namespace Stockfish;
+
 void mainLoopProcess() {
-    while (true) {
-        if (!inputs.empty()) {
-            auto nextInput = inputs.pullNext();
-            if (nextInput == "exit") {
-                break;
-            }
+    outputs.push(engine_info());
 
-            auto nextOutput = std::string("Got input from outside: [");
-            nextOutput += nextInput;
-            nextOutput += "]";
+    UCI::init(Options);
+    Tune::init();
+    PSQT::init();
+    Bitboards::init();
+    Position::init();
+    Bitbases::init();
+    Endgames::init();
+    Threads.set(size_t(Options["Threads"]));
+    Search::clear(); // After threads are up
+    Eval::NNUE::init();
 
-            outputs.push(nextOutput);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
+    UCI::loop();
+
+    Threads.set(0);
 }
 
 extern "C"

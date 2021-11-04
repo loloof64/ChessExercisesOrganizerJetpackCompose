@@ -16,15 +16,21 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
 #include <cstring>   // For std::memset
-#include <iostream>
 #include <thread>
+#include <sstream>
 
 #include "bitboard.h"
 #include "misc.h"
 #include "thread.h"
 #include "tt.h"
 #include "uci.h"
+
+#include "sharedioqueues.h"
 
 namespace Stockfish {
 
@@ -71,8 +77,10 @@ void TranspositionTable::resize(size_t mbSize) {
   table = static_cast<Cluster*>(aligned_large_pages_alloc(clusterCount * sizeof(Cluster)));
   if (!table)
   {
-      std::cerr << "Failed to allocate " << mbSize
-                << "MB for transposition table." << std::endl;
+      std::stringstream allocation_err_msg;
+      allocation_err_msg << "Failed to allocate " << mbSize
+                << "MB for transposition table.";
+      outputs.push(allocation_err_msg.str());
       exit(EXIT_FAILURE);
   }
 

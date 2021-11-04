@@ -18,7 +18,10 @@
 
 // Code for calculating NNUE evaluation function
 
-#include <iostream>
+/*
+ * Modified by Laurent Bernabé
+ */
+
 #include <set>
 #include <sstream>
 #include <iomanip>
@@ -31,6 +34,8 @@
 #include "../types.h"
 
 #include "evaluate_nnue.h"
+
+#include "sharedioqueues.h"
 
 namespace Stockfish::Eval::NNUE {
 
@@ -395,7 +400,7 @@ namespace Stockfish::Eval::NNUE {
         {
              msg = "Failed to export a net. A non-embedded net can only be saved if the filename is specified";
 
-             sync_cout << msg << sync_endl;
+             outputs.push(msg);
              return false;
         }
         actualFilename = EvalFileDefaultName;
@@ -407,7 +412,7 @@ namespace Stockfish::Eval::NNUE {
     msg = saved ? "Network saved successfully to " + actualFilename
                 : "Failed to export a net";
 
-    sync_cout << msg << sync_endl;
+    outputs.push(msg);
     return saved;
   }
 

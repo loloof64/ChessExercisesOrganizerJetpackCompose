@@ -2,8 +2,8 @@
  * Laurent Bernabe - 2021
  */
 
-#ifndef __LOCKED_STRING_QUEUE
-#define __LOCKED_STRING_QUEUE
+#ifndef __LOCKED_STRING_QUEUE_H
+#define __LOCKED_STRING_QUEUE_H
 
 #include <string>
 #include <queue>

@@ -18,11 +18,17 @@
 
 // Constants used in NNUE evaluation function
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
+
 #ifndef NNUE_COMMON_H_INCLUDED
 #define NNUE_COMMON_H_INCLUDED
 
 #include <cstring>
-#include <iostream>
+#include <istream>
+#include <ostream>
 
 #include "../misc.h"  // for IsLittleEndian
 

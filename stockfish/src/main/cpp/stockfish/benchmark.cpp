@@ -16,12 +16,18 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
 #include <fstream>
-#include <iostream>
 #include <istream>
+#include <sstream>
 #include <vector>
 
 #include "position.h"
+
+#include "sharedioqueues.h"
 
 using namespace std;
 
@@ -135,7 +141,9 @@ vector<string> setup_bench(const Position& current, istream& is) {
 
       if (!file.is_open())
       {
-          cerr << "Unable to open file " << fenFile << endl;
+          std::stringstream file_err_msg;
+          file_err_msg << "Unable to open file " << fenFile;
+          outputs.push(file_err_msg.str());
           exit(EXIT_FAILURE);
       }
 

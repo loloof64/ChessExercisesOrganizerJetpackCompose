@@ -16,6 +16,10 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Modified by Laurent Bernabé
+ */
+
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -23,7 +27,6 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-#include <iostream>
 #include <streambuf>
 #include <vector>
 
@@ -36,6 +39,7 @@
 #include "timeman.h"
 #include "uci.h"
 #include "incbin/incbin.h"
+#include "sharedioqueues.h"
 
 
 // Macro to embed the default efficiently updatable neural network (NNUE) file
@@ -126,25 +130,28 @@ namespace Eval {
     if (useNNUE && currentEvalFileName != eval_file)
     {
 
-        string msg1 = "If the UCI option \"Use NNUE\" is set to true, network evaluation parameters compatible with the engine must be available.";
-        string msg2 = "The option is set to true, but the network file " + eval_file + " was not loaded successfully.";
-        string msg3 = "The UCI option EvalFile might need to specify the full path, including the directory name, to the network file.";
-        string msg4 = "The default net can be downloaded from: https://tests.stockfishchess.org/api/nn/" + std::string(EvalFileDefaultName);
-        string msg5 = "The engine will be terminated now.";
+        string msg1 = "info string ERROR: If the UCI option \"Use NNUE\" is set to true, network evaluation parameters compatible with the engine must be available.";
+        string msg2 = "info string ERROR: The option is set to true, but the network file " + eval_file + " was not loaded successfully.";
+        string msg3 = "info string ERROR: The UCI option EvalFile might need to specify the full path, including the directory name, to the network file.";
+        string msg4 = "info string ERROR: The default net can be downloaded from: https://tests.stockfishchess.org/api/nn/" + std::string(EvalFileDefaultName);
+        string msg5 = "info string ERROR: The engine will be terminated now.";
 
-        sync_cout << "info string ERROR: " << msg1 << sync_endl;
-        sync_cout << "info string ERROR: " << msg2 << sync_endl;
-        sync_cout << "info string ERROR: " << msg3 << sync_endl;
-        sync_cout << "info string ERROR: " << msg4 << sync_endl;
-        sync_cout << "info string ERROR: " << msg5 << sync_endl;
+        outputs.push(msg1);
+        outputs.push(msg2);
+        outputs.push(msg3);
+        outputs.push(msg4);
+        outputs.push(msg5);
 
         exit(EXIT_FAILURE);
     }
 
-    if (useNNUE)
-        sync_cout << "info string NNUE evaluation using " << eval_file << " enabled" << sync_endl;
-    else
-        sync_cout << "info string classical evaluation enabled" << sync_endl;
+    if (useNNUE) {
+        string eval_msg = "info string NNUE evaluation using " + eval_file + " enabled";
+        outputs.push(eval_msg);
+    }
+    else {
+        outputs.push("info string classical evaluation enabled");
+    }
   }
 }
 
