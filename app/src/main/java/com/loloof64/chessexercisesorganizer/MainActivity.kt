@@ -7,24 +7,31 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.loloof64.chessexercisesorganizer.ui.pages.EnginesPage
 import com.loloof64.chessexercisesorganizer.ui.pages.GamePage
+import com.loloof64.stockfish.StockfishLib
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var stockfishLib: StockfishLib
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        stockfishLib = StockfishLib()
         setContent {
-            MainContent()
+            MainContent(stockfishLib)
         }
+    }
+
+    override fun onStop() {
+        stockfishLib.stop()
+        super.onStop()
     }
 }
 
 @Composable
-fun MainContent() {
+fun MainContent(stockfishLib: StockfishLib) {
     val navController = rememberNavController()
     NavHost(navController, startDestination = "game") {
-        composable("game") { GamePage(navController = navController) }
-        composable("engines") { EnginesPage(navController = navController) }
+        composable("game") { GamePage(stockfishLib =  stockfishLib) }
     }
 }

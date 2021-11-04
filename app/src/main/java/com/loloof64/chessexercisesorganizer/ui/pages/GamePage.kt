@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -30,10 +28,10 @@ import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import com.loloof64.stockfish.StockfishLib
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
 class GamePageState {
     var boardReversed = false
@@ -52,15 +50,11 @@ class GamePageViewModel : ViewModel() {
 
 @Composable
 fun GamePage(
-    navController: NavController? = null,
     gamePageViewModel: GamePageViewModel = viewModel(),
+    stockfishLib: StockfishLib,
 ) {
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
-
-    val okString = stringResource(R.string.ok)
-
-    val context = LocalContext.current
 
     var currentPosition by remember {
         mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
@@ -80,10 +74,6 @@ fun GamePage(
 
     var pendingStopGameRequest by remember {
         mutableStateOf(gamePageViewModel.pageState.pendingStopGameRequest)
-    }
-
-    var pendingSelectEngineDialog by remember {
-        mutableStateOf(gamePageViewModel.pageState.pendingSelectEngineDialog)
     }
 
     var promotionState by remember {
@@ -113,12 +103,6 @@ fun GamePage(
     val missingMaterialText = stringResource(R.string.missing_material_draw)
     val gameStoppedMessage = stringResource(R.string.user_stopped_game)
 
-    val errorLaunchingEngineText = stringResource(R.string.error_launching_engine)
-    val noInstalledEngineText = stringResource(R.string.no_installed_engine_error)
-
-    val enginesFolder = File(context.filesDir, "engines")
-    val enginesList = listInstalledEngines(enginesFolder)
-
     fun doStartNewGame() {
         gamePageViewModel.pageState.promotionState = PendingPromotionData()
         gamePageViewModel.boardState.newGame()
@@ -127,17 +111,6 @@ fun GamePage(
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
         gamePageViewModel.pageState.gameInProgress = true
         gameInProgress = true
-    }
-
-    fun showInfiniteSnackbarAction(text: String) {
-        scope.launch {
-            scaffoldState.snackbarHostState.showSnackbar(
-                message = text,
-                actionLabel = okString,
-                duration = SnackbarDuration.Indefinite
-            )
-        }
-
     }
 
     fun showMinutedSnackbarAction(text: String, duration: SnackbarDuration) {
@@ -151,15 +124,9 @@ fun GamePage(
     }
 
     fun newGameRequest() {
-        val noEngineInstalledLocally = enginesList.isEmpty()
-        if (noEngineInstalledLocally) {
-            showInfiniteSnackbarAction(noInstalledEngineText)
-            return
-        }
         val isInInitialPosition = gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
         if (isInInitialPosition) {
-            gamePageViewModel.pageState.pendingSelectEngineDialog = true
-            pendingSelectEngineDialog = true
+            doStartNewGame()
         } else {
             gamePageViewModel.pageState.pendingNewGameRequest = true
             pendingNewGameRequest = true
@@ -174,7 +141,6 @@ fun GamePage(
 
     fun doStopCurrentGame() {
         if (!gamePageViewModel.pageState.gameInProgress) return
-        stopCurrentRunningEngine()
         computerThinking = false
         gamePageViewModel.pageState.promotionState = PendingPromotionData()
         promotionState = gamePageViewModel.pageState.promotionState
@@ -197,7 +163,6 @@ fun GamePage(
         }
         message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
         if (endedStatus != GameEndedStatus.NOT_ENDED) {
-            stopCurrentRunningEngine()
             computerThinking = false
             gamePageViewModel.pageState.gameInProgress = false
             gameInProgress = false
@@ -215,15 +180,18 @@ fun GamePage(
     fun generateComputerMove(oldPosition: String) {
         if (computerThinking) return
         computerThinking = true
-        sendCommandToRunningEngine("position fen $oldPosition")
-        sendCommandToRunningEngine("go movetime 1000")
+        stockfishLib.sendCommand("position fen $oldPosition")
+        stockfishLib.sendCommand("go movetime 1000")
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
             var moveLine: String? = null
 
             while (!mustExitLoop) {
-                val nextEngineLine = readNextEngineOutput()
-                if (nextEngineLine != null && nextEngineLine.startsWith("bestmove")) {
+                val nextEngineLine = stockfishLib.readNextOutput()
+                /////////////////////////////////////////////////////////////////////
+                if (!nextEngineLine.startsWith("@@@")) println(nextEngineLine)
+                /////////////////////////////////////////////////////////////////////
+                if (nextEngineLine.startsWith("bestmove")) {
                     moveLine = nextEngineLine
                     mustExitLoop = true
                 }
@@ -268,17 +236,6 @@ fun GamePage(
                         gamePageViewModel.pageState.boardReversed =
                             !gamePageViewModel.pageState.boardReversed
                         boardReversed = gamePageViewModel.pageState.boardReversed
-                    }
-                    if (!gameInProgress) {
-                        SimpleButton(
-                            navController = navController,
-                            text = stringResource(R.string.chess_engines),
-                            vectorId = R.drawable.ic_car_engine
-                        ) {
-                            it?.navigate("engines") {
-                                launchSingleTop = true
-                            }
-                        }
                     }
                 })
             },
@@ -337,7 +294,7 @@ fun GamePage(
                                     gamePageViewModel.pageState.pendingNewGameRequest = false
                                     gamePageViewModel.pageState.pendingSelectEngineDialog = true
                                     pendingNewGameRequest = false
-                                    pendingSelectEngineDialog = true
+                                    doStartNewGame()
                                 },
                                 dismissCallback = {
                                     gamePageViewModel.pageState.pendingNewGameRequest = false
@@ -356,36 +313,11 @@ fun GamePage(
                                     pendingStopGameRequest = false
                                 })
 
-                            SelectEngineDialog(
-                                isOpen = pendingSelectEngineDialog,
-                                enginesList = enginesList,
-                                validateCallback = {
-                                    gamePageViewModel.pageState.pendingSelectEngineDialog = false
-                                    pendingSelectEngineDialog = false
-                                    coroutineScope.launch {
-                                        executeInstalledEngine(
-                                            enginesFolder = enginesFolder,
-                                            index = it,
-                                            errorCallback = {
-                                                scope.launch {
-                                                    scaffoldState.snackbarHostState.showSnackbar(
-                                                        message = errorLaunchingEngineText,
-                                                        actionLabel = okString,
-                                                        duration = SnackbarDuration.Indefinite
-                                                    )
-                                                }
-                                                doStopCurrentGame()
-                                            })
-                                    }
-                                    doStartNewGame()
-                                },
-                                dismissCallback = {
-                                    gamePageViewModel.pageState.pendingSelectEngineDialog = false
-                                    pendingSelectEngineDialog = false
-                                })
                             if (computerThinking) {
                                 CircularProgressIndicator(modifier = Modifier.size(50.dp))
                             }
+
+
                         }
                     ) { allMeasurable, constraints ->
                         val boardSize =
@@ -524,48 +456,6 @@ fun ConfirmStopGameDialog(
 
     }
 }
-
-@Composable
-fun SelectEngineDialog(
-    isOpen: Boolean,
-    enginesList: Array<String>,
-    validateCallback: (Int) -> Unit,
-    dismissCallback: () -> Unit
-) {
-    if (isOpen) {
-        AlertDialog(onDismissRequest = { dismissCallback() },
-            title = {
-                Text(stringResource(R.string.select_engine_title))
-            },
-            text = {
-                LazyColumn {
-                    enginesList.mapIndexed { index, caption ->
-                        item {
-                            Button(onClick = {
-                                validateCallback(index)
-                            }) {
-                                Text(text = caption)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-
-            },
-            dismissButton = {
-                Button(
-                    onClick = { dismissCallback() },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
-                ) {
-                    Text(stringResource(R.string.Cancel))
-                }
-            }
-        )
-
-    }
-}
-
 
 @Composable
 fun SimpleButton(
