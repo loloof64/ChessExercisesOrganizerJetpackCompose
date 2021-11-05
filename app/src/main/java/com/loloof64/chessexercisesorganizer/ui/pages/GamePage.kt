@@ -109,6 +109,7 @@ fun GamePage(
         gamePageViewModel.movesElements.clear()
         gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+        stockfishLib.sendCommand("ucinewgame");
         gamePageViewModel.pageState.gameInProgress = true
         gameInProgress = true
     }
