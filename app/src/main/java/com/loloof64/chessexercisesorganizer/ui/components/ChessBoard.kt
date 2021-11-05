@@ -921,12 +921,9 @@ private fun DrawScope.drawArrowBaseLine(points: Array<Float>, cellsSize: Float) 
     val (ax, ay, bx, by) = points
     val halfThickness = cellsSize * 0.08
 
-    val realAx = (ax - halfThickness).toFloat()
-    val realBx = (bx - halfThickness).toFloat()
-
     val brush = SolidColor(Color.Magenta)
-    val startOffset = Offset(realAx, ay)
-    val endOffset = Offset(realBx ,by)
+    val startOffset = Offset(ax, ay)
+    val endOffset = Offset(bx ,by)
     val strokeWidth = (2*halfThickness).toFloat()
 
     drawLine(brush = brush, start = startOffset, end = endOffset, strokeWidth = strokeWidth)
