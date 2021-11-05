@@ -182,7 +182,7 @@ fun GamePage(
         computerThinking = true
 
         stockfishLib.sendCommand("position fen $oldPosition")
-        stockfishLib.sendCommand("go movetime 1000")
+        stockfishLib.sendCommand("go movetime 2000")
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
 
