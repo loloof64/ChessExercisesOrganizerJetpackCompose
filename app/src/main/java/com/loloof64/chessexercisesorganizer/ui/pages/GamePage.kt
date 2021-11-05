@@ -60,6 +60,10 @@ fun GamePage(
         mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
     }
 
+    var lastMoveArrow by remember {
+        mutableStateOf(gamePageViewModel.boardState.getLastMoveArrow())
+    }
+
     var boardReversed by remember {
         mutableStateOf(gamePageViewModel.pageState.boardReversed)
     }
@@ -109,7 +113,9 @@ fun GamePage(
         gamePageViewModel.movesElements.clear()
         gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-        stockfishLib.sendCommand("ucinewgame");
+        stockfishLib.sendCommand("ucinewgame")
+        gamePageViewModel.boardState.clearLastMoveArrow()
+        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
         gamePageViewModel.pageState.gameInProgress = true
         gameInProgress = true
     }
@@ -172,7 +178,7 @@ fun GamePage(
 
     fun addMoveFanToHistory() {
         val lastMoveFan = gamePageViewModel.boardState.getLastMoveFan()
-        gamePageViewModel.movesElements.add(HalfMoveSAN(text = lastMoveFan!!))
+        gamePageViewModel.movesElements.add(HalfMoveSAN(text = lastMoveFan))
         if (gamePageViewModel.boardState.whiteTurn()) {
             gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
         }
@@ -201,8 +207,10 @@ fun GamePage(
                     computerThinking = false
 
                     gamePageViewModel.boardState.makeMove(move)
+                    gamePageViewModel.boardState.setLastMoveArrow(MoveData.parse(move)!!)
                     addMoveFanToHistory()
                     currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+                    lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
                     handleNaturalEndgame()
 
                     mustExitLoop = true
@@ -248,6 +256,7 @@ fun GamePage(
                                 whiteSideType = PlayerType.Human,
                                 blackSideType = PlayerType.Computer,
                                 reversed = boardReversed,
+                                lastMoveArrow = lastMoveArrow,
                                 gameInProgress = gameInProgress,
                                 position = currentPosition,
                                 promotionState = promotionState,
@@ -255,17 +264,24 @@ fun GamePage(
                                     gamePageViewModel.boardState.isValidMove(it)
                                 },
                                 dndMoveCallback = {
-                                    gamePageViewModel.boardState.makeMove(it)
+                                    //////////////////////////
+                                    println(it.toString())
+                                    //////////////////////////
+                                    gamePageViewModel.boardState.makeMove(it.toString())
+                                    gamePageViewModel.boardState.setLastMoveArrow(it)
+                                    lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
                                     currentPosition =
                                         gamePageViewModel.boardState.getCurrentPosition()
                                     addMoveFanToHistory()
                                     handleNaturalEndgame()
                                 },
                                 promotionMoveCallback = {
-                                    gamePageViewModel.boardState.makeMove(it)
+                                    gamePageViewModel.boardState.makeMove(it.toString())
+                                    gamePageViewModel.boardState.setLastMoveArrow(it)
                                     gamePageViewModel.pageState.promotionState =
                                         PendingPromotionData()
                                     promotionState = gamePageViewModel.pageState.promotionState
+                                    lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
                                     currentPosition =
                                         gamePageViewModel.boardState.getCurrentPosition()
                                     addMoveFanToHistory()

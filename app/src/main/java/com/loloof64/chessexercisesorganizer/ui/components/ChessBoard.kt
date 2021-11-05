@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -62,10 +63,21 @@ enum class PlayerType {
 class DynamicBoardDataHandler {
     private var startPosition: String = STANDARD_FEN
     private var boardLogic = EMPTY_FEN.toBoard()
+    private var arrowData: MoveData? = null
 
     fun setStartPosition(position: String) {
         startPosition = position
     }
+
+    fun setLastMoveArrow(arrowData: MoveData) {
+        this.arrowData = arrowData
+    }
+
+    fun clearLastMoveArrow() {
+        arrowData = null
+    }
+
+    fun getLastMoveArrow() : MoveData? = arrowData
 
     fun whiteTurn() = boardLogic.turn
 
@@ -82,33 +94,32 @@ class DynamicBoardDataHandler {
         return boardLogic.doMove(move, true, true)
     }
 
-    fun getLastMoveFan(): String? {
+    fun getLastMoveFan(): String {
         val forBlackTurn = boardLogic.turn
         var lastMoveSan = boardLogic.lastMoveSan
-        if (lastMoveSan != null) {
-            val referenceChars = "NBRQK".toCharArray()
-            var firstOccurrenceIndex = -1
-            for (i in 0.until(lastMoveSan.length)) {
-                val currentElement = lastMoveSan.toCharArray()[i]
-                if (referenceChars.contains(currentElement)) {
-                    firstOccurrenceIndex = i
-                    break
-                }
+        if (lastMoveSan == null) throw java.lang.RuntimeException("No move played !")
+        val referenceChars = "NBRQK".toCharArray()
+        var firstOccurrenceIndex = -1
+        for (i in 0.until(lastMoveSan.length)) {
+            val currentElement = lastMoveSan.toCharArray()[i]
+            if (referenceChars.contains(currentElement)) {
+                firstOccurrenceIndex = i
+                break
             }
-            if (firstOccurrenceIndex > -1) {
-                val replacement = when (val element = lastMoveSan.toCharArray()[firstOccurrenceIndex]) {
-                    'N' -> if (forBlackTurn) "\u265e" else "\u2658"
-                    'B' -> if (forBlackTurn) "\u265d" else "\u2657"
-                    'R' -> if (forBlackTurn) "\u265c" else "\u2656"
-                    'Q' -> if (forBlackTurn) "\u265b" else "\u2655"
-                    'K' -> if (forBlackTurn) "\u265a" else "\u2654"
-                    else -> throw java.lang.RuntimeException("Unrecognized piece char $element into SAN $lastMoveSan")
-                }
-                val firstPart = lastMoveSan.substring(0, firstOccurrenceIndex)
-                val lastPart = lastMoveSan.substring(firstOccurrenceIndex + 1)
+        }
+        if (firstOccurrenceIndex > -1) {
+            val replacement = when (val element = lastMoveSan.toCharArray()[firstOccurrenceIndex]) {
+                'N' -> if (forBlackTurn) "\u265e" else "\u2658"
+                'B' -> if (forBlackTurn) "\u265d" else "\u2657"
+                'R' -> if (forBlackTurn) "\u265c" else "\u2656"
+                'Q' -> if (forBlackTurn) "\u265b" else "\u2655"
+                'K' -> if (forBlackTurn) "\u265a" else "\u2654"
+                else -> throw java.lang.RuntimeException("Unrecognized piece char $element into SAN $lastMoveSan")
+            }
+            val firstPart = lastMoveSan.substring(0, firstOccurrenceIndex)
+            val lastPart = lastMoveSan.substring(firstOccurrenceIndex + 1)
 
-                lastMoveSan = "$firstPart$replacement$lastPart"
-            }
+            lastMoveSan = "$firstPart$replacement$lastPart"
         }
         return lastMoveSan
     }
@@ -131,6 +142,45 @@ class DynamicBoardDataHandler {
     }
 }
 
+data class MoveData(
+    val startFile: Int = Int.MIN_VALUE,
+    val startRank: Int = Int.MIN_VALUE,
+    val targetFile: Int = Int.MIN_VALUE,
+    val targetRank: Int = Int.MIN_VALUE,
+    val promotion: Char? = null,
+) {
+    override fun toString(): String {
+        return "${startFile.asFileChar()}${startRank.asRankChar()}" +
+                "${targetFile.asFileChar()}${targetRank.asRankChar()}${promotion ?: ""}"
+    }
+
+    companion object {
+        fun parse(str: String) : MoveData? {
+
+            val startFile = str[0].code - 'a'.code
+            val startRank = str[1].code - '1'.code
+            val targetFile = str[2].code - 'a'.code
+            val targetRank = str[3].code - '1'.code
+            var promotion: Char? = if (str.length >= 5) str[4] else null
+
+            if (startFile < 0 || startFile > 7) return null
+            if (startRank < 0 || startRank > 7) return null
+            if (targetFile < 0 || targetFile > 7) return null
+            if (targetRank < 0 || targetRank > 7) return null
+
+            if (promotion?.let { "qrbn".contains(it) } == false) promotion = null
+
+            return MoveData(
+                startFile = startFile,
+                startRank = startRank,
+                targetFile = targetFile,
+                targetRank = targetRank,
+                promotion = promotion
+            )
+        }
+    }
+}
+
 data class PendingPromotionData(
     val pendingPromotion: Boolean = false,
     val pendingPromotionForBlack: Boolean = false,
@@ -148,6 +198,7 @@ data class PendingPromotionData(
                 "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
                 "$movedPieceXRatio|$movedPieceYRatio"
 
+    /* TODO : remove when sure that pending promotion is preserved across configuration changes.
     companion object {
         fun parse(valueStr: String): PendingPromotionData {
             return try {
@@ -171,6 +222,7 @@ data class PendingPromotionData(
             }
         }
     }
+     */
 }
 
 sealed class PromotionPiece(val fen: Char)
@@ -189,12 +241,13 @@ fun DynamicChessBoard(
     modifier: Modifier = Modifier,
     position: String,
     reversed: Boolean = false,
+    lastMoveArrow: MoveData? = null,
     promotionState: PendingPromotionData = PendingPromotionData(),
     isValidMoveCallback: (String) -> Boolean = { _ -> false },
-    dndMoveCallback: (String) -> Unit = { _ -> },
+    dndMoveCallback: (MoveData) -> Unit = { _ -> },
     setPendingPromotionCallback: (PendingPromotionData) -> Unit = { _ -> },
     cancelPendingPromotionCallback: () -> Unit = { },
-    promotionMoveCallback: (String) -> Unit = { _ -> },
+    promotionMoveCallback: (MoveData) -> Unit = { _ -> },
     gameInProgress: Boolean = false,
     computerMoveRequestCallback: (String) -> Unit = { _ -> },
     whiteSideType: PlayerType = PlayerType.Human,
@@ -228,10 +281,14 @@ fun DynamicChessBoard(
         if (!gameInProgress) return
 
         val promotionFen = piece.fen.lowercaseChar()
-        val moveString =
-            "${promotionState.startFile.asFileChar()}${promotionState.startRank.asRankChar()}" +
-                    "${promotionState.targetFile.asFileChar()}${promotionState.targetRank.asRankChar()}$promotionFen"
-        promotionMoveCallback(moveString)
+        val moveData = MoveData(
+            startFile = promotionState.startFile,
+            startRank = promotionState.startRank,
+            targetFile = promotionState.targetFile,
+            targetRank = promotionState.targetRank,
+            promotion = promotionFen,
+        )
+        promotionMoveCallback(moveData)
         setPendingPromotionCallback(PendingPromotionData())
     }
 
@@ -443,11 +500,14 @@ fun DynamicChessBoard(
         if (!gameInProgress) return
         if (!isValidDndMove()) return
 
-        val moveString =
-            "${dndState.startFile.asFileChar()}${dndState.startRank.asRankChar()}" +
-                    "${dndState.targetFile.asFileChar()}${dndState.targetRank.asRankChar()}"
+        val moveData = MoveData(
+            startFile = dndState.startFile,
+            startRank = dndState.startRank,
+            targetFile = dndState.targetFile,
+            targetRank = dndState.targetRank,
+        )
 
-        dndMoveCallback(moveString)
+        dndMoveCallback(moveData)
         dndState = DndData()
     }
 
@@ -559,6 +619,7 @@ fun DynamicChessBoard(
         val minSize = if (size.width < size.height) size.width else size.height
         cellsSize = minSize / 9f
         drawCells(cellsSize = cellsSize, reversed = reversed, dndData = dndState)
+        drawLastMoveArrow(lastMoveArrow, cellsSize, reversed)
         drawPendingPromotionCells(
             cellsSize = cellsSize,
             reversed = reversed,
@@ -637,6 +698,7 @@ fun StaticChessBoard(
     modifier: Modifier = Modifier,
     position: String = STANDARD_FEN,
     reversed: Boolean = false,
+    lastMoveArrow: MoveData? = null,
 ) {
     val boardLogic = position.toBoard()
     val currentContext = LocalContext.current
@@ -648,6 +710,7 @@ fun StaticChessBoard(
         val minSize = if (size.width < size.height) size.width else size.height
         val cellsSize = minSize / 9f
         drawCells(cellsSize)
+        drawLastMoveArrow(lastMoveArrow, cellsSize, reversed)
         drawFilesCoordinates(cellsSize, reversed)
         drawRanksCoordinates(cellsSize, reversed)
         drawPlayerTurn(cellsSize, boardLogic)
@@ -831,6 +894,42 @@ private fun DrawScope.drawPendingPromotionCells(
             }
         }
     }
+}
+
+private fun DrawScope.drawLastMoveArrow(arrowData: MoveData?, cellsSize: Float, reversed: Boolean) {
+    if (arrowData == null) return
+
+    val points = computeArrowBaseCoordinates(arrowData, cellsSize, reversed)
+    drawArrowBaseLine(points, cellsSize)
+}
+
+private fun computeArrowBaseCoordinates(arrowData: MoveData, cellsSize: Float, reversed: Boolean) : Array<Float> {
+    val fromCol = if (reversed)  7 - arrowData.startFile else arrowData.startFile
+    val fromRow = if (reversed)  arrowData.startRank else 7 - arrowData.startRank
+    val toCol = if (reversed)  7 - arrowData.targetFile else arrowData.targetFile
+    val toRow = if (reversed)  arrowData.targetRank else 7 - arrowData.targetRank
+
+    val ax = (cellsSize * (fromCol + 1.0)).toFloat()
+    val ay = (cellsSize * (fromRow + 1.0)).toFloat()
+    val bx = (cellsSize * (toCol + 1.0)).toFloat()
+    val by = (cellsSize * (toRow + 1.0)).toFloat()
+
+    return arrayOf(ax, ay, bx, by)
+}
+
+private fun DrawScope.drawArrowBaseLine(points: Array<Float>, cellsSize: Float) {
+    val (ax, ay, bx, by) = points
+    val halfThickness = cellsSize * 0.08
+
+    val realAx = (ax - halfThickness).toFloat()
+    val realBx = (bx - halfThickness).toFloat()
+
+    val brush = SolidColor(Color.Magenta)
+    val startOffset = Offset(realAx, ay)
+    val endOffset = Offset(realBx ,by)
+    val strokeWidth = (2*halfThickness).toFloat()
+
+    drawLine(brush = brush, start = startOffset, end = endOffset, strokeWidth = strokeWidth)
 }
 
 private fun DrawScope.drawPlayerTurn(
