@@ -32,8 +32,7 @@ import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.floor
-import kotlin.math.sqrt
+import kotlin.math.*
 
 const val STANDARD_FEN = Board.FEN_START_POSITION
 const val EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1"
@@ -901,6 +900,8 @@ private fun DrawScope.drawLastMoveArrow(arrowData: MoveData?, cellsSize: Float, 
 
     val points = computeArrowBaseCoordinates(arrowData, cellsSize, reversed)
     drawArrowBaseLine(points, cellsSize)
+    drawArrowAngleLine1(points, cellsSize)
+    drawArrowAngleLine2(points, cellsSize)
 }
 
 private fun computeArrowBaseCoordinates(arrowData: MoveData, cellsSize: Float, reversed: Boolean) : Array<Float> {
@@ -919,12 +920,55 @@ private fun computeArrowBaseCoordinates(arrowData: MoveData, cellsSize: Float, r
 
 private fun DrawScope.drawArrowBaseLine(points: Array<Float>, cellsSize: Float) {
     val (ax, ay, bx, by) = points
-    val halfThickness = cellsSize * 0.08
 
-    val brush = SolidColor(Color.Magenta)
+    val brush = SolidColor(Color.Blue)
     val startOffset = Offset(ax, ay)
     val endOffset = Offset(bx ,by)
-    val strokeWidth = (2*halfThickness).toFloat()
+    val strokeWidth = (cellsSize * 0.16).toFloat()
+
+    drawLine(brush = brush, start = startOffset, end = endOffset, strokeWidth = strokeWidth)
+}
+
+private fun DrawScope.drawArrowAngleLine1(points: Array<Float>, cellsSize: Float) {
+    val (ax, ay, bx, by) = points
+
+    val dx = (bx - ax).toDouble()
+    val dy = (by - ay).toDouble()
+
+    val angleRad = atan2(dy, dx) - Math.PI / 2.0 - (3 * Math.PI) / 4.0
+    val angleCos = cos(angleRad)
+    val angleSin = sin(angleRad)
+    val length = (sqrt(dx*dx + dy*dy) * 0.4).toFloat()
+
+    val realBx = (bx - length * angleSin).toFloat()
+    val realBy = (by + length * angleCos).toFloat()
+
+    val brush = SolidColor(Color.Blue)
+    val startOffset = Offset(bx, by)
+    val endOffset = Offset(realBx, realBy)
+    val strokeWidth = (cellsSize * 0.16).toFloat()
+
+    drawLine(brush = brush, start = startOffset, end = endOffset, strokeWidth = strokeWidth)
+}
+
+private fun DrawScope.drawArrowAngleLine2(points: Array<Float>, cellsSize: Float) {
+    val (ax, ay, bx, by) = points
+
+    val dx = (bx - ax).toDouble()
+    val dy = (by - ay).toDouble()
+
+    val angleRad = atan2(dy, dx) - Math.PI / 2.0 + (3 * Math.PI) / 4.0
+    val angleCos = cos(angleRad)
+    val angleSin = sin(angleRad)
+    val length = (sqrt(dx*dx + dy*dy) * 0.4).toFloat()
+
+    val realBx = (bx - length * angleSin).toFloat()
+    val realBy = (by + length * angleCos).toFloat()
+
+    val brush = SolidColor(Color.Blue)
+    val startOffset = Offset(bx, by)
+    val endOffset = Offset(realBx, realBy)
+    val strokeWidth = (cellsSize * 0.16).toFloat()
 
     drawLine(brush = brush, start = startOffset, end = endOffset, strokeWidth = strokeWidth)
 }
