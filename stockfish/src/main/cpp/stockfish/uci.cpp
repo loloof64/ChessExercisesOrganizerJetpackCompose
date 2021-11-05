@@ -254,11 +254,15 @@ void UCI::loop() {
       if (!inputs.empty()){
           cmd = inputs.pullNext();
       }
+      else {
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          continue;
+      }
 
       istringstream is(cmd);
 
       token.clear(); // Avoid a stale if getline() returns empty or blank line
-      is >> skipws >> token;
+      is >> token;
 
       if (    token == "quit"
           ||  token == "stop")

@@ -5,6 +5,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <sstream>
 #include "bitboard.h"
 #include "endgame.h"
 #include "position.h"

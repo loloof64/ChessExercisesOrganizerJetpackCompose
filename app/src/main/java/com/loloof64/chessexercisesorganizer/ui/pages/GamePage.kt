@@ -180,35 +180,34 @@ fun GamePage(
     fun generateComputerMove(oldPosition: String) {
         if (computerThinking) return
         computerThinking = true
+
         stockfishLib.sendCommand("position fen $oldPosition")
         stockfishLib.sendCommand("go movetime 1000")
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
-            var moveLine: String? = null
 
             while (!mustExitLoop) {
                 val nextEngineLine = stockfishLib.readNextOutput()
-                /////////////////////////////////////////////////////////////////////
-                if (!nextEngineLine.startsWith("@@@")) println(nextEngineLine)
-                /////////////////////////////////////////////////////////////////////
+
                 if (nextEngineLine.startsWith("bestmove")) {
-                    moveLine = nextEngineLine
+                    println(nextEngineLine)
+
+                    val moveParts = nextEngineLine!!.split(" ")
+                    val move = moveParts[1]
+
+                    readEngineOutputJob?.cancel()
+                    readEngineOutputJob = null
+                    computerThinking = false
+
+                    gamePageViewModel.boardState.makeMove(move)
+                    addMoveFanToHistory()
+                    currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+                    handleNaturalEndgame()
+
                     mustExitLoop = true
                 }
                 delay(100)
             }
-
-            val moveParts = moveLine!!.split(" ")
-            val move = moveParts[1]
-
-            readEngineOutputJob?.cancel()
-            readEngineOutputJob = null
-            computerThinking = false
-
-            gamePageViewModel.boardState.makeMove(move)
-            addMoveFanToHistory()
-            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-            handleNaturalEndgame()
         }
     }
 
@@ -255,12 +254,7 @@ fun GamePage(
                                     gamePageViewModel.boardState.isValidMove(it)
                                 },
                                 dndMoveCallback = {
-                                    val moveProcessed = gamePageViewModel.boardState.makeMove(it)
-                                    //if (!moveProcessed) return
-
-                                    ////////////////////////////////////
-                                    println("processing dnd move")
-                                    ////////////////////////////////////
+                                    gamePageViewModel.boardState.makeMove(it)
                                     currentPosition =
                                         gamePageViewModel.boardState.getCurrentPosition()
                                     addMoveFanToHistory()
@@ -283,7 +277,11 @@ fun GamePage(
                                 setPendingPromotionCallback = {
                                     gamePageViewModel.pageState.promotionState = it
                                 },
-                                computerMoveRequestCallback = { generateComputerMove(it) },
+                                computerMoveRequestCallback = {
+                                    if (!computerThinking) {
+                                        generateComputerMove(it)
+                                    }
+                                },
                             )
 
                             MovesNavigator(elements = gamePageViewModel.movesElements.toTypedArray())
