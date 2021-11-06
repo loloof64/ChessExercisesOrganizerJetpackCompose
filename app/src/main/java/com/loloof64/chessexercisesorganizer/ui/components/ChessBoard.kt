@@ -618,7 +618,6 @@ fun DynamicChessBoard(
         val minSize = if (size.width < size.height) size.width else size.height
         cellsSize = minSize / 9f
         drawCells(cellsSize = cellsSize, reversed = reversed, dndData = dndState)
-        drawLastMoveArrow(lastMoveArrow, cellsSize, reversed)
         drawPendingPromotionCells(
             cellsSize = cellsSize,
             reversed = reversed,
@@ -635,6 +634,7 @@ fun DynamicChessBoard(
             dndData = dndState,
             promotionData = promotionState,
         )
+        drawLastMoveArrow(lastMoveArrow, cellsSize, reversed)
 
         if (dndState.pieceValue != NO_PIECE) {
             val boardMinSize = cellsSize * 9f
@@ -709,7 +709,6 @@ fun StaticChessBoard(
         val minSize = if (size.width < size.height) size.width else size.height
         val cellsSize = minSize / 9f
         drawCells(cellsSize)
-        drawLastMoveArrow(lastMoveArrow, cellsSize, reversed)
         drawFilesCoordinates(cellsSize, reversed)
         drawRanksCoordinates(cellsSize, reversed)
         drawPlayerTurn(cellsSize, boardLogic)
@@ -719,6 +718,7 @@ fun StaticChessBoard(
             position = boardLogic,
             reversed = reversed,
         )
+        drawLastMoveArrow(lastMoveArrow, cellsSize, reversed)
 
     }
 }
