@@ -8,6 +8,8 @@ Using chess vectors from [Wikimedia Commons](https://commons.wikimedia.org/wiki/
 
 Using source code from [Carballo project](https://github.com/albertoruibal/carballo).
 
+FreeSerif font downloaded from [Fonts2U](https://fr.fonts2u.com/free-serif.police).
+
 Using source code from Stockfish 14.
 
 Using some pictures from [FlatIcon](http://www.flaticon.com) :

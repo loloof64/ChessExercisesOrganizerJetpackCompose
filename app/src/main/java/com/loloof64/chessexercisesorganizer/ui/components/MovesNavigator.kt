@@ -5,6 +5,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -29,7 +30,7 @@ fun MovesNavigator(modifier: Modifier = Modifier, elements: Array<MovesNavigator
         crossAxisSpacing = 15.dp,
     ) {
         elements.map {
-            Text(text = it.text, fontSize = 34.sp, color = Color.Blue)
+            Text(text = it.text, fontSize = 34.sp, color = Color.Blue, style= MaterialTheme.typography.body1)
         }
     }
 }
