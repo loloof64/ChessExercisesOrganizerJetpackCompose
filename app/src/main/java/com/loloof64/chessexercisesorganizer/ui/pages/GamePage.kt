@@ -264,9 +264,6 @@ fun GamePage(
                                     gamePageViewModel.boardState.isValidMove(it)
                                 },
                                 dndMoveCallback = {
-                                    //////////////////////////
-                                    println(it.toString())
-                                    //////////////////////////
                                     gamePageViewModel.boardState.makeMove(it.toString())
                                     gamePageViewModel.boardState.setLastMoveArrow(it)
                                     lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
@@ -301,7 +298,9 @@ fun GamePage(
                                 },
                             )
 
-                            MovesNavigator(elements = gamePageViewModel.movesElements.toTypedArray())
+                            val elements = gamePageViewModel.movesElements.toTypedArray()
+                            MovesNavigator(elements = elements,
+                            mustBeVisibleByDefaultElementIndex = elements.size.dec())
 
                             ConfirmNewGameDialog(
                                 isOpen = pendingNewGameRequest,
