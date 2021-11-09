@@ -2,6 +2,7 @@ package com.loloof64.chessexercisesorganizer.ui.components
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
@@ -15,13 +16,32 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.flowlayout.FlowRow
 import androidx.compose.ui.platform.LocalDensity
 
-sealed class MovesNavigatorElement(open val text: String)
-data class MoveNumber(override val text: String) : MovesNavigatorElement(text)
-data class HalfMoveSAN(override val text: String) : MovesNavigatorElement(text)
+sealed class MovesNavigatorElement(
+    open val text: String,
+    open val fen: String?,
+    open val lastMoveArrowData: MoveData?
+)
+
+data class MoveNumber(
+    override val text: String,
+    override val fen: String? = null,
+    override val lastMoveArrowData: MoveData? = null
+) : MovesNavigatorElement(text, fen, lastMoveArrowData)
+
+data class HalfMoveSAN(
+    override val text: String, override val fen: String? = null,
+    override val lastMoveArrowData: MoveData? = null
+) : MovesNavigatorElement(text, fen, lastMoveArrowData)
 
 @Composable
-fun MovesNavigator(modifier: Modifier = Modifier, elements: Array<MovesNavigatorElement>, mustBeVisibleByDefaultElementIndex: Int = 0) {
-    val lineHeightPixels = with(LocalDensity.current) {34.sp.toPx()}
+fun MovesNavigator(
+    modifier: Modifier = Modifier,
+    elements: Array<MovesNavigatorElement>,
+    mustBeVisibleByDefaultElementIndex: Int = 0,
+    highlightedItemIndex: Int? = null,
+    elementSelectionRequestCallback: (Triple<String, MoveData, Int>) -> Unit = { _ -> }
+) {
+    val lineHeightPixels = with(LocalDensity.current) { 34.sp.toPx() }
     val scrollAmount = ((mustBeVisibleByDefaultElementIndex / 6) * lineHeightPixels).toInt()
     val vertScrollState = ScrollState(scrollAmount)
 
@@ -31,8 +51,19 @@ fun MovesNavigator(modifier: Modifier = Modifier, elements: Array<MovesNavigator
             .verticalScroll(vertScrollState),
         mainAxisSpacing = 8.dp,
     ) {
-        elements.map {
-            Text(text = it.text, fontSize = 34.sp, color = Color.Blue, style= MaterialTheme.typography.body1)
+        elements.mapIndexed { index, elt ->
+            val backgroundColor =
+                if (index == highlightedItemIndex) Color.Green else Color.Transparent
+            Text(text = elt.text,
+                fontSize = 34.sp,
+                color = Color.Blue,
+                style = MaterialTheme.typography.body1,
+                modifier = Modifier
+                    .background(color = backgroundColor)
+                    .clickable {
+                        if (elt.fen != null) elementSelectionRequestCallback(Triple(elt.fen!!, elt.lastMoveArrowData!!, index))
+                    }
+            )
         }
     }
 }

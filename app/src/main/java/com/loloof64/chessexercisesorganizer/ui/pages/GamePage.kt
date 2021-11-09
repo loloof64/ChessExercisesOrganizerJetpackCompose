@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,6 +93,10 @@ fun GamePage(
         mutableStateOf<Job?>(null)
     }
 
+    var highlightedHistoryItemIndex by rememberSaveable {
+        mutableStateOf<Int?>(null)
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -115,6 +120,7 @@ fun GamePage(
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
         stockfishLib.sendCommand("ucinewgame")
         gamePageViewModel.boardState.clearLastMoveArrow()
+        highlightedHistoryItemIndex = null
         lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
         gamePageViewModel.pageState.gameInProgress = true
         gameInProgress = true
@@ -176,11 +182,30 @@ fun GamePage(
         }
     }
 
+    // This must be called after having played the move on the board !
     fun addMoveFanToHistory() {
         val lastMoveFan = gamePageViewModel.boardState.getLastMoveFan()
-        gamePageViewModel.movesElements.add(HalfMoveSAN(text = lastMoveFan))
+        val lastMoveFen = gamePageViewModel.boardState.getCurrentPosition()
+        val lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        gamePageViewModel.movesElements.add(
+            HalfMoveSAN(
+                text = lastMoveFan,
+                fen = lastMoveFen,
+                lastMoveArrowData = lastMoveArrow
+            )
+        )
         if (gamePageViewModel.boardState.whiteTurn()) {
             gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
+        }
+    }
+
+    fun tryToSelectPosition(positionData: Triple<String, MoveData, Int>) {
+        if (!gameInProgress) {
+            gamePageViewModel.boardState.setCurrentPosition(positionData.first)
+            gamePageViewModel.boardState.setLastMoveArrow(positionData.second)
+            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+            highlightedHistoryItemIndex = positionData.third
         }
     }
 
@@ -299,8 +324,14 @@ fun GamePage(
                             )
 
                             val elements = gamePageViewModel.movesElements.toTypedArray()
-                            MovesNavigator(elements = elements,
-                            mustBeVisibleByDefaultElementIndex = elements.size.dec())
+                            MovesNavigator(
+                                elements = elements,
+                                mustBeVisibleByDefaultElementIndex = elements.size.dec(),
+                                highlightedItemIndex = highlightedHistoryItemIndex,
+                                elementSelectionRequestCallback = {
+                                    tryToSelectPosition(it)
+                                }
+                            )
 
                             ConfirmNewGameDialog(
                                 isOpen = pendingNewGameRequest,

@@ -68,6 +68,10 @@ class DynamicBoardDataHandler {
         startPosition = position
     }
 
+    fun setCurrentPosition(position: String) {
+        boardLogic.fen = position
+    }
+
     fun setLastMoveArrow(arrowData: MoveData) {
         this.arrowData = arrowData
     }
