@@ -152,6 +152,33 @@ fun GamePage(
         pendingStopGameRequest = true
     }
 
+    fun selectLastHistoryNode() {
+        if (!gameInProgress) {
+            var lastHistoryElementIndex = gamePageViewModel.movesElements.size.dec()
+            while (true) {
+                if (lastHistoryElementIndex <= 0) break
+
+                val currentHistoryNode = gamePageViewModel.movesElements[lastHistoryElementIndex]
+                val isAPositionNode = currentHistoryNode.fen != null
+                if (isAPositionNode) break
+
+                lastHistoryElementIndex = lastHistoryElementIndex.dec()
+            }
+            val positionData = gamePageViewModel.movesElements[lastHistoryElementIndex]
+            val fen = positionData.fen
+            val lastMoveArrowData = positionData.lastMoveArrowData
+            if (fen != null) {
+                gamePageViewModel.boardState.setCurrentPosition(fen)
+            }
+            if (lastMoveArrowData != null) {
+                gamePageViewModel.boardState.setLastMoveArrow(positionData.lastMoveArrowData!!)
+            }
+            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+            highlightedHistoryItemIndex = if (fen != null) lastHistoryElementIndex else null
+        }
+    }
+
     fun doStopCurrentGame() {
         if (!gamePageViewModel.pageState.gameInProgress) return
         computerThinking = false
@@ -159,6 +186,7 @@ fun GamePage(
         promotionState = gamePageViewModel.pageState.promotionState
         gamePageViewModel.pageState.gameInProgress = false
         gameInProgress = false
+        selectLastHistoryNode()
         showMinutedSnackbarAction(gameStoppedMessage, SnackbarDuration.Short)
     }
 
@@ -179,6 +207,7 @@ fun GamePage(
             computerThinking = false
             gamePageViewModel.pageState.gameInProgress = false
             gameInProgress = false
+            selectLastHistoryNode()
         }
     }
 
@@ -186,12 +215,12 @@ fun GamePage(
     fun addMoveFanToHistory() {
         val lastMoveFan = gamePageViewModel.boardState.getLastMoveFan()
         val lastMoveFen = gamePageViewModel.boardState.getCurrentPosition()
-        val lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        val localLastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
         gamePageViewModel.movesElements.add(
             HalfMoveSAN(
                 text = lastMoveFan,
                 fen = lastMoveFen,
-                lastMoveArrowData = lastMoveArrow
+                lastMoveArrowData = localLastMoveArrow
             )
         )
         if (gamePageViewModel.boardState.whiteTurn()) {
@@ -231,18 +260,43 @@ fun GamePage(
                     readEngineOutputJob = null
                     computerThinking = false
 
-                    gamePageViewModel.boardState.makeMove(move)
-                    gamePageViewModel.boardState.setLastMoveArrow(MoveData.parse(move)!!)
-                    addMoveFanToHistory()
-                    currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-                    lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-                    handleNaturalEndgame()
+                    if (gameInProgress) {
+                        gamePageViewModel.boardState.makeMove(move)
+                        gamePageViewModel.boardState.setLastMoveArrow(MoveData.parse(move)!!)
+                        addMoveFanToHistory()
+                        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+                        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+                        handleNaturalEndgame()
+                    }
 
                     mustExitLoop = true
                 }
                 delay(100)
             }
         }
+    }
+
+    fun handleStandardMoveDoneOnBoard(it: MoveData) {
+        gamePageViewModel.boardState.makeMove(it.toString())
+        gamePageViewModel.boardState.setLastMoveArrow(it)
+        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        currentPosition =
+            gamePageViewModel.boardState.getCurrentPosition()
+        addMoveFanToHistory()
+        handleNaturalEndgame()
+    }
+
+    fun handlePromotionMoveDoneOnBoard(it: MoveData) {
+        gamePageViewModel.boardState.makeMove(it.toString())
+        gamePageViewModel.boardState.setLastMoveArrow(it)
+        gamePageViewModel.pageState.promotionState =
+            PendingPromotionData()
+        promotionState = gamePageViewModel.pageState.promotionState
+        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        currentPosition =
+            gamePageViewModel.boardState.getCurrentPosition()
+        addMoveFanToHistory()
+        handleNaturalEndgame()
     }
 
     ChessExercisesOrganizerJetpackComposeTheme {
@@ -289,25 +343,10 @@ fun GamePage(
                                     gamePageViewModel.boardState.isValidMove(it)
                                 },
                                 dndMoveCallback = {
-                                    gamePageViewModel.boardState.makeMove(it.toString())
-                                    gamePageViewModel.boardState.setLastMoveArrow(it)
-                                    lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-                                    currentPosition =
-                                        gamePageViewModel.boardState.getCurrentPosition()
-                                    addMoveFanToHistory()
-                                    handleNaturalEndgame()
+                                    handleStandardMoveDoneOnBoard(it)
                                 },
                                 promotionMoveCallback = {
-                                    gamePageViewModel.boardState.makeMove(it.toString())
-                                    gamePageViewModel.boardState.setLastMoveArrow(it)
-                                    gamePageViewModel.pageState.promotionState =
-                                        PendingPromotionData()
-                                    promotionState = gamePageViewModel.pageState.promotionState
-                                    lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-                                    currentPosition =
-                                        gamePageViewModel.boardState.getCurrentPosition()
-                                    addMoveFanToHistory()
-                                    handleNaturalEndgame()
+                                    handlePromotionMoveDoneOnBoard(it)
                                 },
                                 cancelPendingPromotionCallback = {
                                     gamePageViewModel.pageState.promotionState =

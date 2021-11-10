@@ -15,7 +15,7 @@
     <string name="black_king">Roi noir</string>
     <string name="red_cross">Croix rouge</string>
     <string name="chessmate_white">Les Blancs ont gagné par échec et mat.</string>
-    <string name="chessmate_black">Les Noirs on gagné par échec et mat.</string>
+    <string name="chessmate_black">Les Noirs ont gagné par échec et mat.</string>
     <string name="stalemate">Nulle par pat.</string>
     <string name="three_fold_repetition">Nulle par trilple répétition.</string>
     <string name="fifty_moves_rule_draw">Nulle par la règle des 50 coups.</string>
