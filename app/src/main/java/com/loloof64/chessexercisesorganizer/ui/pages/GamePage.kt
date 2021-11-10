@@ -168,7 +168,7 @@ fun GamePage(
         }
     }
 
-    fun selectLastHistoryNode() {
+    fun selectLastPosition() {
         if (!gameInProgress) {
             var lastHistoryElementIndex = gamePageViewModel.movesElements.size.dec()
             while (true) {
@@ -202,7 +202,7 @@ fun GamePage(
         promotionState = gamePageViewModel.pageState.promotionState
         gamePageViewModel.pageState.gameInProgress = false
         gameInProgress = false
-        selectLastHistoryNode()
+        selectLastPosition()
         showMinutedSnackbarAction(gameStoppedMessage, SnackbarDuration.Short)
     }
 
@@ -223,7 +223,7 @@ fun GamePage(
             computerThinking = false
             gamePageViewModel.pageState.gameInProgress = false
             gameInProgress = false
-            selectLastHistoryNode()
+            selectLastPosition()
         }
     }
 
@@ -387,7 +387,8 @@ fun GamePage(
                                 elementSelectionRequestCallback = {
                                     tryToSelectPosition(it)
                                 },
-                                handleFirstPositionRequest = { selectFirstPosition() }
+                                handleFirstPositionRequest = { selectFirstPosition() },
+                                handleLastPositionRequest = { selectLastPosition() }
                             )
 
                             ConfirmNewGameDialog(
