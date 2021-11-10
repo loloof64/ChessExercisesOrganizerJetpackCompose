@@ -50,4 +50,8 @@
     <string name="error_launching_engine">Erreur de démarrage du moteur.</string>
     <string name="confirm_new_game_title">¿Empezar un nuevo juego?</string>
     <string name="confirm_new_game_message">¿Está seguro de que desea iniciar un juego nuevo y detener el juego actual?</string>
+    <string name="first_position">Primera posición</string>
+    <string name="previous_position">Anterior posición</string>
+    <string name="next_position">Siguiente posición</string>
+    <string name="last_position">Ultima posición</string>
 </resources>

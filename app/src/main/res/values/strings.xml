@@ -49,4 +49,8 @@
     <string name="error_launching_engine">Error launching engine.</string>
     <string name="confirm_new_game_title">Start a new game ?</string>
     <string name="confirm_new_game_message">Do you really want to stop current game a start a new one ?</string>
+    <string name="first_position">First position</string>
+    <string name="previous_position">Previous position</string>
+    <string name="next_position">Next position</string>
+    <string name="last_position">Last position</string>
 </resources>
