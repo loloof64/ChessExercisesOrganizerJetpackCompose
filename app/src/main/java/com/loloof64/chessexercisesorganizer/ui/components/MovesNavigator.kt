@@ -49,19 +49,41 @@ fun MovesNavigatorButtons(
 ) {
     val iconsModifier = Modifier.size(128.dp)
     val iconsTint = Color.Blue
-    Row(modifier = modifier
-        .fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth(), horizontalArrangement = Arrangement.Center
+    ) {
         IconButton(onClick = handleFirstPositionRequest) {
-            Icon(contentDescription = stringResource(id = R.string.first_position), imageVector = Icons.Filled.FirstPage, tint = iconsTint, modifier = iconsModifier)
+            Icon(
+                contentDescription = stringResource(id = R.string.first_position),
+                imageVector = Icons.Filled.FirstPage,
+                tint = iconsTint,
+                modifier = iconsModifier
+            )
         }
         IconButton(onClick = handlePreviousPositionRequest) {
-            Icon(contentDescription = stringResource(id = R.string.previous_position), imageVector = Icons.Filled.ArrowLeft, tint = iconsTint, modifier = iconsModifier)
+            Icon(
+                contentDescription = stringResource(id = R.string.previous_position),
+                imageVector = Icons.Filled.ArrowLeft,
+                tint = iconsTint,
+                modifier = iconsModifier
+            )
         }
         IconButton(onClick = handleNextPositionRequest) {
-            Icon(contentDescription = stringResource(id = R.string.next_position), imageVector = Icons.Filled.ArrowRight, tint = iconsTint, modifier = iconsModifier)
+            Icon(
+                contentDescription = stringResource(id = R.string.next_position),
+                imageVector = Icons.Filled.ArrowRight,
+                tint = iconsTint,
+                modifier = iconsModifier
+            )
         }
         IconButton(onClick = handleLastPositionRequest) {
-            Icon(contentDescription = stringResource(id = R.string.last_position), imageVector = Icons.Filled.LastPage, tint = iconsTint, modifier = iconsModifier)
+            Icon(
+                contentDescription = stringResource(id = R.string.last_position),
+                imageVector = Icons.Filled.LastPage,
+                tint = iconsTint,
+                modifier = iconsModifier
+            )
         }
     }
 }
@@ -70,19 +92,29 @@ fun MovesNavigatorButtons(
 fun MovesNavigator(
     modifier: Modifier = Modifier,
     elements: Array<MovesNavigatorElement>,
-    mustBeVisibleByDefaultElementIndex: Int = 0,
+    mustBeVisibleByDefaultElementIndex: Int? = null,
     highlightedItemIndex: Int? = null,
-    elementSelectionRequestCallback: (Triple<String, MoveData, Int>) -> Unit = { _ -> }
+    elementSelectionRequestCallback: (Triple<String, MoveData, Int>) -> Unit = { _ -> },
+    handleFirstPositionRequest: () -> Unit = {},
+    handleLastPositionRequest: () -> Unit = {},
+    handlePreviousPositionRequest: () -> Unit = {},
+    handleNextPositionRequest: () -> Unit = {},
 ) {
     val lineHeightPixels = with(LocalDensity.current) { 34.sp.toPx() }
-    val scrollAmount = ((mustBeVisibleByDefaultElementIndex / 6) * lineHeightPixels).toInt()
+    val scrollAmount =
+        if (mustBeVisibleByDefaultElementIndex != null) ((mustBeVisibleByDefaultElementIndex / 6) * lineHeightPixels).toInt() else 0
     val vertScrollState = ScrollState(scrollAmount)
 
     Column(
         modifier = modifier
             .background(color = Color.Yellow.copy(alpha = 0.3f))
     ) {
-        MovesNavigatorButtons()
+        MovesNavigatorButtons(
+            handleFirstPositionRequest = handleFirstPositionRequest,
+            handlePreviousPositionRequest = handlePreviousPositionRequest,
+            handleNextPositionRequest = handleNextPositionRequest,
+            handleLastPositionRequest = handleLastPositionRequest
+        )
 
         FlowRow(
             modifier = Modifier

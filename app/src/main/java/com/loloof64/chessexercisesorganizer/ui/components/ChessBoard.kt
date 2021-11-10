@@ -80,19 +80,19 @@ class DynamicBoardDataHandler {
         arrowData = null
     }
 
-    fun getLastMoveArrow() : MoveData? = arrowData
+    fun getLastMoveArrow(): MoveData? = arrowData
 
     fun whiteTurn() = boardLogic.turn
 
     fun moveNumber() = (boardLogic.moveNumber shr 1) + 1
-    
+
     fun getCurrentPosition(): String = boardLogic.fen ?: EMPTY_FEN
 
     fun newGame() {
         boardLogic = startPosition.toBoard()
     }
 
-    fun makeMove(moveStr: String) : Boolean {
+    fun makeMove(moveStr: String): Boolean {
         val move = Move.getFromString(boardLogic, moveStr, true)
         return boardLogic.doMove(move, true, true)
     }
@@ -137,7 +137,7 @@ class DynamicBoardDataHandler {
         return when {
             boardLogic.isMate -> if (boardLogic.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
             boardLogic.isStalemate -> GameEndedStatus.STALEMATE
-            boardLogic.isDrawByThreeFoldRepetitions  -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
+            boardLogic.isDrawByThreeFoldRepetitions -> GameEndedStatus.DRAW_THREE_FOLD_REPETITION
             boardLogic.isDrawByFiftyMovesRule -> GameEndedStatus.DRAW_FIFTY_MOVES_RULE
             boardLogic.isDrawByMissingMaterial -> GameEndedStatus.DRAW_MISSING_MATERIAL
             else -> GameEndedStatus.NOT_ENDED
@@ -158,7 +158,7 @@ data class MoveData(
     }
 
     companion object {
-        fun parse(str: String) : MoveData? {
+        fun parse(str: String): MoveData? {
 
             val startFile = str[0].code - 'a'.code
             val startRank = str[1].code - '1'.code
@@ -460,7 +460,8 @@ fun DynamicChessBoard(
         val isPieceOfSideToMove =
             (piece.isWhitePiece() && whiteTurn) ||
                     (!piece.isWhitePiece() && !whiteTurn)
-        val humanTurn = (whiteTurn && whiteSideType == PlayerType.Human) || (!whiteTurn && blackSideType == PlayerType.Human)
+        val humanTurn =
+            (whiteTurn && whiteSideType == PlayerType.Human) || (!whiteTurn && blackSideType == PlayerType.Human)
         if (isPieceOfSideToMove && humanTurn) {
             val col = if (reversed) 7 - file else file
             val row = if (reversed) rank else 7 - rank
@@ -908,11 +909,15 @@ private fun DrawScope.drawLastMoveArrow(arrowData: MoveData?, cellsSize: Float, 
     drawArrowAngleLine2(points, cellsSize)
 }
 
-private fun computeArrowBaseCoordinates(arrowData: MoveData, cellsSize: Float, reversed: Boolean) : Array<Float> {
-    val fromCol = if (reversed)  7 - arrowData.startFile else arrowData.startFile
-    val fromRow = if (reversed)  arrowData.startRank else 7 - arrowData.startRank
-    val toCol = if (reversed)  7 - arrowData.targetFile else arrowData.targetFile
-    val toRow = if (reversed)  arrowData.targetRank else 7 - arrowData.targetRank
+private fun computeArrowBaseCoordinates(
+    arrowData: MoveData,
+    cellsSize: Float,
+    reversed: Boolean
+): Array<Float> {
+    val fromCol = if (reversed) 7 - arrowData.startFile else arrowData.startFile
+    val fromRow = if (reversed) arrowData.startRank else 7 - arrowData.startRank
+    val toCol = if (reversed) 7 - arrowData.targetFile else arrowData.targetFile
+    val toRow = if (reversed) arrowData.targetRank else 7 - arrowData.targetRank
 
     val ax = (cellsSize * (fromCol + 1.0)).toFloat()
     val ay = (cellsSize * (fromRow + 1.0)).toFloat()
@@ -927,7 +932,7 @@ private fun DrawScope.drawArrowBaseLine(points: Array<Float>, cellsSize: Float) 
 
     val brush = SolidColor(Color.Blue)
     val startOffset = Offset(ax, ay)
-    val endOffset = Offset(bx ,by)
+    val endOffset = Offset(bx, by)
     val strokeWidth = (cellsSize * 0.16).toFloat()
 
     drawLine(brush = brush, start = startOffset, end = endOffset, strokeWidth = strokeWidth)
@@ -942,7 +947,7 @@ private fun DrawScope.drawArrowAngleLine1(points: Array<Float>, cellsSize: Float
     val angleRad = atan2(dy, dx) - Math.PI / 2.0 - (3 * Math.PI) / 4.0
     val angleCos = cos(angleRad)
     val angleSin = sin(angleRad)
-    val length = (sqrt(dx*dx + dy*dy) * 0.4).toFloat()
+    val length = (sqrt(dx * dx + dy * dy) * 0.4).toFloat()
 
     val realBx = (bx - length * angleSin).toFloat()
     val realBy = (by + length * angleCos).toFloat()
@@ -964,7 +969,7 @@ private fun DrawScope.drawArrowAngleLine2(points: Array<Float>, cellsSize: Float
     val angleRad = atan2(dy, dx) - Math.PI / 2.0 + (3 * Math.PI) / 4.0
     val angleCos = cos(angleRad)
     val angleSin = sin(angleRad)
-    val length = (sqrt(dx*dx + dy*dy) * 0.4).toFloat()
+    val length = (sqrt(dx * dx + dy * dy) * 0.4).toFloat()
 
     val realBx = (bx - length * angleSin).toFloat()
     val realBy = (by + length * angleCos).toFloat()

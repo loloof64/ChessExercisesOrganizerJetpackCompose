@@ -57,6 +57,10 @@ fun GamePage(
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
 
+    var startPosition by rememberSaveable {
+        mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
+    }
+
     var currentPosition by remember {
         mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
     }
@@ -118,6 +122,7 @@ fun GamePage(
         gamePageViewModel.movesElements.clear()
         gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+        startPosition = gamePageViewModel.boardState.getCurrentPosition()
         stockfishLib.sendCommand("ucinewgame")
         gamePageViewModel.boardState.clearLastMoveArrow()
         highlightedHistoryItemIndex = null
@@ -150,6 +155,17 @@ fun GamePage(
         if (!gamePageViewModel.pageState.gameInProgress) return
         gamePageViewModel.pageState.pendingStopGameRequest = true
         pendingStopGameRequest = true
+    }
+
+    fun selectFirstPosition() {
+        if (!gameInProgress) {
+            val fen = startPosition
+            gamePageViewModel.boardState.setCurrentPosition(fen)
+
+            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+            lastMoveArrow = null
+            highlightedHistoryItemIndex = null
+        }
     }
 
     fun selectLastHistoryNode() {
@@ -365,11 +381,13 @@ fun GamePage(
                             val elements = gamePageViewModel.movesElements.toTypedArray()
                             MovesNavigator(
                                 elements = elements,
-                                mustBeVisibleByDefaultElementIndex = elements.size.dec(),
+                                mustBeVisibleByDefaultElementIndex =
+                                   if (gameInProgress) elements.size.dec() else highlightedHistoryItemIndex,
                                 highlightedItemIndex = highlightedHistoryItemIndex,
                                 elementSelectionRequestCallback = {
                                     tryToSelectPosition(it)
-                                }
+                                },
+                                handleFirstPositionRequest = { selectFirstPosition() }
                             )
 
                             ConfirmNewGameDialog(
