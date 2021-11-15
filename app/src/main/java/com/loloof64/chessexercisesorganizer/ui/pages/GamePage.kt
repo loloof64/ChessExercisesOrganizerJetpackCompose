@@ -231,7 +231,59 @@ fun GamePage(
 
     fun selectNextPosition() {
         if (!gameInProgress) {
-            //TODO
+            var lastMoveArrowData : MoveData?
+
+
+            val noPositionCurrentlySelected = highlightedHistoryItemIndex == null
+            if (noPositionCurrentlySelected) {
+                val thereIsAtLeastOneMove = gamePageViewModel.movesElements.size > 1
+                if (thereIsAtLeastOneMove) {
+                    val nodeIndex = 1
+                    val positionData = gamePageViewModel.movesElements[2]
+                    val fen = positionData.fen
+                    lastMoveArrowData = positionData.lastMoveArrowData
+
+                    gamePageViewModel.boardState.setCurrentPosition(fen!!)
+                    gamePageViewModel.boardState.setLastMoveArrow(lastMoveArrowData)
+
+                    currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+                    lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+                    highlightedHistoryItemIndex = nodeIndex
+                }
+            }
+            else {
+                var targetNodeIndex: Int = highlightedHistoryItemIndex!!
+                var fen:String?
+
+                do {
+                    targetNodeIndex += 1
+                    val hasReachedLastNode = targetNodeIndex >= gamePageViewModel.movesElements.size.dec()
+                    if (hasReachedLastNode) {
+                        // Searching back for the last node with a position defined
+                        do {
+                            val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                            fen = positionData.fen
+                            if (fen != null) break
+                            targetNodeIndex -= 1
+                        } while(targetNodeIndex >= 0)
+                    }
+
+                    val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                    fen = positionData.fen
+
+                    val positionDefined = fen != null
+                    if (positionDefined) {
+                        lastMoveArrowData = positionData.lastMoveArrowData
+
+                        gamePageViewModel.boardState.setCurrentPosition(fen!!)
+                        gamePageViewModel.boardState.setLastMoveArrow(lastMoveArrowData)
+
+                        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+                        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+                        highlightedHistoryItemIndex = targetNodeIndex
+                    }
+                } while(fen == null)
+            }
         }
     }
 
