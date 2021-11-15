@@ -186,12 +186,52 @@ fun GamePage(
             if (fen != null) {
                 gamePageViewModel.boardState.setCurrentPosition(fen)
             }
-            if (lastMoveArrowData != null) {
-                gamePageViewModel.boardState.setLastMoveArrow(positionData.lastMoveArrowData!!)
-            }
+            gamePageViewModel.boardState.setLastMoveArrow(lastMoveArrowData)
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
             highlightedHistoryItemIndex = if (fen != null) lastHistoryElementIndex else null
+        }
+    }
+
+    fun selectPreviousPosition() {
+        if (!gameInProgress) {
+            var targetNodeIndex: Int = highlightedHistoryItemIndex ?: return
+            val lastMoveArrowData : MoveData?
+
+            var fen:String? = null
+            do {
+                targetNodeIndex -= 1
+                if (targetNodeIndex < 0) {
+                    break
+                }
+
+                val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                fen = positionData.fen
+            } while (fen == null)
+
+            if (targetNodeIndex < 0) {
+                fen = startPosition
+                lastMoveArrowData = null
+            }
+            else {
+                val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                lastMoveArrowData = positionData.lastMoveArrowData
+            }
+
+            if (fen != null) {
+                gamePageViewModel.boardState.setCurrentPosition(fen)
+            }
+            gamePageViewModel.boardState.setLastMoveArrow(lastMoveArrowData)
+
+            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+            highlightedHistoryItemIndex = if (fen != null) targetNodeIndex else null
+        }
+    }
+
+    fun selectNextPosition() {
+        if (!gameInProgress) {
+            //TODO
         }
     }
 
@@ -382,13 +422,15 @@ fun GamePage(
                             MovesNavigator(
                                 elements = elements,
                                 mustBeVisibleByDefaultElementIndex =
-                                   if (gameInProgress) elements.size.dec() else highlightedHistoryItemIndex,
+                                if (gameInProgress) elements.size.dec() else highlightedHistoryItemIndex,
                                 highlightedItemIndex = highlightedHistoryItemIndex,
                                 elementSelectionRequestCallback = {
                                     tryToSelectPosition(it)
                                 },
                                 handleFirstPositionRequest = { selectFirstPosition() },
-                                handleLastPositionRequest = { selectLastPosition() }
+                                handleLastPositionRequest = { selectLastPosition() },
+                                handlePreviousPositionRequest = { selectPreviousPosition() },
+                                handleNextPositionRequest = { selectNextPosition() }
                             )
 
                             ConfirmNewGameDialog(
