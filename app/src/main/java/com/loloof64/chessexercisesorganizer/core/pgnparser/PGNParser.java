@@ -318,23 +318,27 @@ public class PGNParser extends Parser {
 			{
 			setState(49);
 			tag_section();
-			setState(53);
+			setState(51); 
 			_errHandler.sync(this);
-			_alt = getInterpreter().adaptivePredict(_input,3,_ctx);
-			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
-				if ( _alt==1 ) {
+			_alt = 1;
+			do {
+				switch (_alt) {
+				case 1:
 					{
 					{
 					setState(50);
 					match(SPACE);
 					}
-					} 
+					}
+					break;
+				default:
+					throw new NoViableAltException(this);
 				}
-				setState(55);
+				setState(53); 
 				_errHandler.sync(this);
 				_alt = getInterpreter().adaptivePredict(_input,3,_ctx);
-			}
-			setState(56);
+			} while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER );
+			setState(55);
 			movetext_section();
 			}
 		}
@@ -408,26 +412,26 @@ public class PGNParser extends Parser {
 		enterRule(_localctx, 6, RULE_tag_section);
 		int _la;
 		try {
-			setState(65);
+			setState(64);
 			_errHandler.sync(this);
 			switch ( getInterpreter().adaptivePredict(_input,5,_ctx) ) {
 			case 1:
 				_localctx = new RecurTagSectionContext(_localctx);
 				enterOuterAlt(_localctx, 1);
 				{
-				setState(58);
+				setState(57);
 				tag_pair();
-				setState(60);
+				setState(59);
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if (_la==SPACE) {
 					{
-					setState(59);
+					setState(58);
 					match(SPACE);
 					}
 				}
 
-				setState(62);
+				setState(61);
 				tag_section();
 				}
 				break;
@@ -435,7 +439,7 @@ public class PGNParser extends Parser {
 				_localctx = new SingleTagSectionContext(_localctx);
 				enterOuterAlt(_localctx, 2);
 				{
-				setState(64);
+				setState(63);
 				tag_pair();
 				}
 				break;
@@ -491,47 +495,47 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(67);
+			setState(66);
 			match(LEFT_BRACKET);
-			setState(69);
+			setState(68);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==SPACE) {
 				{
-				setState(68);
+				setState(67);
 				match(SPACE);
 				}
 			}
 
-			setState(71);
+			setState(70);
 			tag_name();
-			setState(73); 
+			setState(72); 
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			do {
 				{
 				{
-				setState(72);
+				setState(71);
 				match(SPACE);
 				}
 				}
-				setState(75); 
+				setState(74); 
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 			} while ( _la==SPACE );
-			setState(77);
+			setState(76);
 			tag_value();
-			setState(79);
+			setState(78);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==SPACE) {
 				{
-				setState(78);
+				setState(77);
 				match(SPACE);
 				}
 			}
 
-			setState(81);
+			setState(80);
 			match(RIGHT_BRACKET);
 			}
 		}
@@ -573,7 +577,7 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(83);
+			setState(82);
 			match(SYMBOL);
 			}
 		}
@@ -615,7 +619,7 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(85);
+			setState(84);
 			match(STRING);
 			}
 		}
@@ -667,23 +671,23 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(87);
+			setState(86);
 			element_sequence();
-			setState(89); 
+			setState(88); 
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			do {
 				{
 				{
-				setState(88);
+				setState(87);
 				match(SPACE);
 				}
 				}
-				setState(91); 
+				setState(90); 
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 			} while ( _la==SPACE );
-			setState(93);
+			setState(92);
 			game_termination();
 			}
 		}
@@ -735,6 +739,25 @@ public class PGNParser extends Parser {
 			else return visitor.visitChildren(this);
 		}
 	}
+	public static class SingleRecurVariationRecurElementSequenceContext extends Element_sequenceContext {
+		public Recursive_variationContext recursive_variation() {
+			return getRuleContext(Recursive_variationContext.class,0);
+		}
+		public SingleRecurVariationRecurElementSequenceContext(Element_sequenceContext ctx) { copyFrom(ctx); }
+		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof PGNListener ) ((PGNListener)listener).enterSingleRecurVariationRecurElementSequence(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof PGNListener ) ((PGNListener)listener).exitSingleRecurVariationRecurElementSequence(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof PGNVisitor ) return ((PGNVisitor<? extends T>)visitor).visitSingleRecurVariationRecurElementSequence(this);
+			else return visitor.visitChildren(this);
+		}
+	}
 	public static class EmptyElementSequenceContext extends Element_sequenceContext {
 		public EmptyElementSequenceContext(Element_sequenceContext ctx) { copyFrom(ctx); }
 		@Override
@@ -748,6 +771,25 @@ public class PGNParser extends Parser {
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof PGNVisitor ) return ((PGNVisitor<? extends T>)visitor).visitEmptyElementSequence(this);
+			else return visitor.visitChildren(this);
+		}
+	}
+	public static class SingleElementRecurElementSequenceContext extends Element_sequenceContext {
+		public ElementContext element() {
+			return getRuleContext(ElementContext.class,0);
+		}
+		public SingleElementRecurElementSequenceContext(Element_sequenceContext ctx) { copyFrom(ctx); }
+		@Override
+		public void enterRule(ParseTreeListener listener) {
+			if ( listener instanceof PGNListener ) ((PGNListener)listener).enterSingleElementRecurElementSequence(this);
+		}
+		@Override
+		public void exitRule(ParseTreeListener listener) {
+			if ( listener instanceof PGNListener ) ((PGNListener)listener).exitSingleElementRecurElementSequence(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof PGNVisitor ) return ((PGNVisitor<? extends T>)visitor).visitSingleElementRecurElementSequence(this);
 			else return visitor.visitChildren(this);
 		}
 	}
@@ -783,18 +825,16 @@ public class PGNParser extends Parser {
 		enterRule(_localctx, 16, RULE_element_sequence);
 		try {
 			int _alt;
-			setState(112);
+			setState(113);
 			_errHandler.sync(this);
-			switch (_input.LA(1)) {
-			case INTEGER:
-			case NUMERIC_ANNOTATION_GLYPH:
-			case SYMBOL:
+			switch ( getInterpreter().adaptivePredict(_input,12,_ctx) ) {
+			case 1:
 				_localctx = new ElementRecurElementSequenceContext(_localctx);
 				enterOuterAlt(_localctx, 1);
 				{
-				setState(95);
+				setState(94);
 				element();
-				setState(97); 
+				setState(96); 
 				_errHandler.sync(this);
 				_alt = 1;
 				do {
@@ -802,7 +842,7 @@ public class PGNParser extends Parser {
 					case 1:
 						{
 						{
-						setState(96);
+						setState(95);
 						match(SPACE);
 						}
 						}
@@ -810,21 +850,21 @@ public class PGNParser extends Parser {
 					default:
 						throw new NoViableAltException(this);
 					}
-					setState(99); 
+					setState(98); 
 					_errHandler.sync(this);
 					_alt = getInterpreter().adaptivePredict(_input,10,_ctx);
 				} while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER );
-				setState(101);
+				setState(100);
 				element_sequence();
 				}
 				break;
-			case LEFT_PARENTHESIS:
+			case 2:
 				_localctx = new VariationRecurElementSequenceContext(_localctx);
 				enterOuterAlt(_localctx, 2);
 				{
-				setState(103);
+				setState(102);
 				recursive_variation();
-				setState(105); 
+				setState(104); 
 				_errHandler.sync(this);
 				_alt = 1;
 				do {
@@ -832,7 +872,7 @@ public class PGNParser extends Parser {
 					case 1:
 						{
 						{
-						setState(104);
+						setState(103);
 						match(SPACE);
 						}
 						}
@@ -840,23 +880,36 @@ public class PGNParser extends Parser {
 					default:
 						throw new NoViableAltException(this);
 					}
-					setState(107); 
+					setState(106); 
 					_errHandler.sync(this);
 					_alt = getInterpreter().adaptivePredict(_input,11,_ctx);
 				} while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER );
-				setState(109);
+				setState(108);
 				element_sequence();
 				}
 				break;
-			case SPACE:
-			case RIGHT_PARENTHESIS:
-				_localctx = new EmptyElementSequenceContext(_localctx);
+			case 3:
+				_localctx = new SingleElementRecurElementSequenceContext(_localctx);
 				enterOuterAlt(_localctx, 3);
+				{
+				setState(110);
+				element();
+				}
+				break;
+			case 4:
+				_localctx = new SingleRecurVariationRecurElementSequenceContext(_localctx);
+				enterOuterAlt(_localctx, 4);
+				{
+				setState(111);
+				recursive_variation();
+				}
+				break;
+			case 5:
+				_localctx = new EmptyElementSequenceContext(_localctx);
+				enterOuterAlt(_localctx, 5);
 				{
 				}
 				break;
-			default:
-				throw new NoViableAltException(this);
 			}
 		}
 		catch (RecognitionException re) {
@@ -901,27 +954,27 @@ public class PGNParser extends Parser {
 		ElementContext _localctx = new ElementContext(_ctx, getState());
 		enterRule(_localctx, 18, RULE_element);
 		try {
-			setState(117);
+			setState(118);
 			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case INTEGER:
 				enterOuterAlt(_localctx, 1);
 				{
-				setState(114);
+				setState(115);
 				move_number_indication();
 				}
 				break;
 			case SYMBOL:
 				enterOuterAlt(_localctx, 2);
 				{
-				setState(115);
+				setState(116);
 				san_move();
 				}
 				break;
 			case NUMERIC_ANNOTATION_GLYPH:
 				enterOuterAlt(_localctx, 3);
 				{
-				setState(116);
+				setState(117);
 				match(NUMERIC_ANNOTATION_GLYPH);
 				}
 				break;
@@ -969,14 +1022,14 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(119);
+			setState(120);
 			match(INTEGER);
-			setState(121);
+			setState(122);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==PERIOD) {
 				{
-				setState(120);
+				setState(121);
 				match(PERIOD);
 				}
 			}
@@ -1021,7 +1074,7 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(123);
+			setState(124);
 			match(SYMBOL);
 			}
 		}
@@ -1072,31 +1125,31 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(125);
+			setState(126);
 			match(LEFT_PARENTHESIS);
-			setState(127);
+			setState(128);
 			_errHandler.sync(this);
 			switch ( getInterpreter().adaptivePredict(_input,15,_ctx) ) {
 			case 1:
 				{
-				setState(126);
+				setState(127);
 				match(SPACE);
 				}
 				break;
 			}
-			setState(129);
+			setState(130);
 			element_sequence();
-			setState(131);
+			setState(132);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==SPACE) {
 				{
-				setState(130);
+				setState(131);
 				match(SPACE);
 				}
 			}
 
-			setState(133);
+			setState(134);
 			match(RIGHT_PARENTHESIS);
 			}
 		}
@@ -1142,7 +1195,7 @@ public class PGNParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(135);
+			setState(136);
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << WHITE_WINS) | (1L << BLACK_WINS) | (1L << DRAWN_GAME) | (1L << ASTERISK))) != 0)) ) {
 			_errHandler.recoverInline(this);
@@ -1166,42 +1219,43 @@ public class PGNParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\31\u008c\4\2\t\2"+
+		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\31\u008d\4\2\t\2"+
 		"\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b\t\b\4\t\t\t\4\n\t\n\4\13"+
 		"\t\13\4\f\t\f\4\r\t\r\4\16\t\16\4\17\t\17\3\2\3\2\7\2!\n\2\f\2\16\2$\13"+
 		"\2\3\2\3\2\3\3\3\3\7\3*\n\3\f\3\16\3-\13\3\3\3\3\3\3\3\5\3\62\n\3\3\4"+
-		"\3\4\7\4\66\n\4\f\4\16\49\13\4\3\4\3\4\3\5\3\5\5\5?\n\5\3\5\3\5\3\5\5"+
-		"\5D\n\5\3\6\3\6\5\6H\n\6\3\6\3\6\6\6L\n\6\r\6\16\6M\3\6\3\6\5\6R\n\6\3"+
-		"\6\3\6\3\7\3\7\3\b\3\b\3\t\3\t\6\t\\\n\t\r\t\16\t]\3\t\3\t\3\n\3\n\6\n"+
-		"d\n\n\r\n\16\ne\3\n\3\n\3\n\3\n\6\nl\n\n\r\n\16\nm\3\n\3\n\3\n\5\ns\n"+
-		"\n\3\13\3\13\3\13\5\13x\n\13\3\f\3\f\5\f|\n\f\3\r\3\r\3\16\3\16\5\16\u0082"+
-		"\n\16\3\16\3\16\5\16\u0086\n\16\3\16\3\16\3\17\3\17\3\17\2\2\20\2\4\6"+
-		"\b\n\f\16\20\22\24\26\30\32\34\2\3\4\2\3\5\17\17\2\u0090\2\36\3\2\2\2"+
-		"\4\61\3\2\2\2\6\63\3\2\2\2\bC\3\2\2\2\nE\3\2\2\2\fU\3\2\2\2\16W\3\2\2"+
-		"\2\20Y\3\2\2\2\22r\3\2\2\2\24w\3\2\2\2\26y\3\2\2\2\30}\3\2\2\2\32\177"+
-		"\3\2\2\2\34\u0089\3\2\2\2\36\"\5\4\3\2\37!\7\t\2\2 \37\3\2\2\2!$\3\2\2"+
-		"\2\" \3\2\2\2\"#\3\2\2\2#%\3\2\2\2$\"\3\2\2\2%&\7\2\2\3&\3\3\2\2\2\'+"+
-		"\5\6\4\2(*\7\t\2\2)(\3\2\2\2*-\3\2\2\2+)\3\2\2\2+,\3\2\2\2,.\3\2\2\2-"+
-		"+\3\2\2\2./\5\4\3\2/\62\3\2\2\2\60\62\3\2\2\2\61\'\3\2\2\2\61\60\3\2\2"+
-		"\2\62\5\3\2\2\2\63\67\5\b\5\2\64\66\7\t\2\2\65\64\3\2\2\2\669\3\2\2\2"+
-		"\67\65\3\2\2\2\678\3\2\2\28:\3\2\2\29\67\3\2\2\2:;\5\20\t\2;\7\3\2\2\2"+
-		"<>\5\n\6\2=?\7\t\2\2>=\3\2\2\2>?\3\2\2\2?@\3\2\2\2@A\5\b\5\2AD\3\2\2\2"+
-		"BD\5\n\6\2C<\3\2\2\2CB\3\2\2\2D\t\3\2\2\2EG\7\20\2\2FH\7\t\2\2GF\3\2\2"+
-		"\2GH\3\2\2\2HI\3\2\2\2IK\5\f\7\2JL\7\t\2\2KJ\3\2\2\2LM\3\2\2\2MK\3\2\2"+
-		"\2MN\3\2\2\2NO\3\2\2\2OQ\5\16\b\2PR\7\t\2\2QP\3\2\2\2QR\3\2\2\2RS\3\2"+
-		"\2\2ST\7\21\2\2T\13\3\2\2\2UV\7\27\2\2V\r\3\2\2\2WX\7\f\2\2X\17\3\2\2"+
-		"\2Y[\5\22\n\2Z\\\7\t\2\2[Z\3\2\2\2\\]\3\2\2\2][\3\2\2\2]^\3\2\2\2^_\3"+
-		"\2\2\2_`\5\34\17\2`\21\3\2\2\2ac\5\24\13\2bd\7\t\2\2cb\3\2\2\2de\3\2\2"+
-		"\2ec\3\2\2\2ef\3\2\2\2fg\3\2\2\2gh\5\22\n\2hs\3\2\2\2ik\5\32\16\2jl\7"+
-		"\t\2\2kj\3\2\2\2lm\3\2\2\2mk\3\2\2\2mn\3\2\2\2no\3\2\2\2op\5\22\n\2ps"+
-		"\3\2\2\2qs\3\2\2\2ra\3\2\2\2ri\3\2\2\2rq\3\2\2\2s\23\3\2\2\2tx\5\26\f"+
-		"\2ux\5\30\r\2vx\7\26\2\2wt\3\2\2\2wu\3\2\2\2wv\3\2\2\2x\25\3\2\2\2y{\7"+
-		"\r\2\2z|\7\16\2\2{z\3\2\2\2{|\3\2\2\2|\27\3\2\2\2}~\7\27\2\2~\31\3\2\2"+
-		"\2\177\u0081\7\22\2\2\u0080\u0082\7\t\2\2\u0081\u0080\3\2\2\2\u0081\u0082"+
-		"\3\2\2\2\u0082\u0083\3\2\2\2\u0083\u0085\5\22\n\2\u0084\u0086\7\t\2\2"+
-		"\u0085\u0084\3\2\2\2\u0085\u0086\3\2\2\2\u0086\u0087\3\2\2\2\u0087\u0088"+
-		"\7\23\2\2\u0088\33\3\2\2\2\u0089\u008a\t\2\2\2\u008a\35\3\2\2\2\23\"+"+
-		"\61\67>CGMQ]emrw{\u0081\u0085";
+		"\3\4\6\4\66\n\4\r\4\16\4\67\3\4\3\4\3\5\3\5\5\5>\n\5\3\5\3\5\3\5\5\5C"+
+		"\n\5\3\6\3\6\5\6G\n\6\3\6\3\6\6\6K\n\6\r\6\16\6L\3\6\3\6\5\6Q\n\6\3\6"+
+		"\3\6\3\7\3\7\3\b\3\b\3\t\3\t\6\t[\n\t\r\t\16\t\\\3\t\3\t\3\n\3\n\6\nc"+
+		"\n\n\r\n\16\nd\3\n\3\n\3\n\3\n\6\nk\n\n\r\n\16\nl\3\n\3\n\3\n\3\n\3\n"+
+		"\5\nt\n\n\3\13\3\13\3\13\5\13y\n\13\3\f\3\f\5\f}\n\f\3\r\3\r\3\16\3\16"+
+		"\5\16\u0083\n\16\3\16\3\16\5\16\u0087\n\16\3\16\3\16\3\17\3\17\3\17\2"+
+		"\2\20\2\4\6\b\n\f\16\20\22\24\26\30\32\34\2\3\4\2\3\5\17\17\2\u0093\2"+
+		"\36\3\2\2\2\4\61\3\2\2\2\6\63\3\2\2\2\bB\3\2\2\2\nD\3\2\2\2\fT\3\2\2\2"+
+		"\16V\3\2\2\2\20X\3\2\2\2\22s\3\2\2\2\24x\3\2\2\2\26z\3\2\2\2\30~\3\2\2"+
+		"\2\32\u0080\3\2\2\2\34\u008a\3\2\2\2\36\"\5\4\3\2\37!\7\t\2\2 \37\3\2"+
+		"\2\2!$\3\2\2\2\" \3\2\2\2\"#\3\2\2\2#%\3\2\2\2$\"\3\2\2\2%&\7\2\2\3&\3"+
+		"\3\2\2\2\'+\5\6\4\2(*\7\t\2\2)(\3\2\2\2*-\3\2\2\2+)\3\2\2\2+,\3\2\2\2"+
+		",.\3\2\2\2-+\3\2\2\2./\5\4\3\2/\62\3\2\2\2\60\62\3\2\2\2\61\'\3\2\2\2"+
+		"\61\60\3\2\2\2\62\5\3\2\2\2\63\65\5\b\5\2\64\66\7\t\2\2\65\64\3\2\2\2"+
+		"\66\67\3\2\2\2\67\65\3\2\2\2\678\3\2\2\289\3\2\2\29:\5\20\t\2:\7\3\2\2"+
+		"\2;=\5\n\6\2<>\7\t\2\2=<\3\2\2\2=>\3\2\2\2>?\3\2\2\2?@\5\b\5\2@C\3\2\2"+
+		"\2AC\5\n\6\2B;\3\2\2\2BA\3\2\2\2C\t\3\2\2\2DF\7\20\2\2EG\7\t\2\2FE\3\2"+
+		"\2\2FG\3\2\2\2GH\3\2\2\2HJ\5\f\7\2IK\7\t\2\2JI\3\2\2\2KL\3\2\2\2LJ\3\2"+
+		"\2\2LM\3\2\2\2MN\3\2\2\2NP\5\16\b\2OQ\7\t\2\2PO\3\2\2\2PQ\3\2\2\2QR\3"+
+		"\2\2\2RS\7\21\2\2S\13\3\2\2\2TU\7\27\2\2U\r\3\2\2\2VW\7\f\2\2W\17\3\2"+
+		"\2\2XZ\5\22\n\2Y[\7\t\2\2ZY\3\2\2\2[\\\3\2\2\2\\Z\3\2\2\2\\]\3\2\2\2]"+
+		"^\3\2\2\2^_\5\34\17\2_\21\3\2\2\2`b\5\24\13\2ac\7\t\2\2ba\3\2\2\2cd\3"+
+		"\2\2\2db\3\2\2\2de\3\2\2\2ef\3\2\2\2fg\5\22\n\2gt\3\2\2\2hj\5\32\16\2"+
+		"ik\7\t\2\2ji\3\2\2\2kl\3\2\2\2lj\3\2\2\2lm\3\2\2\2mn\3\2\2\2no\5\22\n"+
+		"\2ot\3\2\2\2pt\5\24\13\2qt\5\32\16\2rt\3\2\2\2s`\3\2\2\2sh\3\2\2\2sp\3"+
+		"\2\2\2sq\3\2\2\2sr\3\2\2\2t\23\3\2\2\2uy\5\26\f\2vy\5\30\r\2wy\7\26\2"+
+		"\2xu\3\2\2\2xv\3\2\2\2xw\3\2\2\2y\25\3\2\2\2z|\7\r\2\2{}\7\16\2\2|{\3"+
+		"\2\2\2|}\3\2\2\2}\27\3\2\2\2~\177\7\27\2\2\177\31\3\2\2\2\u0080\u0082"+
+		"\7\22\2\2\u0081\u0083\7\t\2\2\u0082\u0081\3\2\2\2\u0082\u0083\3\2\2\2"+
+		"\u0083\u0084\3\2\2\2\u0084\u0086\5\22\n\2\u0085\u0087\7\t\2\2\u0086\u0085"+
+		"\3\2\2\2\u0086\u0087\3\2\2\2\u0087\u0088\3\2\2\2\u0088\u0089\7\23\2\2"+
+		"\u0089\33\3\2\2\2\u008a\u008b\t\2\2\2\u008b\35\3\2\2\2\23\"+\61\67=BF"+
+		"LP\\dlsx|\u0082\u0086";
 	public static final ATN _ATN =
 		new ATNDeserializer().deserialize(_serializedATN.toCharArray());
 	static {

@@ -24,6 +24,8 @@ class PgnGameLoader {
         walker.walk(extractor, tree)
 
         val gamesStrings = extractor.gamesStrings
-        return gamesStrings.map { PgnParser.parsePgn(it) }
+        return gamesStrings.map {
+            PgnParser.parsePgn(it)
+        }
     }
 }

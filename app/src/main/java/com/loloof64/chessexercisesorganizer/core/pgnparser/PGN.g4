@@ -56,7 +56,7 @@ pgn_database
 
 /// <PGN-game> ::= <tag-section> <movetext-section>
 pgn_game
- : tag_section SPACE* movetext_section
+ : tag_section SPACE+ movetext_section
  ;
 
 /// <tag-section> ::= <tag-pair> <tag-section>
@@ -92,6 +92,8 @@ movetext_section
 element_sequence
  : element SPACE+ element_sequence              # elementRecurElementSequence
  | recursive_variation SPACE+ element_sequence  # variationRecurElementSequence
+ | element                                      # singleElementRecurElementSequence
+ | recursive_variation                          # singleRecurVariationRecurElementSequence
  |                                              # emptyElementSequence
  ;
 

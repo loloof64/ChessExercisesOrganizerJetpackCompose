@@ -140,6 +140,30 @@ public interface PGNListener extends ParseTreeListener {
 	 */
 	void exitVariationRecurElementSequence(PGNParser.VariationRecurElementSequenceContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code singleElementRecurElementSequence}
+	 * labeled alternative in {@link PGNParser#element_sequence}.
+	 * @param ctx the parse tree
+	 */
+	void enterSingleElementRecurElementSequence(PGNParser.SingleElementRecurElementSequenceContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code singleElementRecurElementSequence}
+	 * labeled alternative in {@link PGNParser#element_sequence}.
+	 * @param ctx the parse tree
+	 */
+	void exitSingleElementRecurElementSequence(PGNParser.SingleElementRecurElementSequenceContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code singleRecurVariationRecurElementSequence}
+	 * labeled alternative in {@link PGNParser#element_sequence}.
+	 * @param ctx the parse tree
+	 */
+	void enterSingleRecurVariationRecurElementSequence(PGNParser.SingleRecurVariationRecurElementSequenceContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code singleRecurVariationRecurElementSequence}
+	 * labeled alternative in {@link PGNParser#element_sequence}.
+	 * @param ctx the parse tree
+	 */
+	void exitSingleRecurVariationRecurElementSequence(PGNParser.SingleRecurVariationRecurElementSequenceContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code emptyElementSequence}
 	 * labeled alternative in {@link PGNParser#element_sequence}.
 	 * @param ctx the parse tree

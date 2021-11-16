@@ -160,6 +160,30 @@ public class PGNBaseListener implements PGNListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterSingleElementRecurElementSequence(PGNParser.SingleElementRecurElementSequenceContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitSingleElementRecurElementSequence(PGNParser.SingleElementRecurElementSequenceContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterSingleRecurVariationRecurElementSequence(PGNParser.SingleRecurVariationRecurElementSequenceContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitSingleRecurVariationRecurElementSequence(PGNParser.SingleRecurVariationRecurElementSequenceContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterEmptyElementSequence(PGNParser.EmptyElementSequenceContext ctx) { }
 	/**
 	 * {@inheritDoc}

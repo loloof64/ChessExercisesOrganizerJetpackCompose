@@ -139,10 +139,11 @@ fun GamePage(
             val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
-            val selectedGameIndex = 0
+            val selectedGameIndex = 3
             val selectedGame = gamesData[selectedGameIndex]
 
-            val startFen = selectedGame.fenStartPosition.ifEmpty { Board.FEN_START_POSITION }
+            val startFen =
+                if (selectedGame.fenStartPosition != null) selectedGame.fenStartPosition else Board.FEN_START_POSITION
 
             gamePageViewModel.pageState.promotionState = PendingPromotionData()
             gamePageViewModel.boardState.newGame(startFen)
@@ -156,8 +157,7 @@ fun GamePage(
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
             gamePageViewModel.pageState.gameInProgress = true
             gameInProgress = true
-        }
-        catch (ex: Exception) {
+        } catch (ex: Exception) {
             ex.printStackTrace()
             showMinutedSnackbarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
         }
@@ -218,9 +218,9 @@ fun GamePage(
     fun selectPreviousPosition() {
         if (!gameInProgress) {
             var targetNodeIndex: Int = highlightedHistoryItemIndex ?: return
-            val lastMoveArrowData : MoveData?
+            val lastMoveArrowData: MoveData?
 
-            var fen:String? = null
+            var fen: String? = null
             do {
                 targetNodeIndex -= 1
                 if (targetNodeIndex < 0) {
@@ -234,8 +234,7 @@ fun GamePage(
             if (targetNodeIndex < 0) {
                 fen = startPosition
                 lastMoveArrowData = null
-            }
-            else {
+            } else {
                 val positionData = gamePageViewModel.movesElements[targetNodeIndex]
                 lastMoveArrowData = positionData.lastMoveArrowData
             }
@@ -253,7 +252,7 @@ fun GamePage(
 
     fun selectNextPosition() {
         if (!gameInProgress) {
-            var lastMoveArrowData : MoveData?
+            var lastMoveArrowData: MoveData?
 
 
             val noPositionCurrentlySelected = highlightedHistoryItemIndex == null
@@ -272,14 +271,14 @@ fun GamePage(
                     lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
                     highlightedHistoryItemIndex = nodeIndex
                 }
-            }
-            else {
+            } else {
                 var targetNodeIndex: Int = highlightedHistoryItemIndex!!
-                var fen:String?
+                var fen: String?
 
                 do {
                     targetNodeIndex += 1
-                    val hasReachedLastNode = targetNodeIndex >= gamePageViewModel.movesElements.size.dec()
+                    val hasReachedLastNode =
+                        targetNodeIndex >= gamePageViewModel.movesElements.size.dec()
                     if (hasReachedLastNode) {
                         // Searching back for the last node with a position defined
                         do {
@@ -287,7 +286,7 @@ fun GamePage(
                             fen = positionData.fen
                             if (fen != null) break
                             targetNodeIndex -= 1
-                        } while(targetNodeIndex >= 0)
+                        } while (targetNodeIndex >= 0)
                     }
 
                     val positionData = gamePageViewModel.movesElements[targetNodeIndex]
@@ -304,7 +303,7 @@ fun GamePage(
                         lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
                         highlightedHistoryItemIndex = targetNodeIndex
                     }
-                } while(fen == null)
+                } while (fen == null)
             }
         }
     }

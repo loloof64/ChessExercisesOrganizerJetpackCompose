@@ -101,6 +101,20 @@ public class PGNBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements PG
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitSingleElementRecurElementSequence(PGNParser.SingleElementRecurElementSequenceContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitSingleRecurVariationRecurElementSequence(PGNParser.SingleRecurVariationRecurElementSequenceContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitEmptyElementSequence(PGNParser.EmptyElementSequenceContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}

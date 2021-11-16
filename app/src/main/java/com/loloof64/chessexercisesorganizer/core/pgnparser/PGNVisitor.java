@@ -89,6 +89,20 @@ public interface PGNVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitVariationRecurElementSequence(PGNParser.VariationRecurElementSequenceContext ctx);
 	/**
+	 * Visit a parse tree produced by the {@code singleElementRecurElementSequence}
+	 * labeled alternative in {@link PGNParser#element_sequence}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSingleElementRecurElementSequence(PGNParser.SingleElementRecurElementSequenceContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code singleRecurVariationRecurElementSequence}
+	 * labeled alternative in {@link PGNParser#element_sequence}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSingleRecurVariationRecurElementSequence(PGNParser.SingleRecurVariationRecurElementSequenceContext ctx);
+	/**
 	 * Visit a parse tree produced by the {@code emptyElementSequence}
 	 * labeled alternative in {@link PGNParser#element_sequence}.
 	 * @param ctx the parse tree
