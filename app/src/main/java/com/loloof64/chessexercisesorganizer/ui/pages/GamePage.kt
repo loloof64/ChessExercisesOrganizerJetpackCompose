@@ -484,6 +484,7 @@ fun GamePage(
                                 },
                                 setPendingPromotionCallback = {
                                     gamePageViewModel.pageState.promotionState = it
+                                    promotionState = gamePageViewModel.pageState.promotionState
                                 },
                                 computerMoveRequestCallback = {
                                     if (!computerThinking) {
