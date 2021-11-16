@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,7 +27,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.alonsoruibal.chess.Board
 import com.loloof64.chessexercisesorganizer.R
+import com.loloof64.chessexercisesorganizer.core.PgnGameLoader
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.stockfish.StockfishLib
@@ -47,6 +50,7 @@ class GamePageViewModel : ViewModel() {
     var pageState = GamePageState()
     var boardState = DynamicBoardDataHandler()
     var movesElements = mutableListOf<MovesNavigatorElement>()
+    var currentGame = PgnGameLoader()
 }
 
 @Composable
@@ -115,21 +119,9 @@ fun GamePage(
     val fiftyMovesText = stringResource(R.string.fifty_moves_rule_draw)
     val missingMaterialText = stringResource(R.string.missing_material_draw)
     val gameStoppedMessage = stringResource(R.string.user_stopped_game)
+    val gamesLoadingErrorMessage = stringResource(R.string.game_loading_error)
 
-    fun doStartNewGame() {
-        gamePageViewModel.pageState.promotionState = PendingPromotionData()
-        gamePageViewModel.boardState.newGame()
-        gamePageViewModel.movesElements.clear()
-        gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
-        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-        startPosition = gamePageViewModel.boardState.getCurrentPosition()
-        stockfishLib.sendCommand("ucinewgame")
-        gamePageViewModel.boardState.clearLastMoveArrow()
-        highlightedHistoryItemIndex = null
-        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-        gamePageViewModel.pageState.gameInProgress = true
-        gameInProgress = true
-    }
+    val context = LocalContext.current
 
     fun showMinutedSnackbarAction(text: String, duration: SnackbarDuration) {
         scope.launch {
@@ -139,6 +131,36 @@ fun GamePage(
             )
         }
 
+    }
+
+    fun doStartNewGame() {
+        try {
+            val inputStream = context.assets.open("dummy_sample.pgn")
+            val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
+
+            val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
+            val selectedGameIndex = 0
+            val selectedGame = gamesData[selectedGameIndex]
+
+            val startFen = selectedGame.fenStartPosition.ifEmpty { Board.FEN_START_POSITION }
+
+            gamePageViewModel.pageState.promotionState = PendingPromotionData()
+            gamePageViewModel.boardState.newGame(startFen)
+            gamePageViewModel.movesElements.clear()
+            gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
+            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+            startPosition = gamePageViewModel.boardState.getCurrentPosition()
+            stockfishLib.sendCommand("ucinewgame")
+            gamePageViewModel.boardState.clearLastMoveArrow()
+            highlightedHistoryItemIndex = null
+            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+            gamePageViewModel.pageState.gameInProgress = true
+            gameInProgress = true
+        }
+        catch (ex: Exception) {
+            ex.printStackTrace()
+            showMinutedSnackbarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
+        }
     }
 
     fun newGameRequest() {

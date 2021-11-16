@@ -54,4 +54,5 @@
     <string name="previous_position">Position précédente</string>
     <string name="next_position">Position suivante</string>
     <string name="last_position">Dernière position</string>
+    <string name="game_loading_error">Echec lors du chargement des parties !</string>
 </resources>

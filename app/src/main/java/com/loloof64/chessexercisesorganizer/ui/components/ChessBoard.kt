@@ -64,10 +64,6 @@ class DynamicBoardDataHandler {
     private var boardLogic = EMPTY_FEN.toBoard()
     private var arrowData: MoveData? = null
 
-    fun setStartPosition(position: String) {
-        startPosition = position
-    }
-
     fun setCurrentPosition(position: String) {
         boardLogic.fen = position
     }
@@ -88,7 +84,8 @@ class DynamicBoardDataHandler {
 
     fun getCurrentPosition(): String = boardLogic.fen ?: EMPTY_FEN
 
-    fun newGame() {
+    fun newGame(startFen: String) {
+        startPosition = startFen
         boardLogic = startPosition.toBoard()
     }
 

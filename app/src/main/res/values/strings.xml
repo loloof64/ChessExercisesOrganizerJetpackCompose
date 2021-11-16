@@ -53,4 +53,5 @@
     <string name="previous_position">Previous position</string>
     <string name="next_position">Next position</string>
     <string name="last_position">Last position</string>
+    <string name="game_loading_error">Failed to load games from file !</string>
 </resources>
