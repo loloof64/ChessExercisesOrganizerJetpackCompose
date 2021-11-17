@@ -105,6 +105,14 @@ fun GamePage(
         mutableStateOf<Int?>(null)
     }
 
+    var whiteSideType by rememberSaveable {
+        mutableStateOf(PlayerType.Human)
+    }
+
+    var blackSideType by rememberSaveable {
+        mutableStateOf(PlayerType.Human)
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -185,22 +193,35 @@ fun GamePage(
             val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
-            val selectedGameIndex = 5
+            val selectedGameIndex = 11
             val selectedGame = gamesData[selectedGameIndex]
 
             val startFen =
                 if (selectedGame.fenStartPosition != null) selectedGame.fenStartPosition else Board.FEN_START_POSITION
 
-            gamePageViewModel.pageState.promotionState = PendingPromotionData()
+
+            // First we ensure that position is valid when initializing the board
             gamePageViewModel.boardState.newGame(startFen)
+
+            // Here we are fine to process the rest
+            val blackStartGame = startFen.split(" ")[1] == "b"
+            whiteSideType = if (blackStartGame) PlayerType.Computer else PlayerType.Human
+            blackSideType = if (blackStartGame) PlayerType.Human else PlayerType.Computer
+            gamePageViewModel.pageState.boardReversed =
+                blackStartGame
+            boardReversed = gamePageViewModel.pageState.boardReversed
+
+
+            gamePageViewModel.pageState.promotionState = PendingPromotionData()
             gamePageViewModel.movesElements.clear()
-            gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
+            gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}.${if (blackStartGame) ".." else ""}"))
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             startPosition = gamePageViewModel.boardState.getCurrentPosition()
             stockfishLib.sendCommand("ucinewgame")
             gamePageViewModel.boardState.clearLastMoveArrow()
             highlightedHistoryItemIndex = null
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+
             gamePageViewModel.pageState.gameInProgress = true
             gameInProgress = true
 
@@ -382,8 +403,6 @@ fun GamePage(
                 val nextEngineLine = stockfishLib.readNextOutput()
 
                 if (nextEngineLine.startsWith("bestmove")) {
-                    println(nextEngineLine)
-
                     val moveParts = nextEngineLine!!.split(" ")
                     val move = moveParts[1]
 
@@ -463,8 +482,8 @@ fun GamePage(
                     Layout(
                         content = {
                             DynamicChessBoard(
-                                whiteSideType = PlayerType.Human,
-                                blackSideType = PlayerType.Computer,
+                                whiteSideType = whiteSideType,
+                                blackSideType = blackSideType,
                                 reversed = boardReversed,
                                 lastMoveArrow = lastMoveArrow,
                                 gameInProgress = gameInProgress,

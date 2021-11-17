@@ -860,8 +860,84 @@ public class Board {
     /**
      * It checks if a state is valid basically, if the other king is not in check
      */
-    private boolean isValid() {
+    boolean isValid() {
         return (!bbAttacks.isSquareAttacked(this, kings & getOthers(), !getTurn()));
+    }
+
+    /*
+    Added by loloof64
+    Taken from https://javarevisited.blogspot.com/2014/06/how-to-count-number-of-set-bits-or-1s.html#axzz7CU4T3iVW
+     */
+    int countSetBits(long number){
+        int count = 0;
+        while(number != 0){
+            ++count;
+            number &= number - 1;
+        }
+        return count;
+    }
+
+    /**
+     * Checks completely if state is valid :
+     * - pieces counts
+     * - no pawn on 1st / 8th rank
+     * - other king is not in check
+     *
+     * Added by loloof64
+     */
+    public boolean checkValidityCompletely() {
+        boolean isValid = true;
+
+        boolean otherKingInCheck = bbAttacks.isSquareAttacked(this, kings & getOthers(), !getTurn());
+        if (otherKingInCheck) isValid = false;
+
+        for (int col = 0; col < 8; col++) {
+            long cellSquareBottom = 1L << col;
+            long cellSquareTop = 1L << 56 << col;
+            char pieceBottom = getPieceAt(cellSquareBottom);
+            char pieceTop = getPieceAt(cellSquareTop);
+
+            if (pieceBottom == 'p' || pieceBottom == 'P') isValid = false;
+            if (pieceTop == 'p' || pieceTop == 'P') isValid = false;
+        }
+
+        int whiteKings = countSetBits(whites & kings);
+        int whitePawns = countSetBits(whites & pawns);
+        int whiteKnights = countSetBits(whites & knights);
+        int whiteBishops = countSetBits(whites & bishops);
+        int whiteRooks = countSetBits(whites & rooks);
+        int whiteQueens = countSetBits(whites & queens);
+
+        int blackKings = countSetBits(blacks & kings);
+        int blackPawns = countSetBits(blacks & pawns);
+        int blackKnights = countSetBits(blacks & knights);
+        int blackBishops = countSetBits(blacks & bishops);
+        int blackRooks = countSetBits(blacks & rooks);
+        int blackQueens = countSetBits(blacks & queens);
+
+        boolean oneWhiteKing = whiteKings == 1;
+        boolean upToEightWhitePawns = whitePawns <= 8;
+        boolean upToTenWhiteKnights = whiteKnights <= 10;
+        boolean upToTenWhiteBishops = whiteBishops <= 10;
+        boolean upToTenWhiteRooks = whiteRooks <= 10;
+        boolean upToNineWhiteQueens = whiteQueens <= 9;
+
+        boolean oneBlackKing = blackKings == 1;
+        boolean upToEightBlackPawns = blackPawns <= 8;
+        boolean upToTenBlackKnights = blackKnights <= 10;
+        boolean upToTenBlackBishops = blackBishops <= 10;
+        boolean upToTenBlackRooks = blackRooks <= 10;
+        boolean upToNineBlackQueens = blackQueens <= 9;
+
+        boolean goodWhitePiecesCount = (whiteKings+whitePawns+whiteKnights+whiteBishops+whiteRooks+whiteQueens) <= 16;
+        boolean goodBlackPiecesCount = (blackKings+blackPawns+blackKnights+blackBishops+blackRooks+blackQueens) <= 16;
+
+        if (!oneWhiteKing || !oneBlackKing) isValid = false;
+        if (!upToEightWhitePawns || !upToTenWhiteKnights || !upToTenWhiteBishops || !upToTenWhiteRooks || !upToNineWhiteQueens) isValid = false;
+        if (!upToEightBlackPawns || !upToTenBlackKnights || !upToTenBlackBishops || !upToTenBlackRooks || !upToNineBlackQueens) isValid = false;
+        if (!goodWhitePiecesCount || !goodBlackPiecesCount) isValid = false;
+
+        return isValid;
     }
 
     /**
@@ -1090,7 +1166,7 @@ public class Board {
     }
 
     /**
-     * Generates legal moves for the position when not already generated
+     * Generates legal moves for the position when not already generated.
      */
     void generateLegalMoves() {
         if ((key[0] != legalMovesKey[0]) || (key[1] != legalMovesKey[1])) {

@@ -86,10 +86,8 @@ class DynamicBoardDataHandler {
 
     fun newGame(startFen: String) {
         val positionValidator = startFen.toBoard()
-        val legalMoves = mutableListOf<Int>().toIntArray()
-        positionValidator.getLegalMoves(legalMoves)
-        val isIllegalPosition = legalMoves.isEmpty()
-        if (isIllegalPosition) throw IllegalPositionException(startFen)
+        val isLegalPosition = positionValidator.checkValidityCompletely()
+        if (!isLegalPosition) throw IllegalPositionException(startFen)
         startPosition = startFen
         boardLogic = startPosition.toBoard()
     }

@@ -56,7 +56,7 @@
 
 1. Rb3 Kd5 2. Ra4 Kc6 3. Rg4 Kd5 *
 
-[Event "Endgame training"]
+[Event "Illegal position"]
 [Site "?"]
 [Date "????.??.??"]
 [Round "?"]
@@ -64,6 +64,78 @@
 [Black "?"]
 [Result "*"]
 [FEN "8/8/8/8/4b3/1kb5/8/K7 b - - 0 40"]
+[Setup "1"]
+
+*
+
+[Event "Illegal position"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "8/1k1K4/8/8/8/8/8/5pP1 w - - 0 1"]
+[Setup "1"]
+
+*
+
+[Event "Illegal position"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "5pP1/1k1K4/8/8/8/8/8/8 w - - 0 1"]
+[Setup "1"]
+
+*
+
+[Event "Illegal position"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "8/1k1K4/8/8/3K4/8/8/8 w - - 0 1"]
+[Setup "1"]
+
+*
+
+[Event "Illegal position"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "8/3K4/8/8/3K4/8/8/8 w - - 0 1"]
+[Setup "1"]
+
+*
+
+[Event "Illegal position"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "rr3rrr/rk3rrr/r4r2/8/3K4/8/8/8 w - - 0 1"]
+[Setup "1"]
+
+*
+
+[Event "Endgame training"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "8/8/8/8/8/1k6/4bb2/2K5 b - - 0 51"]
 [Setup "1"]
 
 *
