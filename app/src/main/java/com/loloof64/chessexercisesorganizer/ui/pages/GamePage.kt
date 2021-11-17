@@ -133,13 +133,59 @@ fun GamePage(
 
     }
 
+    fun selectLastPosition() {
+        if (!gameInProgress) {
+            var lastHistoryElementIndex = gamePageViewModel.movesElements.size.dec()
+            while (true) {
+                if (lastHistoryElementIndex <= 0) break
+
+                val currentHistoryNode = gamePageViewModel.movesElements[lastHistoryElementIndex]
+                val isAPositionNode = currentHistoryNode.fen != null
+                if (isAPositionNode) break
+
+                lastHistoryElementIndex = lastHistoryElementIndex.dec()
+            }
+            val positionData = gamePageViewModel.movesElements[lastHistoryElementIndex]
+            val fen = positionData.fen
+            val lastMoveArrowData = positionData.lastMoveArrowData
+            if (fen != null) {
+                gamePageViewModel.boardState.setCurrentPosition(fen)
+            }
+            gamePageViewModel.boardState.setLastMoveArrow(lastMoveArrowData)
+            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+            highlightedHistoryItemIndex = if (fen != null) lastHistoryElementIndex else null
+        }
+    }
+
+    fun handleNaturalEndgame() {
+        if (!gamePageViewModel.pageState.gameInProgress) return
+        val endedStatus = gamePageViewModel.boardState.getNaturalEndGameStatus()
+        val message = when (endedStatus) {
+            GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
+            GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
+            GameEndedStatus.STALEMATE -> stalemateText
+            GameEndedStatus.DRAW_THREE_FOLD_REPETITION -> threeFoldRepetitionText
+            GameEndedStatus.DRAW_FIFTY_MOVES_RULE -> fiftyMovesText
+            GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
+            else -> null
+        }
+        message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
+        if (endedStatus != GameEndedStatus.NOT_ENDED) {
+            computerThinking = false
+            gamePageViewModel.pageState.gameInProgress = false
+            gameInProgress = false
+            selectLastPosition()
+        }
+    }
+
     fun doStartNewGame() {
         try {
             val inputStream = context.assets.open("dummy_sample.pgn")
             val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
-            val selectedGameIndex = 3
+            val selectedGameIndex = 2
             val selectedGame = gamesData[selectedGameIndex]
 
             val startFen =
@@ -157,6 +203,8 @@ fun GamePage(
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
             gamePageViewModel.pageState.gameInProgress = true
             gameInProgress = true
+
+            handleNaturalEndgame()
         } catch (ex: Exception) {
             ex.printStackTrace()
             showMinutedSnackbarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
@@ -187,31 +235,6 @@ fun GamePage(
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             lastMoveArrow = null
             highlightedHistoryItemIndex = null
-        }
-    }
-
-    fun selectLastPosition() {
-        if (!gameInProgress) {
-            var lastHistoryElementIndex = gamePageViewModel.movesElements.size.dec()
-            while (true) {
-                if (lastHistoryElementIndex <= 0) break
-
-                val currentHistoryNode = gamePageViewModel.movesElements[lastHistoryElementIndex]
-                val isAPositionNode = currentHistoryNode.fen != null
-                if (isAPositionNode) break
-
-                lastHistoryElementIndex = lastHistoryElementIndex.dec()
-            }
-            val positionData = gamePageViewModel.movesElements[lastHistoryElementIndex]
-            val fen = positionData.fen
-            val lastMoveArrowData = positionData.lastMoveArrowData
-            if (fen != null) {
-                gamePageViewModel.boardState.setCurrentPosition(fen)
-            }
-            gamePageViewModel.boardState.setLastMoveArrow(lastMoveArrowData)
-            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-            highlightedHistoryItemIndex = if (fen != null) lastHistoryElementIndex else null
         }
     }
 
@@ -317,27 +340,6 @@ fun GamePage(
         gameInProgress = false
         selectLastPosition()
         showMinutedSnackbarAction(gameStoppedMessage, SnackbarDuration.Short)
-    }
-
-    fun handleNaturalEndgame() {
-        if (!gamePageViewModel.pageState.gameInProgress) return
-        val endedStatus = gamePageViewModel.boardState.getNaturalEndGameStatus()
-        val message = when (endedStatus) {
-            GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
-            GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
-            GameEndedStatus.STALEMATE -> stalemateText
-            GameEndedStatus.DRAW_THREE_FOLD_REPETITION -> threeFoldRepetitionText
-            GameEndedStatus.DRAW_FIFTY_MOVES_RULE -> fiftyMovesText
-            GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
-            else -> null
-        }
-        message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
-        if (endedStatus != GameEndedStatus.NOT_ENDED) {
-            computerThinking = false
-            gamePageViewModel.pageState.gameInProgress = false
-            gameInProgress = false
-            selectLastPosition()
-        }
     }
 
     // This must be called after having played the move on the board !
