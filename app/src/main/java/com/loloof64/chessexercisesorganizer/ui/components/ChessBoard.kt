@@ -85,6 +85,11 @@ class DynamicBoardDataHandler {
     fun getCurrentPosition(): String = boardLogic.fen ?: EMPTY_FEN
 
     fun newGame(startFen: String) {
+        val positionValidator = startFen.toBoard()
+        val legalMoves = mutableListOf<Int>().toIntArray()
+        positionValidator.getLegalMoves(legalMoves)
+        val isIllegalPosition = legalMoves.isEmpty()
+        if (isIllegalPosition) throw IllegalPositionException(startFen)
         startPosition = startFen
         boardLogic = startPosition.toBoard()
     }
@@ -141,6 +146,8 @@ class DynamicBoardDataHandler {
         }
     }
 }
+
+class IllegalPositionException(startFen: String) : java.lang.IllegalArgumentException("Illegal position : $startFen !")
 
 data class MoveData(
     val startFile: Int = Int.MIN_VALUE,
