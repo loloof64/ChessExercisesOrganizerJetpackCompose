@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cstring>   // For std::memset
 #include <sstream>
+#include <thread>
 
 #include "evaluate.h"
 #include "misc.h"
@@ -426,6 +427,8 @@ void Thread::search() {
               // If search has been stopped, we break immediately. Sorting is
               // safe because RootMoves is still valid, although it refers to
               // the previous iteration.
+              std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
               if (Threads.stop)
                   break;
 
@@ -464,10 +467,13 @@ void Thread::search() {
           // Sort the PV lines searched so far and update the GUI
           std::stable_sort(rootMoves.begin() + pvFirst, rootMoves.begin() + pvIdx + 1);
 
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
           if (    mainThread
               && (Threads.stop || pvIdx + 1 == multiPV || Time.elapsed() > 3000))
               outputs.push(UCI::pv(rootPos, rootDepth, alpha, beta));
       }
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
       if (!Threads.stop)
           completedDepth = rootDepth;
@@ -489,6 +495,8 @@ void Thread::search() {
       // If skill level is enabled and time is up, pick a sub-optimal best move
       if (skill.enabled() && skill.time_to_pick(rootDepth))
           skill.pick_best(multiPV);
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
       // Do we have time for the next iteration? Can we stop searching now?
       if (    Limits.use_time_management()
@@ -538,6 +546,8 @@ void Thread::search() {
 
       mainThread->iterValue[iterIdx] = bestValue;
       iterIdx = (iterIdx + 1) & 3;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
   if (!mainThread)

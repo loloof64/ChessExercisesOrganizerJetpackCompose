@@ -58,8 +58,10 @@ fun GamePage(
     gamePageViewModel: GamePageViewModel = viewModel(),
     stockfishLib: StockfishLib,
 ) {
+
+    val cpuThinkingTimeoutMs = 2_000L
+
     val scaffoldState = rememberScaffoldState()
-    val scope = rememberCoroutineScope()
 
     var startPosition by rememberSaveable {
         mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
@@ -132,7 +134,7 @@ fun GamePage(
     val context = LocalContext.current
 
     fun showMinutedSnackbarAction(text: String, duration: SnackbarDuration) {
-        scope.launch {
+        coroutineScope.launch {
             scaffoldState.snackbarHostState.showSnackbar(
                 message = text,
                 duration = duration,
@@ -395,7 +397,8 @@ fun GamePage(
         computerThinking = true
 
         stockfishLib.sendCommand("position fen $oldPosition")
-        stockfishLib.sendCommand("go movetime 2000")
+        stockfishLib.sendCommand("go infinite")
+
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
 
@@ -422,6 +425,13 @@ fun GamePage(
                     mustExitLoop = true
                 }
                 delay(100)
+            }
+        }
+
+        coroutineScope.launch {
+            delay(cpuThinkingTimeoutMs)
+            if (readEngineOutputJob?.isActive == true) {
+                stockfishLib.sendCommand("stop")
             }
         }
     }

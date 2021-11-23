@@ -260,9 +260,13 @@ void UCI::loop() {
       }
 
       istringstream is(cmd);
-
-      token.clear(); // Avoid a stale if getline() returns empty or blank line
       is >> token;
+
+      ////////////////////////////////////
+      std::stringstream tmp_1;
+      tmp_1 << "[Got token]: " << token;
+      outputs.push(tmp_1.str());
+      ////////////////////////////////////
 
       if (    token == "quit"
           ||  token == "stop")

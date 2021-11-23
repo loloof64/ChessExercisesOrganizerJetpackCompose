@@ -17,7 +17,7 @@ public class StockfishLib {
      * Stops the process : sends the command "quit".
      * This is better to do this in the Application subclass.
      */
-    public void stop() {
+    public void quit() {
         sendCommand("quit");
     }
 

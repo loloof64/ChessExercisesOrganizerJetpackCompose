@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        stockfishLib.stop()
+        stockfishLib.quit()
         super.onStop()
     }
 }
