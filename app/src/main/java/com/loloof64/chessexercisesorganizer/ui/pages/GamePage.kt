@@ -195,7 +195,7 @@ fun GamePage(
             val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
-            val selectedGameIndex = 11
+            val selectedGameIndex = 1
             val selectedGame = gamesData[selectedGameIndex]
 
             val startFen =

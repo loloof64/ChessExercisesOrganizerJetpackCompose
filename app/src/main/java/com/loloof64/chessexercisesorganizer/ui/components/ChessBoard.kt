@@ -202,32 +202,6 @@ data class PendingPromotionData(
         "$pendingPromotion|$pendingPromotionForBlack|$pendingPromotionStartedInReversedMode|" +
                 "$pieceValue|$startFile|$startRank|$targetFile|$targetRank|" +
                 "$movedPieceXRatio|$movedPieceYRatio"
-
-    /* TODO : remove when sure that pending promotion is preserved across configuration changes.
-    companion object {
-        fun parse(valueStr: String): PendingPromotionData {
-            return try {
-                val parts = valueStr.split("|")
-                PendingPromotionData(
-                    pendingPromotion = parts[0].toBoolean(),
-                    pendingPromotionForBlack = parts[1].toBoolean(),
-                    pendingPromotionStartedInReversedMode = parts[2].toBoolean(),
-                    pieceValue = parts[3][0],
-                    startFile = parts[4].toInt(),
-                    startRank = parts[5].toInt(),
-                    targetFile = parts[6].toInt(),
-                    targetRank = parts[7].toInt(),
-                    movedPieceXRatio = parts[8].toFloat(),
-                    movedPieceYRatio = parts[9].toFloat()
-                )
-            } catch (ex: NumberFormatException) {
-                PendingPromotionData()
-            } catch (ex: ArrayIndexOutOfBoundsException) {
-                PendingPromotionData()
-            }
-        }
-    }
-     */
 }
 
 sealed class PromotionPiece(val fen: Char)
