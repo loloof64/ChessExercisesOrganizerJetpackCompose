@@ -270,6 +270,8 @@ fun GamePage(
             do {
                 targetNodeIndex -= 1
                 if (targetNodeIndex < 0) {
+                    // We prevent the index to be too low.
+                    targetNodeIndex = -1
                     break
                 }
 
@@ -306,7 +308,7 @@ fun GamePage(
                 val thereIsAtLeastOneMove = gamePageViewModel.movesElements.size > 1
                 if (thereIsAtLeastOneMove) {
                     val nodeIndex = 1
-                    val positionData = gamePageViewModel.movesElements[2]
+                    val positionData = gamePageViewModel.movesElements[nodeIndex]
                     val fen = positionData.fen
                     lastMoveArrowData = positionData.lastMoveArrowData
 
