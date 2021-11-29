@@ -139,3 +139,27 @@
 [Setup "1"]
 
 *
+
+[Event "Endgame training"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "8/8/8/8/8/1K1k4/3p1Q2/8 w - - 0 35"]
+[Setup "1"]
+
+*
+
+[Event ""]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result ""]
+[FEN "4k3/8/4K3/4P3/8/8/8/8 b - - 0 35"]
+[Setup "1"]
+
+35... Kf8 ( 35... Kd8 36. Kf7 Kd7 37. e6+ )36. Kd7 Kf7 37. e6+ *

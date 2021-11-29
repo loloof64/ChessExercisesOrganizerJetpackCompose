@@ -83,15 +83,15 @@ tag_value
  
 /// <movetext-section> ::= <element-sequence> <game-termination>
 movetext_section
- : element_sequence SPACE+ game_termination
+ : element_sequence SPACE* game_termination
  ;
 
 /// <element-sequence> ::= <element> <element-sequence>
 ///                        <recursive-variation> <element-sequence>
 ///                        <empty>
 element_sequence
- : element SPACE+ element_sequence              # elementRecurElementSequence
- | recursive_variation SPACE+ element_sequence  # variationRecurElementSequence
+ : element SPACE* element_sequence              # elementRecurElementSequence
+ | recursive_variation SPACE* element_sequence  # variationRecurElementSequence
  | element                                      # singleElementRecurElementSequence
  | recursive_variation                          # singleRecurVariationRecurElementSequence
  |                                              # emptyElementSequence
@@ -209,7 +209,7 @@ INTEGER
 /// A period character (".") is a token by itself.  It is used for move number
 /// indications (see below).  It is self terminating.
 PERIOD
- : '.'
+ : '.'+
  ;
 
 /// An asterisk character ("*") is a token by itself.  It is used as one of the

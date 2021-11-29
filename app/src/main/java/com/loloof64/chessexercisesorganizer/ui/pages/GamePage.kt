@@ -55,6 +55,7 @@ class GamePageViewModel : ViewModel() {
 
 @Composable
 fun GamePage(
+    navController: NavController,
     gamePageViewModel: GamePageViewModel = viewModel(),
     stockfishLib: StockfishLib,
 ) {
@@ -191,16 +192,16 @@ fun GamePage(
 
     fun doStartNewGame() {
         try {
-            val inputStream = context.assets.open("dummy_sample.pgn")
+            val inputStream = context.assets.open("pgn/dummy_sample.pgn")
             val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
-            val selectedGameIndex = 1
+
+            val selectedGameIndex = 13
             val selectedGame = gamesData[selectedGameIndex]
 
             val startFen =
-                if (selectedGame.fenStartPosition != null) selectedGame.fenStartPosition else Board.FEN_START_POSITION
-
+                if (selectedGame.tags.containsKey("FEN")) selectedGame.tags["FEN"]!! else Board.FEN_START_POSITION
 
             // First we ensure that position is valid when initializing the board
             gamePageViewModel.boardState.newGame(startFen)

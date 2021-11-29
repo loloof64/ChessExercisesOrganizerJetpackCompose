@@ -32,6 +32,6 @@ class MainActivity : AppCompatActivity() {
 fun MainContent(stockfishLib: StockfishLib) {
     val navController = rememberNavController()
     NavHost(navController, startDestination = "game") {
-        composable("game") { GamePage(stockfishLib =  stockfishLib) }
+        composable("game") { GamePage(navController = navController, stockfishLib =  stockfishLib) }
     }
 }

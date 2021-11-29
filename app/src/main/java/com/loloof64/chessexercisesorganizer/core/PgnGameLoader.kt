@@ -2,6 +2,7 @@ package com.loloof64.chessexercisesorganizer.core
 
 import com.alonsoruibal.chess.pgn.Game
 import com.alonsoruibal.chess.pgn.PgnParser
+import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGamesListener
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNLexer
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNParser
@@ -12,7 +13,7 @@ import java.io.StringReader
 
 
 class PgnGameLoader {
-    fun load(gamesFileContent: String): List<Game> {
+    fun load(gamesFileContent: String): List<PGNGame> {
         val charStream = CharStreams.fromReader(StringReader(gamesFileContent))
         val lexer = PGNLexer(charStream)
         val tokens = CommonTokenStream(lexer)
@@ -20,12 +21,9 @@ class PgnGameLoader {
         val tree = parser.parse()
 
         val walker = ParseTreeWalker()
-        val extractor = PGNGamesListener(parser)
+        val extractor = PGNGamesListener()
         walker.walk(extractor, tree)
 
-        val gamesStrings = extractor.gamesStrings
-        return gamesStrings.map {
-            PgnParser.parsePgn(it)
-        }
+        return extractor.getGames()
     }
 }
