@@ -55,4 +55,7 @@
     <string name="next_position">Position suivante</string>
     <string name="last_position">Dernière position</string>
     <string name="game_loading_error">Echec lors du chargement des parties !</string>
+    <string name="solution_mode">Mode solution</string>
+    <string name="played_game_mode">Mode partie</string>
+    <string name="toggle_history_mode">Basculer le mode</string>
 </resources>

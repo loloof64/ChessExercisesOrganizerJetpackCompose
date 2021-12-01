@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.ArrowRight
 import androidx.compose.material.icons.filled.FirstPage
 import androidx.compose.material.icons.filled.LastPage
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.flowlayout.FlowRow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
 import com.alonsoruibal.chess.bitboard.BitboardUtils
@@ -182,6 +184,8 @@ fun MovesNavigatorButtons(
 fun MovesNavigator(
     modifier: Modifier = Modifier,
     elements: Array<MovesNavigatorElement>,
+    isInSolutionMode: Boolean = false,
+    modeSelectionActive: Boolean = false,
     mustBeVisibleByDefaultElementIndex: Int? = null,
     highlightedItemIndex: Int? = null,
     elementSelectionRequestCallback: (Triple<String, MoveData, Int>) -> Unit = { _ -> },
@@ -189,11 +193,17 @@ fun MovesNavigator(
     handleLastPositionRequest: () -> Unit = {},
     handlePreviousPositionRequest: () -> Unit = {},
     handleNextPositionRequest: () -> Unit = {},
+    historyModeToggleRequestHandler: () -> Unit = {},
 ) {
     val lineHeightPixels = with(LocalDensity.current) { 34.sp.toPx() }
     val scrollAmount =
         if (mustBeVisibleByDefaultElementIndex != null) ((mustBeVisibleByDefaultElementIndex / 6) * lineHeightPixels).toInt() else 0
     val vertScrollState = ScrollState(scrollAmount)
+
+    val modeTextID = if (isInSolutionMode) R.string.solution_mode else R.string.played_game_mode
+    val modeText = stringResource(id = modeTextID)
+    
+    val toggleHistoryModeText = stringResource(id = R.string.toggle_history_mode)
 
     Column(
         modifier = modifier
@@ -205,6 +215,34 @@ fun MovesNavigator(
             handleNextPositionRequest = handleNextPositionRequest,
             handleLastPositionRequest = handleLastPositionRequest
         )
+
+        if (modeSelectionActive) {
+
+            Row(horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = modeText,
+                    fontSize = 18.sp,
+                    color = Color.Red,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth(0.40f)
+                        .background(Color.Blue)
+                        .padding(horizontal = 3.dp)
+                )
+
+                Button(
+                    onClick = historyModeToggleRequestHandler,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Yellow),
+                    modifier = Modifier.padding(horizontal = 3.dp)
+                ) {
+                    Text(text = toggleHistoryModeText, fontSize = 18.sp, color = Color.Red)
+                }
+            }
+
+
+        }
 
         FlowRow(
             modifier = Modifier

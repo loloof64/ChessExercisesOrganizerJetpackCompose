@@ -51,6 +51,7 @@ class GamePageViewModel : ViewModel() {
     var boardState = DynamicBoardDataHandler()
     var movesElements = mutableListOf<MovesNavigatorElement>()
     var currentGame = PgnGameLoader()
+    var currentSolution: List<MovesNavigatorElement> = listOf()
 }
 
 @Composable
@@ -114,6 +115,10 @@ fun GamePage(
 
     var blackSideType by rememberSaveable {
         mutableStateOf(PlayerType.Human)
+    }
+
+    var isInSolutionMode by rememberSaveable {
+        mutableStateOf(false)
     }
 
     val isLandscape = when (LocalConfiguration.current.orientation) {
@@ -204,9 +209,13 @@ fun GamePage(
                 val solutionHistory = buildHistoryFromPGNGame(selectedGame)
 
                 if (solutionHistory.isNotEmpty()) {
-                    // TODO store solution
+                    gamePageViewModel.currentSolution = solutionHistory
+                } else {
+                    gamePageViewModel.currentSolution = listOf()
                 }
             } catch (ex: Exception) {
+                gamePageViewModel.currentSolution = listOf()
+
                 println(ex)
                 // TODO notify user
             }
@@ -340,6 +349,8 @@ fun GamePage(
                     val hasReachedLastNode =
                         targetNodeIndex >= gamePageViewModel.movesElements.size.dec()
                     if (hasReachedLastNode) {
+                        // We may be past the last node when starting the next loop.
+                        targetNodeIndex = gamePageViewModel.movesElements.size.dec()
                         // Searching back for the last node with a position defined
                         do {
                             val positionData = gamePageViewModel.movesElements[targetNodeIndex]
@@ -473,6 +484,15 @@ fun GamePage(
         handleNaturalEndgame()
     }
 
+    fun toggleHistoryMode() {
+        val isInInitialPosition = gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+        val modeSelectionNotActive = isInInitialPosition || gameInProgress
+        if (modeSelectionNotActive) return
+
+        highlightedHistoryItemIndex = null
+        isInSolutionMode = !isInSolutionMode
+    }
+
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
             scaffoldState = scaffoldState,
@@ -537,7 +557,14 @@ fun GamePage(
                                 },
                             )
 
-                            val elements = gamePageViewModel.movesElements.toTypedArray()
+                            val isInInitialPosition =
+                                gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+                            val modeSelectionActive = !isInInitialPosition && !gameInProgress
+                            val elements =
+                                if (modeSelectionActive && isInSolutionMode)
+                                    gamePageViewModel.currentSolution.toTypedArray()
+                                else gamePageViewModel.movesElements.toTypedArray()
+
                             MovesNavigator(
                                 elements = elements,
                                 mustBeVisibleByDefaultElementIndex =
@@ -549,7 +576,12 @@ fun GamePage(
                                 handleFirstPositionRequest = { selectFirstPosition() },
                                 handleLastPositionRequest = { selectLastPosition() },
                                 handlePreviousPositionRequest = { selectPreviousPosition() },
-                                handleNextPositionRequest = { selectNextPosition() }
+                                handleNextPositionRequest = { selectNextPosition() },
+                                historyModeToggleRequestHandler = {
+                                    toggleHistoryMode()
+                                },
+                                isInSolutionMode = isInSolutionMode,
+                                modeSelectionActive = modeSelectionActive,
                             )
 
                             ConfirmNewGameDialog(

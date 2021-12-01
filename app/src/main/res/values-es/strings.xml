@@ -55,4 +55,7 @@
     <string name="next_position">Siguiente posición</string>
     <string name="last_position">Ultima posición</string>
     <string name="game_loading_error">¡No se pudieron cargar los juegos desde el archivo!</string>
+    <string name="solution_mode">Modo solución</string>
+    <string name="played_game_mode">Modo juego</string>
+    <string name="toggle_history_mode">Alternar el modo</string>
 </resources>

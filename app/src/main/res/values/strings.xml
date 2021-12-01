@@ -54,4 +54,7 @@
     <string name="next_position">Next position</string>
     <string name="last_position">Last position</string>
     <string name="game_loading_error">Failed to load games from file !</string>
+    <string name="solution_mode">Solution mode</string>
+    <string name="played_game_mode">Game mode</string>
+    <string name="toggle_history_mode">Toggle mode</string>
 </resources>

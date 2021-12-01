@@ -164,3 +164,16 @@
 
 35... Kd8 ( 35... Kf8 36. Kd7 Kf7 37. e6+ )36. Kf7 Kd7 ( 36... Kc7 37. e6 Kd6
 38. e7 )37. e6+ *
+
+[Event ""]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result ""]
+[FEN "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2"]
+[Setup "1"]
+
+2. exd5 Qxd5 ( 2... Nf6 3. c4 ( 3. d4 Nxd5 4. c4 Nb6 )3... e6 4. dxe6 Bxe6 )3.
+Nc3 Qa5 4. d4 *
