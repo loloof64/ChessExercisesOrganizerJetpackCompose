@@ -200,6 +200,17 @@ fun GamePage(
             val selectedGameIndex = 13
             val selectedGame = gamesData[selectedGameIndex]
 
+            try {
+                val solutionHistory = buildHistoryFromPGNGame(selectedGame)
+
+                if (solutionHistory.isNotEmpty()) {
+                    // TODO store solution
+                }
+            } catch (ex: Exception) {
+                println(ex)
+                // TODO notify user
+            }
+
             val startFen =
                 if (selectedGame.tags.containsKey("FEN")) selectedGame.tags["FEN"]!! else Board.FEN_START_POSITION
 

@@ -1,24 +1,40 @@
 package com.loloof64.chessexercisesorganizer.core.pgnparser
 
+enum class GameTermination {
+    WhiteWon,
+    BlackWon,
+    Draw,
+    NotKnown,
+}
+
 data class PGNNode(
     var moveValue: String,
     var whiteMove: Boolean,
     var moveNumber: Int,
     var nextNode: PGNNode? = null,
-    val variations: MutableList<PGNNode> = mutableListOf()
+    val variations: MutableList<PGNNode> = mutableListOf(),
+    var gameTermination: GameTermination? = null
 )
+
 data class PGNGame(val tags: MutableMap<String, String>, val moves: PGNNode?)
 data class PGN(val games: MutableList<PGNGame> = mutableListOf())
 
-class PGNGamesListener() : PGNBaseListener() {
-    lateinit var pgn:PGN
-    private var variationDepth = 0
-    private var moveNumberStack = mutableListOf<Int>()
-    private var whiteMoveStack = mutableListOf<Boolean>()
-    private var variationRootStack = mutableListOf<PGNNode>()
-    private var variationCurrentNodeStack = mutableListOf<PGNNode>()
+class PGNGamesListener : PGNBaseListener() {
+    lateinit var pgn: PGN
     private var currentTags = mutableMapOf<String, String>()
     private val games = mutableListOf<PGNGame>()
+
+    private var variationDepth = 0
+    // Needing this in order to add all variations - which root node is head - to the different parents nodes
+    private var rootNodesStack = mutableListOf<PGNNode?>()
+    // Needing this in order to be up to date in each level
+    private var currentNodesStack = mutableListOf<PGNNode?>()
+    // Needing this in order to add variations in the correct node in each level
+    private var variationsPreviousNodeStack = mutableListOf<PGNNode?>()
+    // Needing this in order to keep all current move numbers in each level
+    private var moveNumberStack = mutableListOf<Int>()
+    // Needing this in order to keep all white turn in each level
+    private var whiteTurnStack = mutableListOf<Boolean>()
 
     fun getGames() = games
 
@@ -37,16 +53,27 @@ class PGNGamesListener() : PGNBaseListener() {
     override fun enterPgn_game(ctx: PGNParser.Pgn_gameContext?) {
         if (ctx == null) return
 
+        variationDepth = 0
         currentTags = mutableMapOf()
+        rootNodesStack = mutableListOf()
+        currentNodesStack = mutableListOf()
+        moveNumberStack = mutableListOf()
+        whiteTurnStack = mutableListOf()
+        variationsPreviousNodeStack = mutableListOf()
     }
 
     override fun exitPgn_game(ctx: PGNParser.Pgn_gameContext?) {
         if (ctx == null) return
 
-        games.add(PGNGame(tags = currentTags, moves = if (variationRootStack.isEmpty()) null else variationRootStack[0]))
+        games.add(
+            PGNGame(
+                tags = currentTags,
+                moves = if (rootNodesStack.isNotEmpty() && rootNodesStack[0] != null) rootNodesStack[0] else null
+            )
+        )
     }
 
-    override fun enterTag_pair(ctx: PGNParser.Tag_pairContext?) {
+    override fun exitTag_pair(ctx: PGNParser.Tag_pairContext?) {
         if (ctx == null) return
 
         val tagName = ctx.tag_name().text
@@ -59,67 +86,137 @@ class PGNGamesListener() : PGNBaseListener() {
         currentTags[tagName] = tagValue
     }
 
-    override fun enterMovetext_section(ctx: PGNParser.Movetext_sectionContext?) {
+    override fun exitMovetext_section(ctx: PGNParser.Movetext_sectionContext?) {
         if (ctx == null) return
 
-        variationDepth = 0
-        moveNumberStack = mutableListOf(1)
-        whiteMoveStack = mutableListOf(true)
-        variationRootStack = mutableListOf()
-        variationCurrentNodeStack = mutableListOf()
-    }
+        val gameTermination = when (ctx.game_termination().text) {
+            "1-0" -> GameTermination.WhiteWon
+            "0-1" -> GameTermination.BlackWon
+            "1/2-1/2" -> GameTermination.Draw
+            else -> GameTermination.NotKnown
+        }
 
-    override fun exitMovetext_section(ctx: PGNParser.Movetext_sectionContext?) {
-        super.exitMovetext_section(ctx)
+        if (currentNodesStack.isNotEmpty() && currentNodesStack[variationDepth] != null) {
+            currentNodesStack[variationDepth]!!.gameTermination = gameTermination
+        }
     }
 
     override fun exitMove_number_indication(ctx: PGNParser.Move_number_indicationContext?) {
         if (ctx == null) return
 
-        val number = Integer.parseInt(ctx.INTEGER().text)
-        val threePeriods = ctx.PERIOD().text.length >= 3
-        /////////////////////////////////
-        println("$number => $threePeriods")
-        /////////////////////////////////
-        moveNumberStack[variationDepth] = number
-        whiteMoveStack[variationDepth] = !threePeriods
+        val moveNumber = Integer.parseInt(ctx.INTEGER().text)
+        val periods = ctx.PERIOD()?.text ?: ""
+        val isWhiteTurn = periods.length < 3
+
+        val currentLevelHasNoMoveNumberYet = moveNumberStack.size < variationDepth + 1
+        if (currentLevelHasNoMoveNumberYet) {
+            moveNumberStack.add(moveNumber)
+        }
+        else {
+            moveNumberStack[variationDepth] = moveNumber
+        }
+
+        val currentLevelHasNoWhiteTurnYet = whiteTurnStack.size < variationDepth + 1
+        if (currentLevelHasNoWhiteTurnYet) {
+            whiteTurnStack.add(isWhiteTurn)
+        }
+        else {
+            whiteTurnStack[variationDepth] = isWhiteTurn
+        }
     }
 
     override fun exitSan_move(ctx: PGNParser.San_moveContext?) {
         if (ctx == null) return
 
-        val moveText = ctx.SYMBOL().text
-        val node = PGNNode(
-            whiteMove = whiteMoveStack[variationDepth],
-            moveValue = moveText,
-            moveNumber = moveNumberStack[variationDepth],
+        val moveSanText = ctx.SYMBOL().text
+        val newNode = PGNNode(
+            moveValue = moveSanText,
+            whiteMove = whiteTurnStack[variationDepth],
+            moveNumber =  moveNumberStack[variationDepth],
         )
-        if (variationRootStack.isEmpty() || variationRootStack.size < (variationDepth + 1)) variationRootStack.add(node)
-        if (variationCurrentNodeStack.isEmpty() || variationCurrentNodeStack.size < (variationDepth + 1)) {
-            variationCurrentNodeStack.add(node)
-        } else {
-            // Build up the linked list
-            variationCurrentNodeStack[variationDepth].nextNode = node
-            // Point to the new node
-            variationCurrentNodeStack[variationDepth] = node
+
+        val noRootDefinedForCurrentLevel = rootNodesStack.size < variationDepth + 1
+        if (noRootDefinedForCurrentLevel) {
+            rootNodesStack.add(newNode)
+        }
+        // Here we are sure that the variation has already at least one san node.
+        else if (rootNodesStack[variationDepth] == null) {
+            rootNodesStack[variationDepth] = variationsPreviousNodeStack[variationDepth]
         }
 
-        whiteMoveStack[variationDepth] = !whiteMoveStack[variationDepth]
+        val noCurrentNodeDefinedForCurrentLevel = currentNodesStack.size < variationDepth + 1
+        when {
+            noCurrentNodeDefinedForCurrentLevel -> {
+                currentNodesStack.add(newNode)
+            }
+            // Current node not attributed yet for current level
+            currentNodesStack[variationDepth] == null -> {
+                currentNodesStack[variationDepth] = newNode
+            }
+            else -> {
+                // Building up the linked list
+                currentNodesStack[variationDepth]!!.nextNode = newNode
+
+                // Pointing to the new node
+                currentNodesStack[variationDepth] = newNode
+            }
+        }
+
+        // Updating old node
+        if (variationsPreviousNodeStack.isEmpty()) {
+            variationsPreviousNodeStack.add(null)
+        }
+        else {
+            // We are sure that the newNode variable has now become the old node
+            variationsPreviousNodeStack[variationDepth] = newNode
+        }
+
+        // Updating white turn
+        whiteTurnStack[variationDepth] = !whiteTurnStack[variationDepth]
     }
 
     override fun enterRecursive_variation(ctx: PGNParser.Recursive_variationContext?) {
         if (ctx == null) return
 
         variationDepth++
-        moveNumberStack.add(1)
-        whiteMoveStack.add(true)
+        val currentLevelHasNoPreviousMoveYet = variationsPreviousNodeStack.size < variationDepth + 1
+        if (currentLevelHasNoPreviousMoveYet) {
+            variationsPreviousNodeStack.add(null)
+        }
+        else {
+            variationsPreviousNodeStack[variationDepth] = null
+        }
+
+        val noRootForCurrentLevel = rootNodesStack.size < variationDepth + 1
+        if (noRootForCurrentLevel) {
+            rootNodesStack.add(null)
+        }
+        else {
+            rootNodesStack[variationDepth] = null
+        }
+
+        val noCurrentNodeForCurrentLevel = currentNodesStack.size < variationDepth + 1
+        if (noCurrentNodeForCurrentLevel) {
+            currentNodesStack.add(null)
+        }
+        else {
+            currentNodesStack[variationDepth] = null
+        }
     }
 
     override fun exitRecursive_variation(ctx: PGNParser.Recursive_variationContext?) {
         if (ctx == null) return
 
-        val variationToAdd = variationRootStack[variationDepth]
+        // Asserting that each variation has at least one move san
+        val currentVariationRoot = rootNodesStack[variationDepth]!!
         variationDepth--
-        variationCurrentNodeStack[variationDepth].variations.add(variationToAdd)
+        // We add variations to the previous node of current variation if possible
+        if (variationsPreviousNodeStack[variationDepth] != null) {
+            variationsPreviousNodeStack[variationDepth]!!.variations.add(currentVariationRoot)
+        }
+        // Otherwise add to the root node of the current variation, now that we're back one level
+        else {
+            rootNodesStack[variationDepth]?.variations?.add(currentVariationRoot)
+        }
     }
 }
