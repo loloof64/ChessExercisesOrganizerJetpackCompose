@@ -296,11 +296,13 @@ fun GamePage(
         if (!gameInProgress) {
             var targetNodeIndex: Int = highlightedHistoryItemIndex ?: return
             val lastMoveArrowData: MoveData?
+            var currentVariationLevel = selectedNodeVariationLevel
 
             var fen: String? = null
             do {
                 targetNodeIndex -= 1
-                if (targetNodeIndex < 0) {
+                val weAreBeforeTheVeryFirstNode = targetNodeIndex < 0
+                if (weAreBeforeTheVeryFirstNode) {
                     // We prevent the index to be too low.
                     targetNodeIndex = -1
                     break
@@ -308,10 +310,14 @@ fun GamePage(
 
                 val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[targetNodeIndex] else gamePageViewModel.movesElements[targetNodeIndex]
                 fen = positionData.fen
-            } while (fen == null)
+                if (positionData.text == ")") currentVariationLevel++
+                else if (positionData.text == "(") currentVariationLevel--
+            } while ((fen == null) || (currentVariationLevel > selectedNodeVariationLevel))
 
-            if (targetNodeIndex < 0) {
+            val weAreBeforeTheVeryFirstNode = targetNodeIndex < 0
+            if (weAreBeforeTheVeryFirstNode) {
                 fen = startPosition
+                targetNodeIndex = -1
                 lastMoveArrowData = null
             } else {
                 val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[targetNodeIndex] else gamePageViewModel.movesElements[targetNodeIndex]
