@@ -140,7 +140,7 @@
 
 *
 
-[Event "Endgame training"]
+[Event "Solution test #1 - index 12"]
 [Site "?"]
 [Date "????.??.??"]
 [Round "?"]
@@ -152,7 +152,7 @@
 
 *
 
-[Event ""]
+[Event "Solution test #2 - index 13"]
 [Site ""]
 [Date ""]
 [Round ""]
@@ -165,7 +165,7 @@
 35... Kd8 ( 35... Kf8 36. Kd7 Kf7 37. e6+ )36. Kf7 Kd7 ( 36... Kc7 37. e6 Kd6
 38. e7 )37. e6+ *
 
-[Event ""]
+[Event "Solution test #3 - index 14"]
 [Site ""]
 [Date ""]
 [Round ""]
@@ -177,3 +177,15 @@
 
 2. exd5 Qxd5 ( 2... Nf6 3. c4 ( 3. d4 Nxd5 4. c4 Nb6 )3... e6 4. dxe6 Bxe6 )3.
 Nc3 Qa5 4. d4 *
+
+[Event "Solution test #4 - index 15"]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result ""]
+[FEN "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"]
+[Setup "1"]
+
+1... e5 2. Nf3 Nc6 ( 2... Nf6)( 2... f5)( 2... d5) *

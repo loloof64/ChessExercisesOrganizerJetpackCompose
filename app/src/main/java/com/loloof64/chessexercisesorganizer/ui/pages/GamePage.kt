@@ -121,6 +121,14 @@ fun GamePage(
         mutableStateOf(false)
     }
 
+    /* When going to next position, or last position,
+        we want to match as many parenthesis as needed, in order to
+        pass through variations starting at current level.
+     */
+    var selectedNodeVariationLevel by rememberSaveable {
+        mutableStateOf(0)
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -151,17 +159,17 @@ fun GamePage(
 
     fun selectLastPosition() {
         if (!gameInProgress) {
-            var lastHistoryElementIndex = gamePageViewModel.movesElements.size.dec()
+            var lastHistoryElementIndex = if (isInSolutionMode) gamePageViewModel.currentSolution.size.dec() else gamePageViewModel.movesElements.size.dec()
             while (true) {
                 if (lastHistoryElementIndex <= 0) break
 
-                val currentHistoryNode = gamePageViewModel.movesElements[lastHistoryElementIndex]
+                val currentHistoryNode = if (isInSolutionMode) gamePageViewModel.currentSolution[lastHistoryElementIndex] else gamePageViewModel.movesElements[lastHistoryElementIndex]
                 val isAPositionNode = currentHistoryNode.fen != null
                 if (isAPositionNode) break
 
                 lastHistoryElementIndex = lastHistoryElementIndex.dec()
             }
-            val positionData = gamePageViewModel.movesElements[lastHistoryElementIndex]
+            val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[lastHistoryElementIndex] else gamePageViewModel.movesElements[lastHistoryElementIndex]
             val fen = positionData.fen
             val lastMoveArrowData = positionData.lastMoveArrowData
             if (fen != null) {
@@ -245,6 +253,8 @@ fun GamePage(
             highlightedHistoryItemIndex = null
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
 
+            isInSolutionMode = false
+
             gamePageViewModel.pageState.gameInProgress = true
             gameInProgress = true
 
@@ -296,7 +306,7 @@ fun GamePage(
                     break
                 }
 
-                val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[targetNodeIndex] else gamePageViewModel.movesElements[targetNodeIndex]
                 fen = positionData.fen
             } while (fen == null)
 
@@ -304,7 +314,7 @@ fun GamePage(
                 fen = startPosition
                 lastMoveArrowData = null
             } else {
-                val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[targetNodeIndex] else gamePageViewModel.movesElements[targetNodeIndex]
                 lastMoveArrowData = positionData.lastMoveArrowData
             }
 
@@ -322,14 +332,15 @@ fun GamePage(
     fun selectNextPosition() {
         if (!gameInProgress) {
             var lastMoveArrowData: MoveData?
-
+            var currentVariationLevel = selectedNodeVariationLevel
 
             val noPositionCurrentlySelected = highlightedHistoryItemIndex == null
+            // Select the first move if no move currently selected
             if (noPositionCurrentlySelected) {
-                val thereIsAtLeastOneMove = gamePageViewModel.movesElements.size > 1
+                val thereIsAtLeastOneMove = if (isInSolutionMode) gamePageViewModel.currentSolution.size > 1 else gamePageViewModel.movesElements.size > 1
                 if (thereIsAtLeastOneMove) {
                     val nodeIndex = 1
-                    val positionData = gamePageViewModel.movesElements[nodeIndex]
+                    val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[nodeIndex] else gamePageViewModel.movesElements[nodeIndex]
                     val fen = positionData.fen
                     lastMoveArrowData = positionData.lastMoveArrowData
 
@@ -340,31 +351,39 @@ fun GamePage(
                     lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
                     highlightedHistoryItemIndex = nodeIndex
                 }
-            } else {
+            }
+            // A move is currently selected
+            else {
                 var targetNodeIndex: Int = highlightedHistoryItemIndex!!
                 var fen: String?
 
                 do {
                     targetNodeIndex += 1
                     val hasReachedLastNode =
-                        targetNodeIndex >= gamePageViewModel.movesElements.size.dec()
+                        targetNodeIndex >= (if (isInSolutionMode) gamePageViewModel.currentSolution.size.dec() else gamePageViewModel.movesElements.size.dec())
                     if (hasReachedLastNode) {
                         // We may be past the last node when starting the next loop.
-                        targetNodeIndex = gamePageViewModel.movesElements.size.dec()
+                        targetNodeIndex = if (isInSolutionMode) gamePageViewModel.currentSolution.size.dec() else gamePageViewModel.movesElements.size.dec()
                         // Searching back for the last node with a position defined
                         do {
-                            val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                            val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[targetNodeIndex] else gamePageViewModel.movesElements[targetNodeIndex]
+                            // We go backward : so ')' increases the variations level counter
+                            if (positionData.text == ")") currentVariationLevel++
+                            else if (positionData.text == "(") currentVariationLevel--
                             fen = positionData.fen
-                            if (fen != null) break
+
+                            if ((fen != null) && (currentVariationLevel == selectedNodeVariationLevel)) break
                             targetNodeIndex -= 1
                         } while (targetNodeIndex >= 0)
                     }
 
-                    val positionData = gamePageViewModel.movesElements[targetNodeIndex]
+                    val positionData = if (isInSolutionMode) gamePageViewModel.currentSolution[targetNodeIndex] else gamePageViewModel.movesElements[targetNodeIndex]
+                    // We go forward : so '(' increases the variations level counter
+                    if (positionData.text == "(") currentVariationLevel++
+                    else if (positionData.text == ")") currentVariationLevel--
                     fen = positionData.fen
 
-                    val positionDefined = fen != null
-                    if (positionDefined) {
+                    if ((fen != null) && (currentVariationLevel == selectedNodeVariationLevel)) {
                         lastMoveArrowData = positionData.lastMoveArrowData
 
                         gamePageViewModel.boardState.setCurrentPosition(fen!!)
@@ -374,7 +393,7 @@ fun GamePage(
                         lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
                         highlightedHistoryItemIndex = targetNodeIndex
                     }
-                } while (fen == null)
+                } while ((fen == null) || (currentVariationLevel != selectedNodeVariationLevel))
             }
         }
     }
@@ -490,6 +509,7 @@ fun GamePage(
         if (modeSelectionNotActive) return
 
         highlightedHistoryItemIndex = null
+        selectedNodeVariationLevel = 0
         isInSolutionMode = !isInSolutionMode
     }
 

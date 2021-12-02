@@ -229,13 +229,13 @@ fun MovesNavigator(
                     modifier = Modifier
                         .fillMaxWidth(0.40f)
                         .background(Color.Blue)
-                        .padding(horizontal = 3.dp)
+                        .padding(horizontal = 10.dp)
                 )
 
                 Button(
                     onClick = historyModeToggleRequestHandler,
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Yellow),
-                    modifier = Modifier.padding(horizontal = 3.dp)
+                    modifier = Modifier.padding(horizontal = 10.dp)
                 ) {
                     Text(text = toggleHistoryModeText, fontSize = 18.sp, color = Color.Red)
                 }

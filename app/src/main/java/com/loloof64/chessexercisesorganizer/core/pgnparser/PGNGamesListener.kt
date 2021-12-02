@@ -139,9 +139,8 @@ class PGNGamesListener : PGNBaseListener() {
         if (noRootDefinedForCurrentLevel) {
             rootNodesStack.add(newNode)
         }
-        // Here we are sure that the variation has already at least one san node.
         else if (rootNodesStack[variationDepth] == null) {
-            rootNodesStack[variationDepth] = variationsPreviousNodeStack[variationDepth]
+            rootNodesStack[variationDepth] = newNode
         }
 
         val noCurrentNodeDefinedForCurrentLevel = currentNodesStack.size < variationDepth + 1
