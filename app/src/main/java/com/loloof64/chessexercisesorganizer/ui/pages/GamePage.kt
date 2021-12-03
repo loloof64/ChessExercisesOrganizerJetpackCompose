@@ -133,6 +133,10 @@ fun GamePage(
         mutableStateOf(0)
     }
 
+    var solutionAvailable by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -404,6 +408,8 @@ fun GamePage(
                 // TODO notify user
             }
 
+            solutionAvailable = gamePageViewModel.currentSolution.isNotEmpty()
+
             val startFen =
                 if (selectedGame.tags.containsKey("FEN")) selectedGame.tags["FEN"]!! else Board.FEN_START_POSITION
 
@@ -628,8 +634,6 @@ fun GamePage(
         selectedNodeVariationLevel = 0
         isInSolutionMode = !isInSolutionMode
     }
-
-    val solutionAvailable = gamePageViewModel.currentSolution.isNotEmpty()
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
