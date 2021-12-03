@@ -386,7 +386,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 15
+            val selectedGameIndex = 12
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
@@ -615,6 +615,9 @@ fun GamePage(
         val modeSelectionNotActive = isInInitialPosition || gameInProgress
         if (modeSelectionNotActive) return
 
+        val noSolutionAvailable = gamePageViewModel.currentSolution.isEmpty()
+        if (noSolutionAvailable) return
+
         gamePageViewModel.boardState.clearLastMoveArrow()
         gamePageViewModel.boardState.setCurrentPosition(startPosition)
 
@@ -625,6 +628,8 @@ fun GamePage(
         selectedNodeVariationLevel = 0
         isInSolutionMode = !isInSolutionMode
     }
+
+    val solutionAvailable = gamePageViewModel.currentSolution.isNotEmpty()
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
@@ -714,7 +719,7 @@ fun GamePage(
                                     toggleHistoryMode()
                                 },
                                 isInSolutionMode = isInSolutionMode,
-                                modeSelectionActive = modeSelectionActive,
+                                modeSelectionActive = modeSelectionActive && solutionAvailable,
                             )
 
                             ConfirmNewGameDialog(
