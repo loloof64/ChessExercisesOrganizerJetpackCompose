@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.flowlayout.FlowRow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.alonsoruibal.chess.Board
 import com.alonsoruibal.chess.Move
@@ -188,6 +189,7 @@ fun MovesNavigator(
     modeSelectionActive: Boolean = false,
     mustBeVisibleByDefaultElementIndex: Int? = null,
     highlightedItemIndex: Int? = null,
+    failedToLoadSolution: Boolean = false,
     elementSelectionRequestCallback: (Triple<String, MoveData, Int>) -> Unit = { _ -> },
     handleFirstPositionRequest: () -> Unit = {},
     handleLastPositionRequest: () -> Unit = {},
@@ -216,7 +218,17 @@ fun MovesNavigator(
             handleLastPositionRequest = handleLastPositionRequest
         )
 
-        if (modeSelectionActive) {
+        if (failedToLoadSolution) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.failed_loading_solution),
+                    fontSize = 18.sp,
+                    color = Color.Red,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        else if (modeSelectionActive) {
 
             Row(horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,

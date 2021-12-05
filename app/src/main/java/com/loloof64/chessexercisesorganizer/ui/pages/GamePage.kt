@@ -137,6 +137,10 @@ fun GamePage(
         mutableStateOf(false)
     }
 
+    var failedToLoadSolution by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -152,6 +156,7 @@ fun GamePage(
     val missingMaterialText = stringResource(R.string.missing_material_draw)
     val gameStoppedMessage = stringResource(R.string.user_stopped_game)
     val gamesLoadingErrorMessage = stringResource(R.string.game_loading_error)
+    val failedLoadingSolutionMessage = stringResource(R.string.failed_loading_solution)
 
     val context = LocalContext.current
 
@@ -405,11 +410,12 @@ fun GamePage(
                 } else {
                     gamePageViewModel.currentSolution = listOf()
                 }
+                failedToLoadSolution = false
             } catch (ex: Exception) {
                 gamePageViewModel.currentSolution = listOf()
+                failedToLoadSolution = true
 
                 println(ex)
-                // TODO notify user
             }
 
             solutionAvailable = gamePageViewModel.currentSolution.isNotEmpty()
@@ -736,6 +742,7 @@ fun GamePage(
                                 },
                                 isInSolutionMode = isInSolutionMode,
                                 modeSelectionActive = modeSelectionActive && solutionAvailable,
+                                failedToLoadSolution = failedToLoadSolution,
                             )
 
                             ConfirmNewGameDialog(
