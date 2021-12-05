@@ -58,4 +58,5 @@
     <string name="played_game_mode">Game mode</string>
     <string name="toggle_history_mode">Toggle mode</string>
     <string name="failed_loading_solution">Illegal solution move(s) !</string>
+    <string name="illegal_start_position">Illegal start position !</string>
 </resources>

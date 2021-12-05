@@ -53,6 +53,8 @@ data class HalfMoveSAN(
     override val lastMoveArrowData: MoveData? = null
 ) : MovesNavigatorElement(text, fen, lastMoveArrowData)
 
+class GamesLoadingException(cause: Throwable) : Exception(cause)
+
 fun buildHistoryFromPGNGame(game: PGNGame): List<MovesNavigatorElement> {
     val gameState = (game.tags["FEN"] ?: Board.FEN_START_POSITION).toBoard()
 
@@ -63,7 +65,7 @@ fun buildHistoryFromPGNGame(game: PGNGame): List<MovesNavigatorElement> {
             currentGameState = gameState
         ) else listOf()
     } catch (ex: Exception) {
-        throw ex
+        throw GamesLoadingException(ex)
     }
 }
 

@@ -156,7 +156,7 @@ fun GamePage(
     val missingMaterialText = stringResource(R.string.missing_material_draw)
     val gameStoppedMessage = stringResource(R.string.user_stopped_game)
     val gamesLoadingErrorMessage = stringResource(R.string.game_loading_error)
-    val failedLoadingSolutionMessage = stringResource(R.string.failed_loading_solution)
+    val illegalStartPositionMessage = stringResource(R.string.illegal_start_position)
 
     val context = LocalContext.current
 
@@ -399,7 +399,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 18
+            val selectedGameIndex = 17
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
@@ -451,7 +451,11 @@ fun GamePage(
             gameInProgress = true
 
             handleNaturalEndgame()
-        } catch (ex: Exception) {
+        }
+        catch (ex: IllegalPositionException) {
+            showMinutedSnackbarAction(illegalStartPositionMessage, SnackbarDuration.Short)
+        }
+        catch (ex: GamesLoadingException) {
             ex.printStackTrace()
             showMinutedSnackbarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
         }

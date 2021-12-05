@@ -59,4 +59,5 @@
     <string name="played_game_mode">Mode partie</string>
     <string name="toggle_history_mode">Basculer le mode</string>
     <string name="failed_loading_solution">Coup(s) illégal(gaux) dans la solution !</string>
+    <string name="illegal_start_position">Position de départ illégale !</string>
 </resources>
