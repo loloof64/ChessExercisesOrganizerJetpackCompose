@@ -189,3 +189,40 @@ Nc3 Qa5 4. d4 *
 [Setup "1"]
 
 1... e5 2. Nf3 Nc6 ( 2... Nf6)( 2... f5)( 2... d5) *
+
+[Event "Index 16"]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result ""]
+[FEN "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2"]
+[Setup "1"]
+
+2. exd5 { Classical variation of Scandinavian defense}  2... Qxd5 3. Nc3 Qd8 4.
+d4 $1 { Main variation}  ( 4. Nf3) *
+
+[Event "Illegal position - index 17"]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result ""]
+[FEN "rnbqkbnr/pppppppp/8/4P3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"]
+[Setup "1"]
+
+1... Nc6 *
+
+[Event "Illegal move - index 18"]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result ""]
+[FEN "rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2"]
+[Setup "1"]
+
+1... Ne7 *

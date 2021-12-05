@@ -344,6 +344,10 @@ fun GamePage(
     // Select last position in current variation.
     fun selectLastPosition() {
         if (!gameInProgress) {
+            // There is at least the first move number element in history at this point.
+            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.movesElements.size < 2)
+            if (noHistoryMove) return
+
             var currentNodeData = NodeSearchParam(
                 index = highlightedHistoryItemIndex ?: -1,
                 variationLevel = selectedNodeVariationLevel
@@ -390,7 +394,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 12
+            val selectedGameIndex = 18
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
@@ -478,6 +482,10 @@ fun GamePage(
     // Select previous position, can go up variation.
     fun selectPreviousPosition() {
         if (!gameInProgress) {
+            // There is at least the first move number element in history at this point.
+            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.movesElements.size < 2)
+            if (noHistoryMove) return
+
             if (highlightedHistoryItemIndex == null) {
                 updateMovesNavigatorSelection(-1)
             }
@@ -496,6 +504,10 @@ fun GamePage(
     // Select next position : if in a variation, cannot go further than the variation end node.
     fun selectNextPosition() {
         if (!gameInProgress) {
+            // There is at least the first move number element in history at this point.
+            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.movesElements.size < 2)
+            if (noHistoryMove) return
+
             if (highlightedHistoryItemIndex == null) {
                 updateMovesNavigatorSelection(1)
             }
