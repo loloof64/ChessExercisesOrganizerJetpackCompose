@@ -208,6 +208,7 @@ fun GamePage(
         var previousTextIsOpenParenthesis = false
         var previousTextIsEndParenthesis = false
         var skippingSiblingVariation = false
+        var needingToSkipOneMove = false
 
         val lastNodeIndex =
             if (isInSolutionMode) gamePageViewModel.currentSolution.size.dec()
@@ -248,7 +249,7 @@ fun GamePage(
                 else gamePageViewModel.movesElements[currentNodeIndex]
 
             val sameLevelAsWhenStarting = currentVariationLevel == selectedNodeVariationLevel
-            val upperLevelThanWhenStarting = currentVariationLevel < selectedNodeVariationLevel
+
 
             when {
                 currentNode.text == "(" -> {
@@ -258,6 +259,11 @@ fun GamePage(
                     currentVariationLevel--
                     previousTextIsOpenParenthesis = true
                     previousTextIsEndParenthesis = false
+
+                    val upperLevelThanWhenStarting = currentVariationLevel < selectedNodeVariationLevel
+                    if (upperLevelThanWhenStarting) {
+                        needingToSkipOneMove = true
+                    }
                 }
                 currentNode.text == ")" -> {
                     // We must be careful about siblings variations
@@ -269,8 +275,20 @@ fun GamePage(
                     previousTextIsEndParenthesis = true
                 }
                 currentNode.fen != null -> {
-                    if ((sameLevelAsWhenStarting || upperLevelThanWhenStarting) && !skippingSiblingVariation) {
-                        break
+                    if (needingToSkipOneMove) {
+                        needingToSkipOneMove = false
+                        previousTextIsOpenParenthesis = false
+                        previousTextIsEndParenthesis = false
+                        continue
+                    }
+                    else {
+                        val upperLevelThanWhenStarting = currentVariationLevel < selectedNodeVariationLevel
+                        if (sameLevelAsWhenStarting && !skippingSiblingVariation) {
+                            break
+                        }
+                        else if (upperLevelThanWhenStarting && !needingToSkipOneMove) {
+                            break
+                        }
                     }
                     previousTextIsOpenParenthesis = false
                     previousTextIsEndParenthesis = false
@@ -399,7 +417,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 14
+            val selectedGameIndex = 15
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
