@@ -93,7 +93,7 @@ private fun recurBuildHistoryFromPGNTree(
     val newFen = currentGameState.fen
     val lastMoveCoordinates = MoveData.parse("$moveFromString$moveToString")
     val moveSanElement = HalfMoveSAN(
-        text = tree.moveValue,
+        text = tree.moveValue.toFAN(forBlackTurn = !tree.whiteMove),
         fen = newFen,
         lastMoveArrowData = lastMoveCoordinates
     )

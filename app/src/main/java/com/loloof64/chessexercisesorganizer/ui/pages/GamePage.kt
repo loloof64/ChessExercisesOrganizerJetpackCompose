@@ -399,7 +399,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 17
+            val selectedGameIndex = 14
             val selectedGame = gamesData[selectedGameIndex]
 
             try {

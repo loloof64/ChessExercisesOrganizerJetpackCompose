@@ -44,6 +44,35 @@ fun String.toBoard(): Board {
     }
 }
 
+fun String.toFAN(forBlackTurn: Boolean): String {
+    var result = this
+    val referenceChars = "NBRQK".toCharArray()
+
+    var firstOccurrenceIndex = -1
+    for (i in 0.until(result.length)) {
+        val currentElement = this.toCharArray()[i]
+        if (referenceChars.contains(currentElement)) {
+            firstOccurrenceIndex = i
+            break
+        }
+    }
+    if (firstOccurrenceIndex > -1) {
+        val replacement = when (val element = this.toCharArray()[firstOccurrenceIndex]) {
+            'N' -> if (forBlackTurn) "\u265e" else "\u2658"
+            'B' -> if (forBlackTurn) "\u265d" else "\u2657"
+            'R' -> if (forBlackTurn) "\u265c" else "\u2656"
+            'Q' -> if (forBlackTurn) "\u265b" else "\u2655"
+            'K' -> if (forBlackTurn) "\u265a" else "\u2654"
+            else -> throw java.lang.RuntimeException("Unrecognized piece char $element into SAN $this")
+        }
+        val firstPart = this.substring(0, firstOccurrenceIndex)
+        val lastPart = this.substring(firstOccurrenceIndex + 1)
+
+        result = "$firstPart$replacement$lastPart"
+    }
+    return result
+}
+
 enum class GameEndedStatus {
     NOT_ENDED,
     CHECKMATE_WHITE,
@@ -101,30 +130,7 @@ class DynamicBoardDataHandler {
         val forBlackTurn = boardLogic.turn
         var lastMoveSan = boardLogic.lastMoveSan
         if (lastMoveSan == null) throw java.lang.RuntimeException("No move played !")
-        val referenceChars = "NBRQK".toCharArray()
-        var firstOccurrenceIndex = -1
-        for (i in 0.until(lastMoveSan.length)) {
-            val currentElement = lastMoveSan.toCharArray()[i]
-            if (referenceChars.contains(currentElement)) {
-                firstOccurrenceIndex = i
-                break
-            }
-        }
-        if (firstOccurrenceIndex > -1) {
-            val replacement = when (val element = lastMoveSan.toCharArray()[firstOccurrenceIndex]) {
-                'N' -> if (forBlackTurn) "\u265e" else "\u2658"
-                'B' -> if (forBlackTurn) "\u265d" else "\u2657"
-                'R' -> if (forBlackTurn) "\u265c" else "\u2656"
-                'Q' -> if (forBlackTurn) "\u265b" else "\u2655"
-                'K' -> if (forBlackTurn) "\u265a" else "\u2654"
-                else -> throw java.lang.RuntimeException("Unrecognized piece char $element into SAN $lastMoveSan")
-            }
-            val firstPart = lastMoveSan.substring(0, firstOccurrenceIndex)
-            val lastPart = lastMoveSan.substring(firstOccurrenceIndex + 1)
-
-            lastMoveSan = "$firstPart$replacement$lastPart"
-        }
-        return lastMoveSan
+        return lastMoveSan.toFAN(forBlackTurn = forBlackTurn)
     }
 
     fun isValidMove(moveStr: String): Boolean {
