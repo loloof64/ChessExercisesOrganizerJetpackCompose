@@ -31,6 +31,7 @@ import com.alonsoruibal.chess.Board
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.core.PgnGameLoader
 import com.loloof64.chessexercisesorganizer.ui.components.*
+import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.stockfish.StockfishLib
 import kotlinx.coroutines.Job
@@ -60,13 +61,6 @@ fun GamePage(
     gamePageViewModel: GamePageViewModel = viewModel(),
     stockfishLib: StockfishLib,
 ) {
-    data class NodeSearchParam(val index: Int, val variationLevel: Int)
-    data class NodeSearchResult(
-        val index: Int, val variationLevel: Int,
-        val isJustBeforeCloseParenthesis: Boolean,
-        val isEndOfMainVariation: Boolean
-    )
-
     val cpuThinkingTimeoutMs = 2_000L
 
     val scaffoldState = rememberScaffoldState()
@@ -204,225 +198,6 @@ fun GamePage(
         highlightedHistoryItemIndex = if (fen != null) nodeIndex else null
     }
 
-    data class InnerPreviousNodeSearchParam(
-        var currentNodeIndex: Int,
-        var currentVariationLevel: Int,
-        var previousTextIsOpenParenthesis: Boolean,
-        var previousTextIsEndParenthesis: Boolean,
-        var skippingSiblingVariation: Boolean,
-        var needingToSkipOneMove: Boolean,
-        var mustBreakLoop: Boolean,
-    )
-
-    fun updateInnerNodeSearchParamForPreviousNodeSearch(
-        historyMoves: List<MovesNavigatorElement>,
-        innerPreviousNodeSearchParam: InnerPreviousNodeSearchParam,
-    ): InnerPreviousNodeSearchParam {
-        val innerPreviousNodeSearchParamCopy = innerPreviousNodeSearchParam.copy(
-            mustBreakLoop = false,
-        )
-
-        val currentNode = historyMoves[innerPreviousNodeSearchParamCopy.currentNodeIndex]
-
-        val sameLevelAsWhenStarting =
-            innerPreviousNodeSearchParamCopy.currentVariationLevel == selectedNodeVariationLevel
-
-        when {
-            currentNode.text == "(" -> {
-                if (innerPreviousNodeSearchParamCopy.skippingSiblingVariation) {
-                    innerPreviousNodeSearchParamCopy.skippingSiblingVariation = false
-                }
-                innerPreviousNodeSearchParamCopy.currentVariationLevel--
-                innerPreviousNodeSearchParamCopy.previousTextIsOpenParenthesis = true
-                innerPreviousNodeSearchParamCopy.previousTextIsEndParenthesis = false
-
-                val upperLevelThanWhenStarting =
-                    innerPreviousNodeSearchParamCopy.currentVariationLevel < selectedNodeVariationLevel
-                if (upperLevelThanWhenStarting) {
-                    innerPreviousNodeSearchParamCopy.needingToSkipOneMove = true
-                }
-            }
-            currentNode.text == ")" -> {
-                // We must be careful about siblings variations
-                if (innerPreviousNodeSearchParamCopy.previousTextIsOpenParenthesis) {
-                    innerPreviousNodeSearchParamCopy.skippingSiblingVariation = true
-                }
-                innerPreviousNodeSearchParamCopy.currentVariationLevel++
-                innerPreviousNodeSearchParamCopy.previousTextIsOpenParenthesis = false
-                innerPreviousNodeSearchParamCopy.previousTextIsEndParenthesis = true
-            }
-            currentNode.fen != null -> {
-                if (innerPreviousNodeSearchParamCopy.needingToSkipOneMove) {
-                    innerPreviousNodeSearchParamCopy.needingToSkipOneMove = false
-                    innerPreviousNodeSearchParamCopy.previousTextIsOpenParenthesis = false
-                    innerPreviousNodeSearchParamCopy.previousTextIsEndParenthesis = false
-                } else {
-                    val upperLevelThanWhenStarting =
-                        innerPreviousNodeSearchParamCopy.currentVariationLevel < selectedNodeVariationLevel
-                    if (sameLevelAsWhenStarting && !innerPreviousNodeSearchParamCopy.skippingSiblingVariation) {
-                        innerPreviousNodeSearchParamCopy.mustBreakLoop = true
-                    } else if (upperLevelThanWhenStarting && !innerPreviousNodeSearchParamCopy.needingToSkipOneMove) {
-                        innerPreviousNodeSearchParamCopy.mustBreakLoop = true
-                    }
-                }
-                innerPreviousNodeSearchParamCopy.previousTextIsOpenParenthesis = false
-                innerPreviousNodeSearchParamCopy.previousTextIsEndParenthesis = false
-            }
-            else -> {
-                innerPreviousNodeSearchParamCopy.previousTextIsOpenParenthesis = false
-                innerPreviousNodeSearchParamCopy.previousTextIsEndParenthesis = false
-                // Nothing to do more, we must go on searching.
-            }
-        }
-
-        return innerPreviousNodeSearchParamCopy
-    }
-
-    fun findPreviousMoveNode(
-        historyMoves: List<MovesNavigatorElement>,
-        nodeData: NodeSearchParam
-    ): NodeSearchResult {
-        var innerPreviousNodeSearchParam = InnerPreviousNodeSearchParam(
-            currentNodeIndex = nodeData.index,
-            currentVariationLevel = nodeData.variationLevel,
-            previousTextIsEndParenthesis = false,
-            previousTextIsOpenParenthesis = false,
-            skippingSiblingVariation = false,
-            needingToSkipOneMove = false,
-            mustBreakLoop = false,
-        )
-
-        val lastNodeIndex = historyMoves.size.dec()
-        val tempCurrentNode =
-            when {
-                innerPreviousNodeSearchParam.currentNodeIndex > lastNodeIndex -> null
-                else -> historyMoves[innerPreviousNodeSearchParam.currentNodeIndex]
-            }
-        /*
-         If we are in last node of main variation, and that this node is not a move, then we're also
-         searching for main variation last move.
-         */
-        val isEndOfMainVariation =
-            (innerPreviousNodeSearchParam.currentNodeIndex >= lastNodeIndex)
-                    && (tempCurrentNode?.fen == null)
-
-        while (true) {
-            innerPreviousNodeSearchParam.currentNodeIndex--
-
-            val isAtHistoryBeginning = innerPreviousNodeSearchParam.currentNodeIndex < 0
-            if (isAtHistoryBeginning) {
-                return NodeSearchResult(
-                    index = -1,
-                    variationLevel = 0,
-                    isEndOfMainVariation = false,
-                    isJustBeforeCloseParenthesis = false,
-                )
-            }
-
-            val isPastLastMove = innerPreviousNodeSearchParam.currentNodeIndex > lastNodeIndex
-            if (isPastLastMove) {
-                innerPreviousNodeSearchParam.currentNodeIndex = lastNodeIndex
-            }
-
-            innerPreviousNodeSearchParam = updateInnerNodeSearchParamForPreviousNodeSearch(
-                historyMoves = historyMoves,
-                innerPreviousNodeSearchParam = innerPreviousNodeSearchParam,
-            )
-            if (innerPreviousNodeSearchParam.mustBreakLoop) break
-        }
-
-        return NodeSearchResult(
-            index = innerPreviousNodeSearchParam.currentNodeIndex,
-            variationLevel = innerPreviousNodeSearchParam.currentVariationLevel,
-            isJustBeforeCloseParenthesis = innerPreviousNodeSearchParam.previousTextIsEndParenthesis,
-            isEndOfMainVariation = isEndOfMainVariation,
-        )
-    }
-
-    data class InnerNextNodeSearchParam(
-        var currentNodeIndex: Int,
-        var currentVariationLevel: Int,
-        var isJustBeforeCloseParenthesis: Boolean,
-        var mustBreakLoop: Boolean
-    )
-
-    fun updateInnerNodeSearchParamForNextNodeSearch(
-        historyMoves: List<MovesNavigatorElement>,
-        innerNextNodeSearchParam: InnerNextNodeSearchParam,
-    ): InnerNextNodeSearchParam {
-        val innerNodeSearchParamCopy = innerNextNodeSearchParam.copy(mustBreakLoop = false)
-        val currentNode = historyMoves[innerNodeSearchParamCopy.currentNodeIndex]
-        val sameLevelAsWhenStarting =
-            innerNodeSearchParamCopy.currentVariationLevel == selectedNodeVariationLevel
-        when {
-            currentNode.text == ")" -> {
-                if (sameLevelAsWhenStarting) {
-                    innerNodeSearchParamCopy.isJustBeforeCloseParenthesis = true
-                    innerNodeSearchParamCopy.currentNodeIndex--
-                    innerNodeSearchParamCopy.mustBreakLoop = true
-                } else innerNodeSearchParamCopy.currentVariationLevel--
-            }
-            currentNode.text == "(" -> {
-                innerNodeSearchParamCopy.currentVariationLevel++
-                innerNodeSearchParamCopy.mustBreakLoop = false
-            }
-            currentNode.fen != null -> {
-                if (sameLevelAsWhenStarting) {
-                    innerNodeSearchParamCopy.mustBreakLoop = true
-                }
-            }
-            else -> {
-                innerNodeSearchParamCopy.mustBreakLoop = false
-            }
-        }
-        return innerNodeSearchParamCopy
-    }
-
-    fun findNextMoveNode(
-        historyMoves: List<MovesNavigatorElement>,
-        nodeData: NodeSearchParam
-    ): NodeSearchResult {
-        var innerNodeSearchParam = InnerNextNodeSearchParam(
-            currentNodeIndex = nodeData.index,
-            currentVariationLevel = nodeData.variationLevel,
-            isJustBeforeCloseParenthesis = false,
-            mustBreakLoop = false,
-        )
-
-        val lastNodeIndex = historyMoves.size.dec()
-        while (true) {
-            innerNodeSearchParam.currentNodeIndex++
-            val isPastLastMove = innerNodeSearchParam.currentNodeIndex > lastNodeIndex
-            if (isPastLastMove) {
-                /* As the last node is the game termination (which belong to main variation),
-                   we're sure that we'll find the end of main variation.
-                 */
-                innerNodeSearchParam.currentNodeIndex = lastNodeIndex
-                return findPreviousMoveNode(
-                    historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
-                    else gamePageViewModel.movesElements,
-                    nodeData = NodeSearchParam(
-                        index = innerNodeSearchParam.currentNodeIndex + 1,
-                        variationLevel = innerNodeSearchParam.currentVariationLevel
-                    ),
-                ).copy(isEndOfMainVariation = true)
-            }
-            innerNodeSearchParam = updateInnerNodeSearchParamForNextNodeSearch(
-                innerNextNodeSearchParam = innerNodeSearchParam,
-                historyMoves = historyMoves
-            )
-            if (innerNodeSearchParam.mustBreakLoop) break
-        }
-
-        return NodeSearchResult(
-            index = innerNodeSearchParam.currentNodeIndex,
-            variationLevel = innerNodeSearchParam.currentVariationLevel,
-            isJustBeforeCloseParenthesis = innerNodeSearchParam.isJustBeforeCloseParenthesis,
-            isEndOfMainVariation = innerNodeSearchParam.currentNodeIndex == lastNodeIndex,
-        )
-    }
-
-
     // Select last position in current variation.
     fun selectLastPosition() {
         if (!gameInProgress) {
@@ -438,9 +213,10 @@ fun GamePage(
                 val searchResult = findNextMoveNode(
                     nodeData = currentNodeData,
                     historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
-                    else gamePageViewModel.movesElements
+                    else gamePageViewModel.movesElements,
+                    selectedNodeVariationLevel = selectedNodeVariationLevel,
                 )
-                if (searchResult.isEndOfMainVariation || searchResult.isJustBeforeCloseParenthesis) {
+                if (searchResult.isLastMoveNodeOfMainVariation || searchResult.hasJustMetCloseParenthesis) {
                     updateMovesNavigatorSelection(searchResult.index)
                     break
                 } else currentNodeData = NodeSearchParam(
@@ -479,7 +255,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 14
+            val selectedGameIndex = 15
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
@@ -584,6 +360,7 @@ fun GamePage(
                         index = highlightedHistoryItemIndex!!,
                         variationLevel = selectedNodeVariationLevel
                     ),
+                    selectedNodeVariationLevel = selectedNodeVariationLevel,
                 )
                 updateMovesNavigatorSelection(searchResult.index)
             }
@@ -597,17 +374,20 @@ fun GamePage(
             val noHistoryMove = !isInSolutionMode && (gamePageViewModel.movesElements.size < 2)
             if (noHistoryMove) return
 
-            if (highlightedHistoryItemIndex == null) {
-                updateMovesNavigatorSelection(1)
-            } else {
-                val searchResult = findNextMoveNode(
-                    historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
-                    else gamePageViewModel.movesElements,
-                    nodeData = NodeSearchParam(
-                        index = highlightedHistoryItemIndex!!,
-                        variationLevel = selectedNodeVariationLevel
-                    ),
-                )
+            val searchResult = findNextMoveNode(
+                historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
+                else gamePageViewModel.movesElements,
+                nodeData = NodeSearchParam(
+                    // There is at least the first move number node
+                    index = highlightedHistoryItemIndex ?: 0,
+                    variationLevel = selectedNodeVariationLevel
+                ),
+                selectedNodeVariationLevel = selectedNodeVariationLevel,
+            )
+            if (searchResult.variationsToProcess.isNotEmpty()) {
+                //TODO process searchResult.index searchResult.mainVariationMoveText and searchResult.variationsToProcess
+            }
+            else {
                 updateMovesNavigatorSelection(searchResult.index)
             }
         }
