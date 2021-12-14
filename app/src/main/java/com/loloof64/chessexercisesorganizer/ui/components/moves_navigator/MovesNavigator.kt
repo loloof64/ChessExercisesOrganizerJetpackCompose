@@ -117,7 +117,7 @@ fun MovesNavigator(
 
     Column(
         modifier = modifier
-            .background(color = Color.Yellow.copy(alpha = 0.3f))
+            .background(color = Color.Yellow.copy(alpha = 0.3f)).fillMaxHeight()
     ) {
         MovesNavigatorButtons(
             handleFirstPositionRequest = handleFirstPositionRequest,

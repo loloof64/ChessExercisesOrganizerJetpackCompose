@@ -274,7 +274,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 14
+            val selectedGameIndex = 15
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
@@ -600,159 +600,184 @@ fun GamePage(
         gamePageViewModel.pageState.variationsSelectorData = null
     }
 
+    fun cancelVariationSelection() {
+        variationSelectionOpen = false
+        gamePageViewModel.pageState.variationsSelectorData = null
+    }
+
+    @Composable
+    fun variationSelectionDropDownComponent() = DropdownMenu(
+        expanded = variationSelectionOpen,
+        onDismissRequest = { cancelVariationSelection() },
+    ) {
+        DropdownMenuItem(onClick = { selectMainVariation() }) {
+            Text(
+                text = variationsSelectorData!!.main.text,
+                modifier = Modifier
+                    .background(Color.Green)
+                    .fillMaxSize(),
+                color = Color.Blue,
+                style = MaterialTheme.typography.body1,
+                fontSize = 28.sp,
+            )
+        }
+        Divider()
+        variationsSelectorData!!.variations.mapIndexed { index, elt ->
+            DropdownMenuItem(onClick = { selectSubVariation(index) }) {
+                Text(
+                    text = elt.text,
+                    modifier = Modifier
+                        .background(Color(0xFFF97916))
+                        .fillMaxSize(),
+                    color = Color.Blue,
+                    style = MaterialTheme.typography.body1,
+                    fontSize = 28.sp,
+                )
+            }
+        }
+    }
+
+    @Composable
+    fun chessBoardComponent() {
+        DynamicChessBoard(
+            whiteSideType = whiteSideType,
+            blackSideType = blackSideType,
+            reversed = boardReversed,
+            lastMoveArrow = lastMoveArrow,
+            gameInProgress = gameInProgress,
+            position = currentPosition,
+            promotionState = promotionState,
+            isValidMoveCallback = {
+                gamePageViewModel.boardState.isValidMove(it)
+            },
+            dndMoveCallback = {
+                handleStandardMoveDoneOnBoard(it)
+            },
+            promotionMoveCallback = {
+                handlePromotionMoveDoneOnBoard(it)
+            },
+            cancelPendingPromotionCallback = {
+                gamePageViewModel.pageState.promotionState =
+                    PendingPromotionData()
+            },
+            setPendingPromotionCallback = {
+                gamePageViewModel.pageState.promotionState = it
+                promotionState = gamePageViewModel.pageState.promotionState
+            },
+            computerMoveRequestCallback = {
+                if (!computerThinking) {
+                    generateComputerMove(it)
+                }
+            },
+        )
+    }
+
+    @Composable
+    fun historyComponent() {
+        val isInInitialPosition =
+            gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+        val modeSelectionActive = !isInInitialPosition && !gameInProgress
+        val elements =
+            if (modeSelectionActive && isInSolutionMode)
+                gamePageViewModel.currentSolution.toTypedArray()
+            else gamePageViewModel.movesElements.toTypedArray()
+
+        MovesNavigator(
+            elements = elements,
+            mustBeVisibleByDefaultElementIndex =
+            if (gameInProgress) elements.size.dec() else highlightedHistoryItemIndex,
+            highlightedItemIndex = highlightedHistoryItemIndex,
+            elementSelectionRequestCallback = {
+                tryToSelectPosition(it)
+            },
+            handleFirstPositionRequest = { selectFirstPosition() },
+            handleLastPositionRequest = { selectLastPosition() },
+            handlePreviousPositionRequest = { selectPreviousPosition() },
+            handleNextPositionRequest = { selectNextPosition() },
+            historyModeToggleRequestHandler = {
+                toggleHistoryMode()
+            },
+            isInSolutionMode = isInSolutionMode,
+            modeSelectionActive = modeSelectionActive && solutionAvailable,
+            failedToLoadSolution = failedToLoadSolution,
+        )
+    }
+
+    @Composable
+    fun dialogs() {
+        ConfirmNewGameDialog(
+            isOpen = pendingNewGameRequest,
+            validateCallback = {
+                gamePageViewModel.pageState.pendingNewGameRequest = false
+                gamePageViewModel.pageState.pendingSelectEngineDialog = true
+                pendingNewGameRequest = false
+                doStartNewGame()
+            },
+            dismissCallback = {
+                gamePageViewModel.pageState.pendingNewGameRequest = false
+                pendingNewGameRequest = false
+            })
+
+        ConfirmStopGameDialog(
+            isOpen = pendingStopGameRequest,
+            validateCallback = {
+                gamePageViewModel.pageState.pendingStopGameRequest = false
+                pendingStopGameRequest = false
+                doStopCurrentGame()
+            },
+            dismissCallback = {
+                gamePageViewModel.pageState.pendingStopGameRequest = false
+                pendingStopGameRequest = false
+            })
+
+    }
+
+    @Composable
+    fun topAppBarComponents() {
+        SimpleButton(
+            text = stringResource(R.string.new_game),
+            vectorId = R.drawable.ic_start_flag
+        ) {
+            newGameRequest()
+        }
+        SimpleButton(
+            text = stringResource(R.string.stop_game),
+            vectorId = R.drawable.ic_stop
+        ) {
+            stopGameRequest()
+        }
+        SimpleButton(
+            text = stringResource(R.string.reverse_board),
+            vectorId = R.drawable.ic_reverse,
+        ) {
+            gamePageViewModel.pageState.boardReversed =
+                !gamePageViewModel.pageState.boardReversed
+            boardReversed = gamePageViewModel.pageState.boardReversed
+        }
+    }
+
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
             scaffoldState = scaffoldState,
             topBar = {
                 TopAppBar(title = { Text(stringResource(R.string.game_page)) }, actions = {
-                    SimpleButton(
-                        text = stringResource(R.string.new_game),
-                        vectorId = R.drawable.ic_start_flag
-                    ) {
-                        newGameRequest()
-                    }
-                    SimpleButton(
-                        text = stringResource(R.string.stop_game),
-                        vectorId = R.drawable.ic_stop
-                    ) {
-                        stopGameRequest()
-                    }
-                    SimpleButton(
-                        text = stringResource(R.string.reverse_board),
-                        vectorId = R.drawable.ic_reverse,
-                    ) {
-                        gamePageViewModel.pageState.boardReversed =
-                            !gamePageViewModel.pageState.boardReversed
-                        boardReversed = gamePageViewModel.pageState.boardReversed
-                    }
+                    topAppBarComponents()
                 })
             },
             content = {
                 Surface(color = MaterialTheme.colors.background) {
-
                     Layout(
                         content = {
-                            DynamicChessBoard(
-                                whiteSideType = whiteSideType,
-                                blackSideType = blackSideType,
-                                reversed = boardReversed,
-                                lastMoveArrow = lastMoveArrow,
-                                gameInProgress = gameInProgress,
-                                position = currentPosition,
-                                promotionState = promotionState,
-                                isValidMoveCallback = {
-                                    gamePageViewModel.boardState.isValidMove(it)
-                                },
-                                dndMoveCallback = {
-                                    handleStandardMoveDoneOnBoard(it)
-                                },
-                                promotionMoveCallback = {
-                                    handlePromotionMoveDoneOnBoard(it)
-                                },
-                                cancelPendingPromotionCallback = {
-                                    gamePageViewModel.pageState.promotionState =
-                                        PendingPromotionData()
-                                },
-                                setPendingPromotionCallback = {
-                                    gamePageViewModel.pageState.promotionState = it
-                                    promotionState = gamePageViewModel.pageState.promotionState
-                                },
-                                computerMoveRequestCallback = {
-                                    if (!computerThinking) {
-                                        generateComputerMove(it)
-                                    }
-                                },
-                            )
-
-                            val isInInitialPosition =
-                                gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
-                            val modeSelectionActive = !isInInitialPosition && !gameInProgress
-                            val elements =
-                                if (modeSelectionActive && isInSolutionMode)
-                                    gamePageViewModel.currentSolution.toTypedArray()
-                                else gamePageViewModel.movesElements.toTypedArray()
-
-                            MovesNavigator(
-                                elements = elements,
-                                mustBeVisibleByDefaultElementIndex =
-                                if (gameInProgress) elements.size.dec() else highlightedHistoryItemIndex,
-                                highlightedItemIndex = highlightedHistoryItemIndex,
-                                elementSelectionRequestCallback = {
-                                    tryToSelectPosition(it)
-                                },
-                                handleFirstPositionRequest = { selectFirstPosition() },
-                                handleLastPositionRequest = { selectLastPosition() },
-                                handlePreviousPositionRequest = { selectPreviousPosition() },
-                                handleNextPositionRequest = { selectNextPosition() },
-                                historyModeToggleRequestHandler = {
-                                    toggleHistoryMode()
-                                },
-                                isInSolutionMode = isInSolutionMode,
-                                modeSelectionActive = modeSelectionActive && solutionAvailable,
-                                failedToLoadSolution = failedToLoadSolution,
-                            )
-
-                            DropdownMenu(
-                                expanded = variationSelectionOpen,
-                                onDismissRequest = { },
-                                offset = DpOffset(0.dp, 0.dp),
-                            ) {
-                                DropdownMenuItem(onClick = { selectMainVariation() }) {
-                                    Text(
-                                        text = variationsSelectorData!!.main.text,
-                                        modifier = Modifier
-                                            .background(Color.Green)
-                                            .fillMaxSize(),
-                                        color = Color.Blue,
-                                        style = MaterialTheme.typography.body1,
-                                        fontSize = 28.sp,
-                                    )
-                                }
-                                variationsSelectorData!!.variations.mapIndexed { index, elt ->
-                                    DropdownMenuItem(onClick = { selectSubVariation(index) }) {
-                                        Text(
-                                            text = elt.text,
-                                            modifier = Modifier
-                                                .background(Color(0xFFF97916))
-                                                .fillMaxSize(),
-                                            color = Color.Blue,
-                                            style = MaterialTheme.typography.body1,
-                                            fontSize = 28.sp,
-                                        )
-                                    }
-                                }
+                            chessBoardComponent()
+                            Box {
+                                historyComponent()
+                                variationSelectionDropDownComponent()
                             }
-
-                            ConfirmNewGameDialog(
-                                isOpen = pendingNewGameRequest,
-                                validateCallback = {
-                                    gamePageViewModel.pageState.pendingNewGameRequest = false
-                                    gamePageViewModel.pageState.pendingSelectEngineDialog = true
-                                    pendingNewGameRequest = false
-                                    doStartNewGame()
-                                },
-                                dismissCallback = {
-                                    gamePageViewModel.pageState.pendingNewGameRequest = false
-                                    pendingNewGameRequest = false
-                                })
-
-                            ConfirmStopGameDialog(
-                                isOpen = pendingStopGameRequest,
-                                validateCallback = {
-                                    gamePageViewModel.pageState.pendingStopGameRequest = false
-                                    pendingStopGameRequest = false
-                                    doStopCurrentGame()
-                                },
-                                dismissCallback = {
-                                    gamePageViewModel.pageState.pendingStopGameRequest = false
-                                    pendingStopGameRequest = false
-                                })
+                            dialogs()
 
                             if (computerThinking) {
                                 CircularProgressIndicator(modifier = Modifier.size(50.dp))
                             }
-
-
                         }
                     ) { allMeasurable, constraints ->
                         val boardSize =
