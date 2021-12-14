@@ -40,6 +40,33 @@ data class InnerNextNodeSearchParam(
     val isLastMoveNodeOfMainVariation: Boolean,
 )
 
+fun findCurrentNodeMoveNumber(
+    historyMoves: List<MovesNavigatorElement>,
+    innerPreviousNodeSearchParam: InnerPreviousNodeSearchParam,
+    selectedNodeVariationLevel: Int
+) : Int {
+    var innerPreviousNodeSearchParamCopy = innerPreviousNodeSearchParam.copy()
+    while (true) {
+        if (innerPreviousNodeSearchParamCopy.currentNodeIndex < 0) {
+            return -1
+        }
+
+        val currentNode = historyMoves[innerPreviousNodeSearchParamCopy.currentNodeIndex]
+        val isAtSameLevelThanWhenStarted = innerPreviousNodeSearchParamCopy.currentVariationLevel == selectedNodeVariationLevel
+        if  (currentNode.text.isMoveNumber() && isAtSameLevelThanWhenStarted) {
+            return currentNode.text.asMoveValue()
+        }
+
+        innerPreviousNodeSearchParamCopy = updateInnerNodeSearchParamForPreviousNodeSearch(
+            historyMoves = historyMoves,
+            innerPreviousNodeSearchParam = innerPreviousNodeSearchParamCopy,
+            selectedNodeVariationLevel = selectedNodeVariationLevel,
+        )
+
+        innerPreviousNodeSearchParamCopy.currentNodeIndex--
+    }
+}
+
 fun updateInnerNodeSearchParamForNextNodeSearch(
     historyMoves: List<MovesNavigatorElement>,
     innerNextNodeSearchParam: InnerNextNodeSearchParam,
@@ -451,4 +478,13 @@ private fun String.isMoveNumber(): Boolean {
     } catch (ex: NumberFormatException) {
         false
     }
+}
+
+private fun String.asMoveValue(): Int {
+   val interestingPart =
+         this.substring(
+             0,
+             this.length - if (this.endsWith("...")) 3 else 1
+         )
+    return Integer.parseInt(interestingPart)
 }

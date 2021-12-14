@@ -60,6 +60,10 @@ class GamePageViewModel : ViewModel() {
     var movesElements = mutableListOf<MovesNavigatorElement>()
     var currentGame = PgnGameLoader()
     var currentSolution: List<MovesNavigatorElement> = listOf()
+
+    fun isWhiteTurn(): Boolean {
+        return boardState.whiteTurn()
+    }
 }
 
 @Composable
@@ -270,7 +274,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 15
+            val selectedGameIndex = 14
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
@@ -400,15 +404,35 @@ fun GamePage(
                 selectedNodeVariationLevel = selectedNodeVariationLevel,
             )
             if (searchResult.variationsToProcess.isNotEmpty()) {
+                val moveNumber = findCurrentNodeMoveNumber(
+                    historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
+                    else gamePageViewModel.movesElements,
+                    innerPreviousNodeSearchParam = InnerPreviousNodeSearchParam(
+                        currentNodeIndex = searchResult.index,
+                        currentVariationLevel = searchResult.variationLevel,
+                        previousTextIsOpenParenthesis = false,
+                        previousTextIsEndParenthesis = false,
+                        skippingSiblingVariation = false,
+                        needingToSkipOneMove = false,
+                        mustBreakLoop = false,
+                        hasJustMetOpenParenthesis = false,
+                        hasJustMetCloseParenthesis = false,
+                        hasJustMetMoveNumberAndOpenParenthesis = false,
+                        isLastMoveNodeOfMainVariation = false,
+                    ),
+                    selectedNodeVariationLevel = selectedNodeVariationLevel,
+                )
+                val isWhiteTurnBeforeMove = gamePageViewModel.isWhiteTurn()
+                val turnPoints = if (isWhiteTurnBeforeMove) "." else "..."
                 gamePageViewModel.pageState.variationsSelectorData =
                     VariationsSelectorData(
                         main = SingleVariationData(
-                            text = searchResult.mainVariationMoveText!!,
+                            text = "$moveNumber$turnPoints${searchResult.mainVariationMoveText!!}",
                             historyIndex = searchResult.index,
                         ),
                         variations = searchResult.variationsToProcess.map {
                             SingleVariationData(
-                                text = it.firstMoveText,
+                                text = "$moveNumber$turnPoints${it.firstMoveText}",
                                 historyIndex = it.firstMoveIndex,
                             )
                         }
