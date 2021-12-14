@@ -3,10 +3,9 @@ package com.loloof64.chessexercisesorganizer.ui.pages
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -20,10 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -38,6 +34,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+data class SingleVariationData(
+    val text: String,
+    val historyIndex: Int,
+)
+
+data class VariationsSelectorData(
+    val main: SingleVariationData,
+    val variations: List<SingleVariationData>,
+)
+
 class GamePageState {
     var boardReversed = false
     var gameInProgress = false
@@ -45,6 +51,7 @@ class GamePageState {
     var pendingStopGameRequest = false
     var pendingSelectEngineDialog = false
     var promotionState = PendingPromotionData()
+    var variationsSelectorData: VariationsSelectorData? = null
 }
 
 class GamePageViewModel : ViewModel() {
@@ -105,6 +112,10 @@ fun GamePage(
         mutableStateOf<Job?>(null)
     }
 
+    var variationsSelectorData by remember {
+        mutableStateOf(gamePageViewModel.pageState.variationsSelectorData)
+    }
+
     var highlightedHistoryItemIndex by rememberSaveable {
         mutableStateOf<Int?>(null)
     }
@@ -134,6 +145,10 @@ fun GamePage(
     }
 
     var failedToLoadSolution by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var variationSelectionOpen by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -385,9 +400,23 @@ fun GamePage(
                 selectedNodeVariationLevel = selectedNodeVariationLevel,
             )
             if (searchResult.variationsToProcess.isNotEmpty()) {
-                //TODO process searchResult.index searchResult.mainVariationMoveText and searchResult.variationsToProcess
-            }
-            else {
+                gamePageViewModel.pageState.variationsSelectorData =
+                    VariationsSelectorData(
+                        main = SingleVariationData(
+                            text = searchResult.mainVariationMoveText!!,
+                            historyIndex = searchResult.index,
+                        ),
+                        variations = searchResult.variationsToProcess.map {
+                            SingleVariationData(
+                                text = it.firstMoveText,
+                                historyIndex = it.firstMoveIndex,
+                            )
+                        }
+                    )
+                variationsSelectorData = gamePageViewModel.pageState.variationsSelectorData
+                variationSelectionOpen = true
+            } else {
+                gamePageViewModel.pageState.variationsSelectorData = null
                 updateMovesNavigatorSelection(searchResult.index)
             }
         }
@@ -517,6 +546,36 @@ fun GamePage(
         isInSolutionMode = !isInSolutionMode
     }
 
+    fun manuallyUpdateHistoryNode() {
+        if (highlightedHistoryItemIndex == null) return
+        val historyNodes = if (isInSolutionMode) gamePageViewModel.currentSolution
+        else gamePageViewModel.movesElements
+
+        val currentNode = historyNodes[highlightedHistoryItemIndex!!]
+        gamePageViewModel.boardState.setCurrentPosition(currentNode.fen!!)
+        gamePageViewModel.boardState.setLastMoveArrow(currentNode.lastMoveArrowData)
+
+        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+    }
+
+    fun selectMainVariation() {
+        highlightedHistoryItemIndex = variationsSelectorData!!.main.historyIndex
+        manuallyUpdateHistoryNode()
+
+        variationSelectionOpen = false
+        gamePageViewModel.pageState.variationsSelectorData = null
+    }
+
+    fun selectSubVariation(variationIndex: Int) {
+        highlightedHistoryItemIndex =
+            variationsSelectorData!!.variations[variationIndex].historyIndex
+        manuallyUpdateHistoryNode()
+
+        variationSelectionOpen = false
+        gamePageViewModel.pageState.variationsSelectorData = null
+    }
+
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
             scaffoldState = scaffoldState,
@@ -608,6 +667,37 @@ fun GamePage(
                                 modeSelectionActive = modeSelectionActive && solutionAvailable,
                                 failedToLoadSolution = failedToLoadSolution,
                             )
+
+                            DropdownMenu(
+                                expanded = variationSelectionOpen,
+                                onDismissRequest = { },
+                                offset = DpOffset(0.dp, 0.dp),
+                            ) {
+                                DropdownMenuItem(onClick = { selectMainVariation() }) {
+                                    Text(
+                                        text = variationsSelectorData!!.main.text,
+                                        modifier = Modifier
+                                            .background(Color.Green)
+                                            .fillMaxSize(),
+                                        color = Color.Blue,
+                                        style = MaterialTheme.typography.body1,
+                                        fontSize = 28.sp,
+                                    )
+                                }
+                                variationsSelectorData!!.variations.mapIndexed { index, elt ->
+                                    DropdownMenuItem(onClick = { selectSubVariation(index) }) {
+                                        Text(
+                                            text = elt.text,
+                                            modifier = Modifier
+                                                .background(Color(0xFFF97916))
+                                                .fillMaxSize(),
+                                            color = Color.Blue,
+                                            style = MaterialTheme.typography.body1,
+                                            fontSize = 28.sp,
+                                        )
+                                    }
+                                }
+                            }
 
                             ConfirmNewGameDialog(
                                 isOpen = pendingNewGameRequest,

@@ -188,7 +188,7 @@ Nc3 Qa5 24. d4 *
 [FEN "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"]
 [Setup "1"]
 
-1... e5 2. Nf3 Nc6 ( 2... Nf6)( 2... f5)( 2... d5) 3. d4 *
+1... e5 2. Nf3 Nc6 ( 2... Nf6)( 2... f5)( 2... d5) *
 
 [Event "Index 16"]
 [Site ""]

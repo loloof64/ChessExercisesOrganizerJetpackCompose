@@ -1,12 +1,11 @@
 package com.loloof64.chessexercisesorganizer.ui.components.moves_navigator
 
-data class VariationToProcess(val openParenthesisIndex: Int, val firstMoveText: String)
+data class VariationToProcess(val firstMoveIndex: Int, val firstMoveText: String)
 data class NodeSearchParam(val index: Int, val variationLevel: Int)
 data class NodeSearchResult(
     val index: Int,
     val variationLevel: Int,
     val mainVariationMoveText: String?,
-    val relativeRootVariationOpenParenthesisIndex: Int?,
     val hasJustMetOpenParenthesis: Boolean,
     val hasJustMetMoveNumberAndOpenParenthesis: Boolean,
     val hasJustMetCloseParenthesis: Boolean,
@@ -17,7 +16,6 @@ data class NodeSearchResult(
 data class InnerPreviousNodeSearchParam(
     var currentNodeIndex: Int,
     var currentVariationLevel: Int,
-    val relativeRootVariationOpenParenthesisIndex: Int?,
     var previousTextIsOpenParenthesis: Boolean,
     var previousTextIsEndParenthesis: Boolean,
     var skippingSiblingVariation: Boolean,
@@ -33,7 +31,6 @@ data class InnerPreviousNodeSearchParam(
 data class InnerNextNodeSearchParam(
     var currentNodeIndex: Int,
     var currentVariationLevel: Int,
-    var relativeRootVariationOpenParenthesisIndex: Int?,
     var hasJustMetCloseParenthesis: Boolean,
     var hasJustMetOpenParenthesis: Boolean,
     var hasJustMetCorrectLevelMoveNumberAndOpenParenthesis: Boolean,
@@ -102,9 +99,6 @@ fun updateInnerNodeSearchParamForCurrentLevelVariationsSearch(
 
     when {
         currentNode.text == ")" -> {
-            if (isJustOneVariationLevelUpAsWhenStarting) {
-                innerNextNodeSearchParamCopy.relativeRootVariationOpenParenthesisIndex = null
-            }
             innerNextNodeSearchParamCopy.hasJustMetCloseParenthesis = true
             innerNextNodeSearchParamCopy.hasJustMetOpenParenthesis = false
             innerNextNodeSearchParamCopy.hasJustMetCorrectLevelMoveNumberAndOpenParenthesis = false
@@ -112,10 +106,6 @@ fun updateInnerNodeSearchParamForCurrentLevelVariationsSearch(
             innerNextNodeSearchParamCopy.currentVariationLevel--
         }
         currentNode.text == "(" -> {
-            if (sameLevelAsWhenStarting) {
-                innerNextNodeSearchParamCopy.relativeRootVariationOpenParenthesisIndex =
-                    innerNextNodeSearchParamCopy.currentNodeIndex
-            }
             innerNextNodeSearchParamCopy.currentVariationLevel++ 
             innerNextNodeSearchParamCopy.hasJustMetOpenParenthesis = true
             innerNextNodeSearchParamCopy.hasJustMetCloseParenthesis = false
@@ -127,7 +117,7 @@ fun updateInnerNodeSearchParamForCurrentLevelVariationsSearch(
                 if (innerNextNodeSearchParamCopy.hasJustMetCorrectLevelMoveNumberAndOpenParenthesis) {
                     innerNextNodeSearchParamCopy.variationsToProcess.add(
                         VariationToProcess(
-                            openParenthesisIndex = innerNextNodeSearchParamCopy.relativeRootVariationOpenParenthesisIndex!!,
+                            firstMoveIndex = innerNextNodeSearchParamCopy.currentNodeIndex,
                             firstMoveText = currentNode.text,
                         )
                     )
@@ -213,7 +203,6 @@ fun findPreviousMoveNode(
     var innerPreviousNodeSearchParam = InnerPreviousNodeSearchParam(
         currentNodeIndex = nodeData.index,
         currentVariationLevel = nodeData.variationLevel,
-        relativeRootVariationOpenParenthesisIndex = null,
         previousTextIsOpenParenthesis = false,
         previousTextIsEndParenthesis = false,
         skippingSiblingVariation = false,
@@ -235,7 +224,6 @@ fun findPreviousMoveNode(
         index = innerPreviousNodeSearchParam.currentNodeIndex,
         variationLevel = innerPreviousNodeSearchParam.currentVariationLevel,
         mainVariationMoveText = null,
-        relativeRootVariationOpenParenthesisIndex = innerPreviousNodeSearchParam.relativeRootVariationOpenParenthesisIndex,
         hasJustMetOpenParenthesis = innerPreviousNodeSearchParam.hasJustMetOpenParenthesis,
         hasJustMetMoveNumberAndOpenParenthesis = innerPreviousNodeSearchParam.hasJustMetMoveNumberAndOpenParenthesis,
         hasJustMetCloseParenthesis = innerPreviousNodeSearchParam.previousTextIsEndParenthesis,
@@ -252,7 +240,6 @@ fun findNextMoveNode(
     var innerNodeSearchParam = InnerNextNodeSearchParam(
         currentNodeIndex = nodeData.index,
         currentVariationLevel = nodeData.variationLevel,
-        relativeRootVariationOpenParenthesisIndex = null,
         hasJustMetCloseParenthesis = false,
         hasJustMetOpenParenthesis = false,
         hasJustMetCorrectLevelMoveNumberAndOpenParenthesis = false,
@@ -282,7 +269,6 @@ fun findNextMoveNode(
         index = innerNodeSearchParam.currentNodeIndex,
         variationLevel = innerNodeSearchParam.currentVariationLevel,
         mainVariationMoveText = innerNodeSearchParam.mainVariationMoveText,
-        relativeRootVariationOpenParenthesisIndex = innerNodeSearchParam.relativeRootVariationOpenParenthesisIndex,
         hasJustMetOpenParenthesis = innerNodeSearchParam.hasJustMetOpenParenthesis,
         hasJustMetMoveNumberAndOpenParenthesis = innerNodeSearchParam.hasJustMetCorrectLevelMoveNumberAndOpenParenthesis,
         hasJustMetCloseParenthesis = innerNodeSearchParam.hasJustMetCloseParenthesis,
@@ -308,7 +294,6 @@ fun loopSearchingForPreviousMoveNode(
                 index = -1,
                 variationLevel = 0,
                 mainVariationMoveText = null,
-                relativeRootVariationOpenParenthesisIndex = null,
                 hasJustMetOpenParenthesis = false,
                 hasJustMetMoveNumberAndOpenParenthesis = false,
                 hasJustMetCloseParenthesis = false,
