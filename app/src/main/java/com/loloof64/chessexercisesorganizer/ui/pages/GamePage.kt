@@ -52,6 +52,14 @@ class GamePageState {
     var pendingSelectEngineDialog = false
     var promotionState = PendingPromotionData()
     var variationsSelectorData: VariationsSelectorData? = null
+    var highlightedHistoryItemIndex: Int? = null
+    var whiteSideType = PlayerType.Human
+    var blackSideType = PlayerType.Human
+    var isInSolutionMode = false
+    var selectedNodeVariationLevel = 0
+    var solutionAvailable = false
+    var failedToLoadSolution = false
+    var variationSelectionOpen = false
 }
 
 class GamePageViewModel : ViewModel() {
@@ -120,40 +128,40 @@ fun GamePage(
         mutableStateOf(gamePageViewModel.pageState.variationsSelectorData)
     }
 
-    var highlightedHistoryItemIndex by rememberSaveable {
-        mutableStateOf<Int?>(null)
+    var highlightedHistoryItemIndex by remember {
+        mutableStateOf(gamePageViewModel.pageState.highlightedHistoryItemIndex)
     }
 
-    var whiteSideType by rememberSaveable {
-        mutableStateOf(PlayerType.Human)
+    var whiteSideType by remember {
+        mutableStateOf(gamePageViewModel.pageState.whiteSideType)
     }
 
-    var blackSideType by rememberSaveable {
-        mutableStateOf(PlayerType.Human)
+    var blackSideType by remember {
+        mutableStateOf(gamePageViewModel.pageState.blackSideType)
     }
 
-    var isInSolutionMode by rememberSaveable {
-        mutableStateOf(false)
+    var isInSolutionMode by remember {
+        mutableStateOf(gamePageViewModel.pageState.isInSolutionMode)
     }
 
     /* When going to next position, or last position,
         we want to match as many parenthesis as needed, in order to
         pass through variations starting at current level.
      */
-    var selectedNodeVariationLevel by rememberSaveable {
-        mutableStateOf(0)
+    var selectedNodeVariationLevel by remember {
+        mutableStateOf(gamePageViewModel.pageState.selectedNodeVariationLevel)
     }
 
-    var solutionAvailable by rememberSaveable {
-        mutableStateOf(false)
+    var solutionAvailable by remember {
+        mutableStateOf(gamePageViewModel.pageState.solutionAvailable)
     }
 
-    var failedToLoadSolution by rememberSaveable {
-        mutableStateOf(false)
+    var failedToLoadSolution by remember {
+        mutableStateOf(gamePageViewModel.pageState.failedToLoadSolution)
     }
 
-    var variationSelectionOpen by rememberSaveable {
-        mutableStateOf(false)
+    var variationSelectionOpen by remember {
+        mutableStateOf(gamePageViewModel.pageState.variationSelectionOpen)
     }
 
     val isLandscape = when (LocalConfiguration.current.orientation) {
@@ -194,7 +202,8 @@ fun GamePage(
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
 
-            highlightedHistoryItemIndex = null
+            gamePageViewModel.pageState.highlightedHistoryItemIndex = null
+            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
 
             return
         }
@@ -214,7 +223,8 @@ fun GamePage(
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
         lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
 
-        highlightedHistoryItemIndex = if (fen != null) nodeIndex else null
+        gamePageViewModel.pageState.highlightedHistoryItemIndex = if (fen != null) nodeIndex else null
+        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
     }
 
     // Select last position in current variation.
@@ -243,6 +253,7 @@ fun GamePage(
                     variationLevel = searchResult.variationLevel,
                 )
             }
+            //TODO update highlightedItemIndex and selectedNodeVariationLevel
         }
     }
 
@@ -274,7 +285,7 @@ fun GamePage(
 
             val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
 
-            val selectedGameIndex = 15
+            val selectedGameIndex = 14
             val selectedGame = gamesData[selectedGameIndex]
 
             try {
@@ -285,15 +296,18 @@ fun GamePage(
                 } else {
                     gamePageViewModel.currentSolution = listOf()
                 }
-                failedToLoadSolution = false
+                gamePageViewModel.pageState.failedToLoadSolution = false
+                failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
             } catch (ex: Exception) {
                 gamePageViewModel.currentSolution = listOf()
-                failedToLoadSolution = true
+                gamePageViewModel.pageState.failedToLoadSolution = true
+                failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
 
                 println(ex)
             }
 
-            solutionAvailable = gamePageViewModel.currentSolution.isNotEmpty()
+            gamePageViewModel.pageState.solutionAvailable = gamePageViewModel.currentSolution.isNotEmpty()
+            solutionAvailable = gamePageViewModel.pageState.solutionAvailable
 
             val startFen =
                 if (selectedGame.tags.containsKey("FEN")) selectedGame.tags["FEN"]!! else Board.FEN_START_POSITION
@@ -303,8 +317,10 @@ fun GamePage(
 
             // Here we are fine to process the rest
             val blackStartGame = startFen.split(" ")[1] == "b"
-            whiteSideType = if (blackStartGame) PlayerType.Computer else PlayerType.Human
-            blackSideType = if (blackStartGame) PlayerType.Human else PlayerType.Computer
+            gamePageViewModel.pageState.whiteSideType = if (blackStartGame) PlayerType.Computer else PlayerType.Human
+            gamePageViewModel.pageState.blackSideType = if (blackStartGame) PlayerType.Human else PlayerType.Computer
+            whiteSideType = gamePageViewModel.pageState.whiteSideType
+            blackSideType = gamePageViewModel.pageState.blackSideType
             gamePageViewModel.pageState.boardReversed =
                 blackStartGame
             boardReversed = gamePageViewModel.pageState.boardReversed
@@ -317,10 +333,12 @@ fun GamePage(
             startPosition = gamePageViewModel.boardState.getCurrentPosition()
             stockfishLib.sendCommand("ucinewgame")
             gamePageViewModel.boardState.clearLastMoveArrow()
-            highlightedHistoryItemIndex = null
+            gamePageViewModel.pageState.highlightedHistoryItemIndex = null
+            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
 
-            isInSolutionMode = false
+            gamePageViewModel.pageState.isInSolutionMode = false
+            isInSolutionMode = gamePageViewModel.pageState.isInSolutionMode
 
             gamePageViewModel.pageState.gameInProgress = true
             gameInProgress = true
@@ -358,7 +376,10 @@ fun GamePage(
 
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             lastMoveArrow = null
-            highlightedHistoryItemIndex = null
+            gamePageViewModel.pageState.highlightedHistoryItemIndex = null
+            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
+
+            //TODO update highlightedItemIndex and selectedNodeVariationLevel
         }
     }
 
@@ -383,6 +404,7 @@ fun GamePage(
                 )
                 updateMovesNavigatorSelection(searchResult.index)
             }
+            //TODO update highlightedItemIndex and selectedNodeVariationLevel
         }
     }
 
@@ -438,11 +460,14 @@ fun GamePage(
                         }
                     )
                 variationsSelectorData = gamePageViewModel.pageState.variationsSelectorData
-                variationSelectionOpen = true
+                gamePageViewModel.pageState.variationSelectionOpen = true
+                variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
             } else {
                 gamePageViewModel.pageState.variationsSelectorData = null
+                variationsSelectorData = null
                 updateMovesNavigatorSelection(searchResult.index)
             }
+            //TODO update highlightedItemIndex and selectedNodeVariationLevel
         }
     }
 
@@ -480,7 +505,8 @@ fun GamePage(
             gamePageViewModel.boardState.setLastMoveArrow(positionData.second)
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-            highlightedHistoryItemIndex = positionData.third
+            gamePageViewModel.pageState.highlightedHistoryItemIndex = positionData.third
+            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
         }
     }
 
@@ -565,9 +591,12 @@ fun GamePage(
         lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
 
-        highlightedHistoryItemIndex = null
-        selectedNodeVariationLevel = 0
-        isInSolutionMode = !isInSolutionMode
+        gamePageViewModel.pageState.highlightedHistoryItemIndex = null
+        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
+        gamePageViewModel.pageState.selectedNodeVariationLevel = 0
+        selectedNodeVariationLevel = gamePageViewModel.pageState.selectedNodeVariationLevel
+        gamePageViewModel.pageState.isInSolutionMode = !isInSolutionMode
+        isInSolutionMode = gamePageViewModel.pageState.isInSolutionMode
     }
 
     fun manuallyUpdateHistoryNode() {
@@ -584,10 +613,12 @@ fun GamePage(
     }
 
     fun selectMainVariation() {
-        highlightedHistoryItemIndex = variationsSelectorData!!.main.historyIndex
+        gamePageViewModel.pageState.highlightedHistoryItemIndex = variationsSelectorData!!.main.historyIndex
+        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
         manuallyUpdateHistoryNode()
 
-        variationSelectionOpen = false
+        gamePageViewModel.pageState.variationSelectionOpen = false
+        variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
         gamePageViewModel.pageState.variationsSelectorData = null
     }
 
@@ -596,13 +627,15 @@ fun GamePage(
             variationsSelectorData!!.variations[variationIndex].historyIndex
         manuallyUpdateHistoryNode()
 
-        variationSelectionOpen = false
+        gamePageViewModel.pageState.variationSelectionOpen = false
         gamePageViewModel.pageState.variationsSelectorData = null
+        variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
     }
 
     fun cancelVariationSelection() {
-        variationSelectionOpen = false
+        gamePageViewModel.pageState.variationSelectionOpen = false
         gamePageViewModel.pageState.variationsSelectorData = null
+        variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
     }
 
     @Composable
