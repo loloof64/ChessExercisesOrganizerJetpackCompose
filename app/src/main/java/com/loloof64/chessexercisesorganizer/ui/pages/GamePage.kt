@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -15,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.alonsoruibal.chess.Board
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessexercisesorganizer.core.PgnGameLoader
+import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
@@ -49,6 +50,7 @@ class GamePageState {
     var gameInProgress = false
     var pendingNewGameRequest = false
     var pendingStopGameRequest = false
+    var pendingExitPageRequest = false
     var pendingSelectEngineDialog = false
     var promotionState = PendingPromotionData()
     var variationsSelectorData: VariationsSelectorData? = null
@@ -66,7 +68,6 @@ class GamePageViewModel : ViewModel() {
     var pageState = GamePageState()
     var boardState = DynamicBoardDataHandler()
     var movesElements = mutableListOf<MovesNavigatorElement>()
-    var currentGame = PgnGameLoader()
     var currentSolution: List<MovesNavigatorElement> = listOf()
 
     fun isWhiteTurn(): Boolean {
@@ -79,6 +80,7 @@ fun GamePage(
     navController: NavController,
     gamePageViewModel: GamePageViewModel = viewModel(),
     stockfishLib: StockfishLib,
+    selectedGameData: PGNGame,
 ) {
     val cpuThinkingTimeoutMs = 2_000L
 
@@ -164,6 +166,10 @@ fun GamePage(
         mutableStateOf(gamePageViewModel.pageState.variationSelectionOpen)
     }
 
+    var pendingExitPageRequest by remember {
+        mutableStateOf(gamePageViewModel.pageState.pendingExitPageRequest)
+    }
+
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
@@ -178,12 +184,10 @@ fun GamePage(
     val fiftyMovesText = stringResource(R.string.fifty_moves_rule_draw)
     val missingMaterialText = stringResource(R.string.missing_material_draw)
     val gameStoppedMessage = stringResource(R.string.user_stopped_game)
-    val gamesLoadingErrorMessage = stringResource(R.string.game_loading_error)
     val illegalStartPositionMessage = stringResource(R.string.illegal_start_position)
+    val arrowBackDescription = stringResource(R.string.arrow_back_button)
 
-    val context = LocalContext.current
-
-    fun showMinutedSnackbarAction(text: String, duration: SnackbarDuration) {
+    fun showMinutedSnackBarAction(text: String, duration: SnackbarDuration) {
         coroutineScope.launch {
             scaffoldState.snackbarHostState.showSnackbar(
                 message = text,
@@ -223,7 +227,8 @@ fun GamePage(
         currentPosition = gamePageViewModel.boardState.getCurrentPosition()
         lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
 
-        gamePageViewModel.pageState.highlightedHistoryItemIndex = if (fen != null) nodeIndex else null
+        gamePageViewModel.pageState.highlightedHistoryItemIndex =
+            if (fen != null) nodeIndex else null
         highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
     }
 
@@ -248,7 +253,8 @@ fun GamePage(
                 if (searchResult.isLastMoveNodeOfMainVariation || searchResult.hasJustMetCloseParenthesis) {
                     updateMovesNavigatorSelection(searchResult.index)
                     gamePageViewModel.pageState.highlightedHistoryItemIndex = searchResult.index
-                    gamePageViewModel.pageState.selectedNodeVariationLevel = searchResult.variationLevel
+                    gamePageViewModel.pageState.selectedNodeVariationLevel =
+                        searchResult.variationLevel
                     break
                 } else currentNodeData = NodeSearchParam(
                     index = searchResult.index,
@@ -270,7 +276,7 @@ fun GamePage(
             GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
             else -> null
         }
-        message?.let { showMinutedSnackbarAction(message, SnackbarDuration.Long) }
+        message?.let { showMinutedSnackBarAction(message, SnackbarDuration.Long) }
         if (endedStatus != GameEndedStatus.NOT_ENDED) {
             computerThinking = false
             gamePageViewModel.pageState.gameInProgress = false
@@ -281,16 +287,8 @@ fun GamePage(
 
     fun doStartNewGame() {
         try {
-            val inputStream = context.assets.open("pgn/dummy_sample.pgn")
-            val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
-
-            val gamesData = gamePageViewModel.currentGame.load(gamesFileContent = gamesFileContent)
-
-            val selectedGameIndex = 14
-            val selectedGame = gamesData[selectedGameIndex]
-
             try {
-                val solutionHistory = buildHistoryFromPGNGame(selectedGame)
+                val solutionHistory = buildHistoryFromPGNGame(selectedGameData)
 
                 if (solutionHistory.isNotEmpty()) {
                     gamePageViewModel.currentSolution = solutionHistory
@@ -307,19 +305,22 @@ fun GamePage(
                 println(ex)
             }
 
-            gamePageViewModel.pageState.solutionAvailable = gamePageViewModel.currentSolution.isNotEmpty()
+            gamePageViewModel.pageState.solutionAvailable =
+                gamePageViewModel.currentSolution.isNotEmpty()
             solutionAvailable = gamePageViewModel.pageState.solutionAvailable
 
             val startFen =
-                if (selectedGame.tags.containsKey("FEN")) selectedGame.tags["FEN"]!! else Board.FEN_START_POSITION
+                if (selectedGameData.tags.containsKey("FEN")) selectedGameData.tags["FEN"]!! else Board.FEN_START_POSITION
 
             // First we ensure that position is valid when initializing the board
             gamePageViewModel.boardState.newGame(startFen)
 
             // Here we are fine to process the rest
             val blackStartGame = startFen.split(" ")[1] == "b"
-            gamePageViewModel.pageState.whiteSideType = if (blackStartGame) PlayerType.Computer else PlayerType.Human
-            gamePageViewModel.pageState.blackSideType = if (blackStartGame) PlayerType.Human else PlayerType.Computer
+            gamePageViewModel.pageState.whiteSideType =
+                if (blackStartGame) PlayerType.Computer else PlayerType.Human
+            gamePageViewModel.pageState.blackSideType =
+                if (blackStartGame) PlayerType.Human else PlayerType.Computer
             whiteSideType = gamePageViewModel.pageState.whiteSideType
             blackSideType = gamePageViewModel.pageState.blackSideType
             gamePageViewModel.pageState.boardReversed =
@@ -346,11 +347,14 @@ fun GamePage(
 
             handleNaturalEndgame()
         } catch (ex: IllegalPositionException) {
-            showMinutedSnackbarAction(illegalStartPositionMessage, SnackbarDuration.Short)
-        } catch (ex: GamesLoadingException) {
+            showMinutedSnackBarAction(illegalStartPositionMessage, SnackbarDuration.Short)
+        }
+        /*
+        catch (ex: GamesLoadingException) {
             ex.printStackTrace()
             showMinutedSnackbarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
         }
+        */
     }
 
     fun newGameRequest() {
@@ -488,7 +492,7 @@ fun GamePage(
         gamePageViewModel.pageState.gameInProgress = false
         gameInProgress = false
         selectLastPosition()
-        showMinutedSnackbarAction(gameStoppedMessage, SnackbarDuration.Short)
+        showMinutedSnackBarAction(gameStoppedMessage, SnackbarDuration.Short)
     }
 
     // This must be called after having played the move on the board !
@@ -622,7 +626,8 @@ fun GamePage(
     }
 
     fun selectMainVariation() {
-        gamePageViewModel.pageState.highlightedHistoryItemIndex = variationsSelectorData!!.main.historyIndex
+        gamePageViewModel.pageState.highlightedHistoryItemIndex =
+            variationsSelectorData!!.main.historyIndex
         highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
         manuallyUpdateHistoryNode()
 
@@ -648,12 +653,24 @@ fun GamePage(
         variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
     }
 
+    fun handleGoBackRequest() {
+        val isInInitialPosition =
+            gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+        if (isInInitialPosition) {
+            navController.popBackStack()
+        }
+        else {
+            gamePageViewModel.pageState.pendingExitPageRequest = true
+            pendingExitPageRequest = true
+        }
+    }
+
     @Composable
     fun variationSelectionDropDownComponent() = DropdownMenu(
         expanded = variationSelectionOpen,
-        onDismissRequest = { cancelVariationSelection() },
+        onDismissRequest = ::cancelVariationSelection,
     ) {
-        DropdownMenuItem(onClick = { selectMainVariation() }) {
+        DropdownMenuItem(onClick = ::selectMainVariation) {
             Text(
                 text = variationsSelectorData!!.main.text,
                 modifier = Modifier
@@ -733,13 +750,11 @@ fun GamePage(
             elementSelectionRequestCallback = {
                 tryToSelectPosition(it)
             },
-            handleFirstPositionRequest = { selectFirstPosition() },
-            handleLastPositionRequest = { selectLastPosition() },
-            handlePreviousPositionRequest = { selectPreviousPosition() },
-            handleNextPositionRequest = { selectNextPosition() },
-            historyModeToggleRequestHandler = {
-                toggleHistoryMode()
-            },
+            handleFirstPositionRequest = ::selectFirstPosition,
+            handleLastPositionRequest = ::selectLastPosition,
+            handlePreviousPositionRequest = ::selectPreviousPosition,
+            handleNextPositionRequest = ::selectNextPosition,
+            historyModeToggleRequestHandler = ::toggleHistoryMode,
             isInSolutionMode = isInSolutionMode,
             modeSelectionActive = modeSelectionActive && solutionAvailable,
             failedToLoadSolution = failedToLoadSolution,
@@ -748,8 +763,31 @@ fun GamePage(
 
     @Composable
     fun dialogs() {
-        ConfirmNewGameDialog(
+        val newGameDialogTitle = stringResource(R.string.confirm_new_game_title)
+        val newGameDialogMessage = stringResource(R.string.confirm_new_game_message)
+        val stopDialogTitle = stringResource(R.string.confirm_stop_game_title)
+        val stopDialogMessage = stringResource(R.string.confirm_stop_game_message)
+        val exitPageDialogTitle = stringResource(R.string.confirm_exit_game_page_title)
+        val exitPageDialogMessage = stringResource(R.string.confirm_exit_game_page_message)
+
+        ConfirmDialog(
+            isOpen = pendingExitPageRequest,
+            title = exitPageDialogTitle,
+            message = exitPageDialogMessage,
+            validateCallback = {
+                gamePageViewModel.pageState.pendingExitPageRequest = false
+                pendingExitPageRequest = false
+                navController.popBackStack()
+            },
+            dismissCallback = {
+                gamePageViewModel.pageState.pendingExitPageRequest = false
+                pendingExitPageRequest = false
+            })
+
+        ConfirmDialog(
             isOpen = pendingNewGameRequest,
+            title = newGameDialogTitle,
+            message = newGameDialogMessage,
             validateCallback = {
                 gamePageViewModel.pageState.pendingNewGameRequest = false
                 gamePageViewModel.pageState.pendingSelectEngineDialog = true
@@ -761,8 +799,10 @@ fun GamePage(
                 pendingNewGameRequest = false
             })
 
-        ConfirmStopGameDialog(
+        ConfirmDialog(
             isOpen = pendingStopGameRequest,
+            title = stopDialogTitle,
+            message = stopDialogMessage,
             validateCallback = {
                 gamePageViewModel.pageState.pendingStopGameRequest = false
                 pendingStopGameRequest = false
@@ -803,9 +843,21 @@ fun GamePage(
         Scaffold(
             scaffoldState = scaffoldState,
             topBar = {
-                TopAppBar(title = { Text(stringResource(R.string.game_page)) }, actions = {
-                    topAppBarComponents()
-                })
+                TopAppBar(
+                    title = { Text(stringResource(R.string.game_page)) },
+                    backgroundColor = Color(0xFF4F7E33),
+                    actions = {
+                        topAppBarComponents()
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = ::handleGoBackRequest) {
+                            Icon(
+                                imageVector = Icons.Filled.ArrowBack,
+                                contentDescription = arrowBackDescription,
+                            )
+                        }
+                    }
+                )
             },
             content = {
                 Surface(color = MaterialTheme.colors.background) {
@@ -887,57 +939,20 @@ fun GamePage(
 }
 
 @Composable
-fun ConfirmNewGameDialog(
+fun ConfirmDialog(
     isOpen: Boolean,
+    title: String,
+    message: String,
     validateCallback: () -> Unit,
     dismissCallback: () -> Unit
 ) {
     if (isOpen) {
         AlertDialog(onDismissRequest = { dismissCallback() },
             title = {
-                Text(stringResource(R.string.confirm_new_game_title))
+                Text(title)
             },
             text = {
-                Text(stringResource(R.string.confirm_new_game_message))
-            },
-            confirmButton = {
-                Button(
-                    onClick = { validateCallback() },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
-                ) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { dismissCallback() },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondaryVariant)
-                ) {
-                    Text(stringResource(R.string.Cancel))
-                }
-            }
-        )
-
-    }
-}
-
-@Composable
-fun ConfirmStopGameDialog(
-    isOpen: Boolean,
-    validateCallback: () -> Unit,
-    dismissCallback: () -> Unit
-) {
-    if (isOpen) {
-        AlertDialog(onDismissRequest = { dismissCallback() },
-            title = {
-                Text(stringResource(R.string.confirm_stop_game_title))
-            },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.confirm_stop_game_message
-                    )
-                )
+                Text(message)
             },
             confirmButton = {
                 Button(

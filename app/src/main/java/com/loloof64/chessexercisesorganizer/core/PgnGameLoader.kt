@@ -1,7 +1,5 @@
 package com.loloof64.chessexercisesorganizer.core
 
-import com.alonsoruibal.chess.pgn.Game
-import com.alonsoruibal.chess.pgn.PgnParser
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGamesListener
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNLexer

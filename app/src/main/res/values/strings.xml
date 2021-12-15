@@ -59,4 +59,8 @@
     <string name="toggle_history_mode">Toggle mode</string>
     <string name="failed_loading_solution">Illegal solution move(s) !</string>
     <string name="illegal_start_position">Illegal start position !</string>
+    <string name="games_list_page">Games list page</string>
+    <string name="arrow_back_button">Go back</string>
+    <string name="confirm_exit_game_page_title">Exit page ?</string>
+    <string name="confirm_exit_game_page_message">Do you really want to exit page and leave current game ?</string>
 </resources>

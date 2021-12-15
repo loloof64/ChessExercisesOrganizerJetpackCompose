@@ -60,4 +60,8 @@
     <string name="toggle_history_mode">Basculer le mode</string>
     <string name="failed_loading_solution">Coup(s) illégal(gaux) dans la solution !</string>
     <string name="illegal_start_position">Position de départ illégale !</string>
+    <string name="games_list_page">Page liste des parties</string>
+    <string name="arrow_back_button">Revenir</string>
+    <string name="confirm_exit_game_page_title">Partir ?</string>
+    <string name="confirm_exit_game_page_message">Souhaitez-vous vraiment quitter la page et la partie courante ?</string>
 </resources>

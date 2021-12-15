@@ -14,6 +14,9 @@ Using source code from Stockfish 14.
 
 Using ANTLR 4 grammar from project [Pgn Parser](https://github.com/bkiers/PGN-parser), slightly modified.
 
+Using some pictures from [SvgRepo](https://www.svgrepo.com) :
+* text_file: from https://www.svgrepo.com/svg/286579/document (by SVG Repo)
+
 Using some pictures from [FlatIcon](http://www.flaticon.com) :
 * red_cross : from https://www.flaticon.com/free-icon/close_1828665 (by Pixel Perfect)
 * start_flag : from https://www.flaticon.com/free-icon/racing-flag_1505471 (by SmashIcons)

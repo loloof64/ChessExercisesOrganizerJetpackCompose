@@ -60,4 +60,8 @@
     <string name="toggle_history_mode">Alternar el modo</string>
     <string name="failed_loading_solution">" ¡Golpe(s) ilegal(es) en la solución!"</string>
     <string name="illegal_start_position">¡Posición de salida ilegal!</string>
+    <string name="games_list_page">Página de lista de juegos</string>
+    <string name="arrow_back_button">Volver</string>
+    <string name="confirm_exit_game_page_message">¿Estás seguro de que quieres salir de la página y el juego actuales?</string>
+    <string name="confirm_exit_game_page_title">¿Salir?</string>
 </resources>
