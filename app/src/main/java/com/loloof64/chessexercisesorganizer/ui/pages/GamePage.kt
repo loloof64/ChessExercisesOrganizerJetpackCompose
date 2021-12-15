@@ -247,13 +247,14 @@ fun GamePage(
                 )
                 if (searchResult.isLastMoveNodeOfMainVariation || searchResult.hasJustMetCloseParenthesis) {
                     updateMovesNavigatorSelection(searchResult.index)
+                    gamePageViewModel.pageState.highlightedHistoryItemIndex = searchResult.index
+                    gamePageViewModel.pageState.selectedNodeVariationLevel = searchResult.variationLevel
                     break
                 } else currentNodeData = NodeSearchParam(
                     index = searchResult.index,
                     variationLevel = searchResult.variationLevel,
                 )
             }
-            //TODO update highlightedItemIndex and selectedNodeVariationLevel
         }
     }
 
@@ -378,8 +379,8 @@ fun GamePage(
             lastMoveArrow = null
             gamePageViewModel.pageState.highlightedHistoryItemIndex = null
             highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
-
-            //TODO update highlightedItemIndex and selectedNodeVariationLevel
+            gamePageViewModel.pageState.selectedNodeVariationLevel = 0
+            selectedNodeVariationLevel = 0
         }
     }
 
@@ -403,8 +404,9 @@ fun GamePage(
                     selectedNodeVariationLevel = selectedNodeVariationLevel,
                 )
                 updateMovesNavigatorSelection(searchResult.index)
+                gamePageViewModel.pageState.highlightedHistoryItemIndex = searchResult.index
+                gamePageViewModel.pageState.selectedNodeVariationLevel = searchResult.variationLevel
             }
-            //TODO update highlightedItemIndex and selectedNodeVariationLevel
         }
     }
 
@@ -425,7 +427,11 @@ fun GamePage(
                 ),
                 selectedNodeVariationLevel = selectedNodeVariationLevel,
             )
+
             if (searchResult.variationsToProcess.isNotEmpty()) {
+                /*
+                We must not update highlighted item index nor currentVariationLevel in GamePageViewModel yet.
+                */
                 val moveNumber = findCurrentNodeMoveNumber(
                     historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
                     else gamePageViewModel.movesElements,
@@ -463,11 +469,14 @@ fun GamePage(
                 gamePageViewModel.pageState.variationSelectionOpen = true
                 variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
             } else {
+                gamePageViewModel.pageState.highlightedHistoryItemIndex = searchResult.index
+                gamePageViewModel.pageState.selectedNodeVariationLevel = searchResult.variationLevel
+
                 gamePageViewModel.pageState.variationsSelectorData = null
                 variationsSelectorData = null
                 updateMovesNavigatorSelection(searchResult.index)
             }
-            //TODO update highlightedItemIndex and selectedNodeVariationLevel
+
         }
     }
 
@@ -623,8 +632,9 @@ fun GamePage(
     }
 
     fun selectSubVariation(variationIndex: Int) {
-        highlightedHistoryItemIndex =
+        gamePageViewModel.pageState.highlightedHistoryItemIndex =
             variationsSelectorData!!.variations[variationIndex].historyIndex
+        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
         manuallyUpdateHistoryNode()
 
         gamePageViewModel.pageState.variationSelectionOpen = false
