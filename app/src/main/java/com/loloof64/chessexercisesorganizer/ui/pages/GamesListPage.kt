@@ -55,15 +55,18 @@ fun GamesListPage(
     }
 
     fun extractGames(fileData: FileData, context: Context): List<PGNGame> {
-        return try {
+        val result = try {
             when (fileData) {
                 is AssetFileData -> extractAssetGames(fileData, context)
             }
         } catch (ex: GamesLoadingException) {
             println(ex)
-            showMinutedSnackBarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
             listOf()
         }
+        if (result.isEmpty()) {
+            showMinutedSnackBarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
+        }
+        return result
     }
 
     ChessExercisesOrganizerJetpackComposeTheme {
