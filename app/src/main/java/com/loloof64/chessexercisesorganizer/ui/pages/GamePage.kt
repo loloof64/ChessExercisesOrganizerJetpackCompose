@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.alonsoruibal.chess.Board
+import com.loloof64.chessexercisesorganizer.NavHostParcelizeArgs
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
 import com.loloof64.chessexercisesorganizer.ui.components.*
@@ -65,10 +66,12 @@ class GamePageState {
 }
 
 class GamePageViewModel : ViewModel() {
+    var gamesList: List<PGNGame> = listOf()
     var pageState = GamePageState()
     var boardState = DynamicBoardDataHandler()
     var movesElements = mutableListOf<MovesNavigatorElement>()
     var currentSolution: List<MovesNavigatorElement> = listOf()
+    var selectedGame = PGNGame(tags = mutableMapOf(), moves = null)
 
     fun isWhiteTurn(): Boolean {
         return boardState.whiteTurn()
@@ -80,9 +83,46 @@ fun GamePage(
     navController: NavController,
     gamePageViewModel: GamePageViewModel = viewModel(),
     stockfishLib: StockfishLib,
-    selectedGameData: PGNGame,
 ) {
     val cpuThinkingTimeoutMs = 2_000L
+
+    val gamesList =
+        navController.previousBackStackEntry?.savedStateHandle?.get<List<PGNGame>>(
+            NavHostParcelizeArgs.gamesList
+        )
+
+    var failedToLoadSolution by remember {
+        mutableStateOf(gamePageViewModel.pageState.failedToLoadSolution)
+    }
+
+    gamesList?.let {
+        gamePageViewModel.gamesList = it
+
+        val selectedGame = it[0]
+        gamePageViewModel.selectedGame = selectedGame
+
+        try {
+            val solutionHistory = buildHistoryFromPGNGame(selectedGame)
+
+            if (solutionHistory.isNotEmpty()) {
+                gamePageViewModel.currentSolution = solutionHistory
+            } else {
+                gamePageViewModel.currentSolution = listOf()
+            }
+            gamePageViewModel.pageState.failedToLoadSolution = false
+            failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
+        } catch (ex: Exception) {
+            gamePageViewModel.currentSolution = listOf()
+            gamePageViewModel.pageState.failedToLoadSolution = true
+            failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
+
+            println(ex)
+        }
+    }
+
+    val selectedGame by remember {
+        mutableStateOf(gamePageViewModel.selectedGame)
+    }
 
     val scaffoldState = rememberScaffoldState()
 
@@ -156,10 +196,6 @@ fun GamePage(
 
     var solutionAvailable by remember {
         mutableStateOf(gamePageViewModel.pageState.solutionAvailable)
-    }
-
-    var failedToLoadSolution by remember {
-        mutableStateOf(gamePageViewModel.pageState.failedToLoadSolution)
     }
 
     var variationSelectionOpen by remember {
@@ -287,30 +323,12 @@ fun GamePage(
 
     fun doStartNewGame() {
         try {
-            try {
-                val solutionHistory = buildHistoryFromPGNGame(selectedGameData)
-
-                if (solutionHistory.isNotEmpty()) {
-                    gamePageViewModel.currentSolution = solutionHistory
-                } else {
-                    gamePageViewModel.currentSolution = listOf()
-                }
-                gamePageViewModel.pageState.failedToLoadSolution = false
-                failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
-            } catch (ex: Exception) {
-                gamePageViewModel.currentSolution = listOf()
-                gamePageViewModel.pageState.failedToLoadSolution = true
-                failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
-
-                println(ex)
-            }
-
             gamePageViewModel.pageState.solutionAvailable =
                 gamePageViewModel.currentSolution.isNotEmpty()
             solutionAvailable = gamePageViewModel.pageState.solutionAvailable
 
             val startFen =
-                if (selectedGameData.tags.containsKey("FEN")) selectedGameData.tags["FEN"]!! else Board.FEN_START_POSITION
+                if (selectedGame.tags.containsKey("FEN")) selectedGame.tags["FEN"]!! else Board.FEN_START_POSITION
 
             // First we ensure that position is valid when initializing the board
             gamePageViewModel.boardState.newGame(startFen)
@@ -349,12 +367,6 @@ fun GamePage(
         } catch (ex: IllegalPositionException) {
             showMinutedSnackBarAction(illegalStartPositionMessage, SnackbarDuration.Short)
         }
-        /*
-        catch (ex: GamesLoadingException) {
-            ex.printStackTrace()
-            showMinutedSnackbarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
-        }
-        */
     }
 
     fun newGameRequest() {

@@ -18,6 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.loloof64.chessexercisesorganizer.NavHostParcelizeArgs
+import com.loloof64.chessexercisesorganizer.NavHostRoutes
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.core.PgnGameLoader
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
@@ -31,7 +34,7 @@ data class AssetFileData(override val caption: String, val assetPath: String) :
 
 @Composable
 fun GamesListPage(
-    fileSelectedHandler: (List<PGNGame>) -> Unit = { _ -> },
+    navController: NavController,
 ) {
     val scaffoldState = rememberScaffoldState()
     val coroutineScope = rememberCoroutineScope()
@@ -79,7 +82,11 @@ fun GamesListPage(
                 SampleGamesList(
                     itemSelectedHandler = {
                         val games = extractGames(fileData = it, context = context)
-                        fileSelectedHandler(games)
+                        navController.currentBackStackEntry?.savedStateHandle?.set(
+                            NavHostParcelizeArgs.gamesList,
+                            games
+                        )
+                        navController.navigate(NavHostRoutes.gamePage)
                     }
                 )
             })

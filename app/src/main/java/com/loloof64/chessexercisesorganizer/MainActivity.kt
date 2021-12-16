@@ -16,6 +16,15 @@ import com.loloof64.stockfish.StockfishLib
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
+object NavHostRoutes {
+    const val gamesListPage = "gamesList"
+    const val gamePage = "gamePage"
+}
+
+object NavHostParcelizeArgs {
+    const val gamesList = "games"
+}
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var stockfishLib: StockfishLib
@@ -37,35 +46,17 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun MainContent(stockfishLib: StockfishLib) {
     val navController = rememberNavController()
-    val emptyPgnGame = PGNGame(tags = mutableMapOf(), moves = null)
-    var selectedFileGames by rememberSaveable {
-        mutableStateOf<List<PGNGame>>(listOf())
-    }
-    var selectedGameIndex by rememberSaveable {
-        mutableStateOf<Int?>(null)
-    }
-    NavHost(navController, startDestination = "gamesList") {
-        composable("gamesList") { GamesListPage(fileSelectedHandler = { gamesList ->
-            selectedFileGames = gamesList
-            if (selectedFileGames.isNotEmpty()) {
-                selectedGameIndex = 0
-                navController.navigate("game")
-            }
-            else {
-                selectedGameIndex = null
-            }
-        }) }
-        composable("game") {
-            GamePage(
+    NavHost(navController, startDestination = NavHostRoutes.gamesListPage) {
+        composable(NavHostRoutes.gamesListPage) {
+            GamesListPage(
                 navController = navController,
-                stockfishLib = stockfishLib,
-                selectedGameData = if (selectedGameIndex != null) {
-                    selectedFileGames[selectedGameIndex!!]
-                }
-                else {
-                    emptyPgnGame
-                }
             )
+        }
+        composable(NavHostRoutes.gamePage) {
+                GamePage(
+                    navController = navController,
+                    stockfishLib = stockfishLib,
+                )
         }
     }
 }

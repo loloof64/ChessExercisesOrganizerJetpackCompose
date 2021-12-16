@@ -1,12 +1,17 @@
 package com.loloof64.chessexercisesorganizer.core.pgnparser
 
-enum class GameTermination {
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
+enum class GameTermination : Parcelable {
     WhiteWon,
     BlackWon,
     Draw,
     NotKnown,
 }
 
+@Parcelize
 data class PGNNode(
     var moveValue: String,
     var whiteMove: Boolean,
@@ -14,9 +19,10 @@ data class PGNNode(
     var nextNode: PGNNode? = null,
     val variations: MutableList<PGNNode> = mutableListOf(),
     var gameTermination: GameTermination? = null
-)
+) : Parcelable
 
-data class PGNGame(val tags: MutableMap<String, String>, val moves: PGNNode?)
+@Parcelize
+data class PGNGame(val tags: MutableMap<String, String>, val moves: PGNNode?) : Parcelable
 data class PGN(val games: MutableList<PGNGame> = mutableListOf())
 
 class PGNGamesListener : PGNBaseListener() {
