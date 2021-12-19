@@ -17,10 +17,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -35,6 +39,9 @@ import com.loloof64.stockfish.StockfishLib
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 data class SingleVariationData(
     val text: String,
@@ -63,6 +70,7 @@ class GamePageState {
     var solutionAvailable = false
     var failedToLoadSolution = false
     var variationSelectionOpen = false
+    var weMustChangeStockfish = false
 }
 
 class GamePageViewModel : ViewModel() {
@@ -81,10 +89,36 @@ class GamePageViewModel : ViewModel() {
 @Composable
 fun GamePage(
     navController: NavController,
+    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
     gamePageViewModel: GamePageViewModel = viewModel(),
-    stockfishLib: StockfishLib,
 ) {
     val cpuThinkingTimeoutMs = 2_000L
+
+    var stockfishLib by remember {
+        mutableStateOf(StockfishLib())
+    }
+
+    // Disposing StockfishLib on right time
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_DESTROY) {
+                stockfishLib.quit()
+                gamePageViewModel.pageState.weMustChangeStockfish = true
+            }
+            else if (event == Lifecycle.Event.ON_RESUME) {
+                if (gamePageViewModel.pageState.weMustChangeStockfish) {
+                    stockfishLib = StockfishLib()
+                    gamePageViewModel.pageState.weMustChangeStockfish = false
+                }
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val gamesList =
         navController.previousBackStackEntry?.savedStateHandle?.get<List<PGNGame>>(

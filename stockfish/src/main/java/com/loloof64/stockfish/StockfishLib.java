@@ -6,8 +6,11 @@ package com.loloof64.stockfish;
  */
 public class StockfishLib {
 
-    public StockfishLib() {
+    static {
         System.loadLibrary("stockfish");
+    }
+
+    public StockfishLib() {
         new Thread(this::mainLoop).start();
     }
 

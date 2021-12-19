@@ -12,6 +12,9 @@
 namespace loloof64 {
     class LockedStringQueue {
     public:
+        ~LockedStringQueue() {
+            this->_mutex.unlock();
+        }
         bool empty() const;
         /*
          * Returns "@@@Queue locked by another thread@@@" if queue is locked by another thread,

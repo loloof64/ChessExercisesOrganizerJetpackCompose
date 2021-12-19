@@ -27,24 +27,17 @@ object NavHostParcelizeArgs {
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var stockfishLib: StockfishLib
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        stockfishLib = StockfishLib()
         setContent {
-            MainContent(stockfishLib)
+            MainContent()
         }
     }
 
-    override fun onStop() {
-        stockfishLib.quit()
-        super.onStop()
-    }
 }
 
 @Composable
-fun MainContent(stockfishLib: StockfishLib) {
+fun MainContent() {
     val navController = rememberNavController()
     NavHost(navController, startDestination = NavHostRoutes.gamesListPage) {
         composable(NavHostRoutes.gamesListPage) {
@@ -55,7 +48,6 @@ fun MainContent(stockfishLib: StockfishLib) {
         composable(NavHostRoutes.gamePage) {
                 GamePage(
                     navController = navController,
-                    stockfishLib = stockfishLib,
                 )
         }
     }

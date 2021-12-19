@@ -262,16 +262,11 @@ void UCI::loop() {
       istringstream is(cmd);
       is >> token;
 
-      ////////////////////////////////////
-      std::stringstream tmp_1;
-      tmp_1 << "[Got token]: " << token;
-      outputs.push(tmp_1.str());
-      ////////////////////////////////////
-
       if (    token == "quit"
-          ||  token == "stop")
+          ||  token == "stop"){
           Threads.stop = true;
-
+          if (token == "quit") break;
+      }
       // The GUI sends 'ponderhit' to tell us the user has played the expected move.
       // So 'ponderhit' will be sent if we were told to ponder on the same move the
       // user has played. We should continue searching but switch from pondering to
@@ -287,22 +282,38 @@ void UCI::loop() {
           outputs.push(uci_msg.str());
       }
 
-      else if (token == "setoption")  setoption(is);
-      else if (token == "go")         go(pos, is, states);
-      else if (token == "position")   position(pos, is, states);
-      else if (token == "ucinewgame") Search::clear();
-      else if (token == "isready")    outputs.push("readyok");
+      else if (token == "setoption")  {
+          setoption(is);
+      }
+      else if (token == "go")         {
+          go(pos, is, states);
+      }
+      else if (token == "position")   {
+          position(pos, is, states);
+      }
+      else if (token == "ucinewgame") {
+          Search::clear();
+      }
+      else if (token == "isready")    {
+          outputs.push("readyok");
+      }
 
       // Additional custom non-UCI commands, mainly for debugging.
       // Do not use these commands during a search!
-      else if (token == "flip")     pos.flip();
-      else if (token == "bench")    bench(pos, is, states);
+      else if (token == "flip")     {
+          pos.flip();
+      }
+      else if (token == "bench")    {
+          bench(pos, is, states);
+      }
       else if (token == "d")        {
           std::stringstream  pos_msg;
           pos_msg << pos;
           outputs.push(pos_msg.str());
       }
-      else if (token == "eval")     trace_eval(pos);
+      else if (token == "eval")     {
+          trace_eval(pos);
+      }
       else if (token == "compiler") {
           std::stringstream compiler_msg;
           compiler_msg << compiler_info();
@@ -322,7 +333,7 @@ void UCI::loop() {
           outputs.push(command_err_msg.str());
       }
 
-  } while (token != "quit"); // Command line args are one-shot
+  } while (true);
 }
 
 
