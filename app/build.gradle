@@ -4,6 +4,12 @@ plugins {
     id 'kotlin-parcelize'
 }
 
+configurations.all {
+    resolutionStrategy {
+        preferProjectModules()
+    }
+}
+
 android {
     compileSdkVersion 31
     buildToolsVersion "30.0.3"

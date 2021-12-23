@@ -1,28 +1,35 @@
 package com.loloof64.chessexercisesorganizer
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
+import com.loloof64.chessexercisesorganizer.core.domain.FileGamesExtractor
+import com.loloof64.chessexercisesorganizer.core.domain.GamesFromFileDataSource
+import com.loloof64.chessexercisesorganizer.core.domain.GamesFromFileExtractorUseCase
+import com.loloof64.chessexercisesorganizer.core.domain.GamesFromFileRepository
 import com.loloof64.chessexercisesorganizer.ui.pages.GamePage
 import com.loloof64.chessexercisesorganizer.ui.pages.GamesListPage
-import com.loloof64.stockfish.StockfishLib
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 
 object NavHostRoutes {
     const val gamesListPage = "gamesList"
     const val gamePage = "gamePage"
 }
 
-object NavHostParcelizeArgs {
-    const val gamesList = "games"
+class MyApplication : Application() {
+    val gamesFromFileExtractorUseCase by lazy {
+        GamesFromFileExtractorUseCase(
+            GamesFromFileDataSource(
+                GamesFromFileRepository(
+                    FileGamesExtractor()
+                )
+            )
+        )
+    }
 }
 
 class MainActivity : AppCompatActivity() {
@@ -46,9 +53,9 @@ fun MainContent() {
             )
         }
         composable(NavHostRoutes.gamePage) {
-                GamePage(
-                    navController = navController,
-                )
+            GamePage(
+                navController = navController,
+            )
         }
     }
 }

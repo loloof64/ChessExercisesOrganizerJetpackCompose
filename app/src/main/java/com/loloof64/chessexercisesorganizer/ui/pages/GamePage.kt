@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -29,7 +30,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.alonsoruibal.chess.Board
-import com.loloof64.chessexercisesorganizer.NavHostParcelizeArgs
+import com.loloof64.chessexercisesorganizer.MyApplication
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
 import com.loloof64.chessexercisesorganizer.ui.components.*
@@ -39,9 +40,6 @@ import com.loloof64.stockfish.StockfishLib
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import java.time.Duration
-import java.util.concurrent.TimeUnit
 
 data class SingleVariationData(
     val text: String,
@@ -94,6 +92,8 @@ fun GamePage(
 ) {
     val cpuThinkingTimeoutMs = 2_000L
 
+    val context = LocalContext.current
+
     var stockfishLib by remember {
         mutableStateOf(StockfishLib())
     }
@@ -120,10 +120,7 @@ fun GamePage(
         }
     }
 
-    val gamesList =
-        navController.previousBackStackEntry?.savedStateHandle?.get<List<PGNGame>>(
-            NavHostParcelizeArgs.gamesList
-        )
+    val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.currentGames()
 
     var failedToLoadSolution by remember {
         mutableStateOf(gamePageViewModel.pageState.failedToLoadSolution)

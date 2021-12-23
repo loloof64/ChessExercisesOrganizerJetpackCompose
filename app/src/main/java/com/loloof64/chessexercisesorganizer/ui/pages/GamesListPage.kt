@@ -1,13 +1,13 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
-import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,18 +19,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.loloof64.chessexercisesorganizer.NavHostParcelizeArgs
+import com.loloof64.chessexercisesorganizer.MyApplication
 import com.loloof64.chessexercisesorganizer.NavHostRoutes
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessexercisesorganizer.core.PgnGameLoader
-import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
+import com.loloof64.chessexercisesorganizer.core.domain.AssetFileData
+import com.loloof64.chessexercisesorganizer.core.domain.FileData
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.GamesLoadingException
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-sealed class FileData(open val caption: String)
-data class AssetFileData(override val caption: String, val assetPath: String) :
-    FileData(caption = caption)
+import kotlinx.coroutines.withContext
 
 @Composable
 fun GamesListPage(
@@ -42,34 +40,13 @@ fun GamesListPage(
 
     val gamesLoadingErrorMessage = stringResource(R.string.game_loading_error)
 
-    fun showMinutedSnackBarAction(text: String, duration: SnackbarDuration) {
-        coroutineScope.launch {
+    suspend fun showMinutedSnackBarAction(text: String, duration: SnackbarDuration) {
+        withContext(Dispatchers.Main.immediate) {
             scaffoldState.snackbarHostState.showSnackbar(
                 message = text,
                 duration = duration,
             )
         }
-    }
-
-    fun extractAssetGames(fileData: AssetFileData, context: Context): List<PGNGame> {
-        val inputStream = context.assets.open(fileData.assetPath)
-        val gamesFileContent = inputStream.bufferedReader().use { it.readText() }
-        return PgnGameLoader().load(gamesFileContent = gamesFileContent)
-    }
-
-    fun extractGames(fileData: FileData, context: Context): List<PGNGame> {
-        val result = try {
-            when (fileData) {
-                is AssetFileData -> extractAssetGames(fileData, context)
-            }
-        } catch (ex: GamesLoadingException) {
-            println(ex)
-            listOf()
-        }
-        if (result.isEmpty()) {
-            showMinutedSnackBarAction(gamesLoadingErrorMessage, SnackbarDuration.Short)
-        }
-        return result
     }
 
     ChessExercisesOrganizerJetpackComposeTheme {
@@ -81,12 +58,23 @@ fun GamesListPage(
             content = {
                 SampleGamesList(
                     itemSelectedHandler = {
-                        val games = extractGames(fileData = it, context = context)
-                        navController.currentBackStackEntry?.savedStateHandle?.set(
-                            NavHostParcelizeArgs.gamesList,
-                            games
-                        )
-                        navController.navigate(NavHostRoutes.gamePage)
+                        coroutineScope.launch(Dispatchers.Main.immediate) {
+                            (context.applicationContext as MyApplication)
+                                .gamesFromFileExtractorUseCase.extractGames(
+                                    fileData = it,
+                                    context = context
+                                )
+                            val games = (context.applicationContext as MyApplication)
+                                .gamesFromFileExtractorUseCase.currentGames()
+                            if (games.isNullOrEmpty()) {
+                                showMinutedSnackBarAction(
+                                    gamesLoadingErrorMessage,
+                                    SnackbarDuration.Short
+                                )
+                            } else {
+                                navController.navigate(NavHostRoutes.gamePage)
+                            }
+                        }
                     }
                 )
             })

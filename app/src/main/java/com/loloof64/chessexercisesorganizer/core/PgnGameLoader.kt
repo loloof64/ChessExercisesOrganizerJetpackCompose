@@ -9,7 +9,6 @@ import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import java.io.StringReader
 
-
 class PgnGameLoader {
     fun load(gamesFileContent: String): List<PGNGame> {
         val charStream = CharStreams.fromReader(StringReader(gamesFileContent))
