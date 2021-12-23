@@ -836,7 +836,7 @@ fun GamePage(
     fun topAppBarComponents() {
         SimpleButton(
             text = stringResource(R.string.new_game),
-            vectorId = R.drawable.ic_start_flag
+            vectorId = R.drawable.ic_start_flags
         ) {
             newGameRequest()
         }
@@ -1022,7 +1022,7 @@ fun SimpleButton(
 @Preview
 @Composable
 fun SimpleButtonPreview() {
-    SimpleButton(text = "New", vectorId = R.drawable.ic_start_flag) {
+    SimpleButton(text = "New", vectorId = R.drawable.ic_start_flags) {
 
     }
 }
