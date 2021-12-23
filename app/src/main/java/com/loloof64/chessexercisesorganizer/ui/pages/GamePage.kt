@@ -47,7 +47,7 @@ data class VariationsSelectorData(
     val variations: List<SingleVariationData>,
 )
 
-class GamePageState {
+class GamePageInterfaceState {
     var boardReversed = false
     var gameInProgress = false
     var pendingNewGameRequest = false
@@ -66,22 +66,26 @@ class GamePageState {
     var variationSelectionOpen = false
 }
 
-class GamePageViewModel : ViewModel() {
+class GamePageChessState {
     var gamesList: List<PGNGame> = listOf()
-    var pageState = GamePageState()
     var boardState = DynamicBoardDataHandler()
-    var movesElements = mutableListOf<MovesNavigatorElement>()
-    var currentSolution: List<MovesNavigatorElement> = listOf()
+    var playedGameHistory = mutableListOf<MovesNavigatorElement>()
+    var gameSolution: List<MovesNavigatorElement> = listOf()
     var selectedGame = PGNGame(tags = mutableMapOf(), moves = null)
     val stockfishLib = StockfishLib()
+}
+
+class GamePageViewModel : ViewModel() {
+    var interfaceState = GamePageInterfaceState()
+    var chessState = GamePageChessState()
 
     fun isWhiteTurn(): Boolean {
-        return boardState.whiteTurn()
+        return chessState.boardState.whiteTurn()
     }
 
     override fun onCleared() {
         super.onCleared()
-        stockfishLib.sendCommand("quit")
+        chessState.stockfishLib.sendCommand("quit")
     }
 }
 
@@ -97,70 +101,70 @@ fun GamePage(
     val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.currentGames()
 
     var failedToLoadSolution by remember {
-        mutableStateOf(gamePageViewModel.pageState.failedToLoadSolution)
+        mutableStateOf(gamePageViewModel.interfaceState.failedToLoadSolution)
     }
 
     gamesList?.let {
-        gamePageViewModel.gamesList = it
+        gamePageViewModel.chessState.gamesList = it
 
         val selectedGame = it[0]
-        gamePageViewModel.selectedGame = selectedGame
+        gamePageViewModel.chessState.selectedGame = selectedGame
 
         try {
             val solutionHistory = buildHistoryFromPGNGame(selectedGame)
 
             if (solutionHistory.isNotEmpty()) {
-                gamePageViewModel.currentSolution = solutionHistory
+                gamePageViewModel.chessState.gameSolution = solutionHistory
             } else {
-                gamePageViewModel.currentSolution = listOf()
+                gamePageViewModel.chessState.gameSolution = listOf()
             }
-            gamePageViewModel.pageState.failedToLoadSolution = false
-            failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
+            gamePageViewModel.interfaceState.failedToLoadSolution = false
+            failedToLoadSolution = gamePageViewModel.interfaceState.failedToLoadSolution
         } catch (ex: Exception) {
-            gamePageViewModel.currentSolution = listOf()
-            gamePageViewModel.pageState.failedToLoadSolution = true
-            failedToLoadSolution = gamePageViewModel.pageState.failedToLoadSolution
+            gamePageViewModel.chessState.gameSolution = listOf()
+            gamePageViewModel.interfaceState.failedToLoadSolution = true
+            failedToLoadSolution = gamePageViewModel.interfaceState.failedToLoadSolution
 
             println(ex)
         }
     }
 
     val selectedGame by remember {
-        mutableStateOf(gamePageViewModel.selectedGame)
+        mutableStateOf(gamePageViewModel.chessState.selectedGame)
     }
 
     val scaffoldState = rememberScaffoldState()
 
     var startPosition by rememberSaveable {
-        mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
+        mutableStateOf(gamePageViewModel.chessState.boardState.getCurrentPosition())
     }
 
     var currentPosition by remember {
-        mutableStateOf(gamePageViewModel.boardState.getCurrentPosition())
+        mutableStateOf(gamePageViewModel.chessState.boardState.getCurrentPosition())
     }
 
     var lastMoveArrow by remember {
-        mutableStateOf(gamePageViewModel.boardState.getLastMoveArrow())
+        mutableStateOf(gamePageViewModel.chessState.boardState.getLastMoveArrow())
     }
 
     var boardReversed by remember {
-        mutableStateOf(gamePageViewModel.pageState.boardReversed)
+        mutableStateOf(gamePageViewModel.interfaceState.boardReversed)
     }
 
     var gameInProgress by remember {
-        mutableStateOf(gamePageViewModel.pageState.gameInProgress)
+        mutableStateOf(gamePageViewModel.interfaceState.gameInProgress)
     }
 
     var pendingNewGameRequest by remember {
-        mutableStateOf(gamePageViewModel.pageState.pendingNewGameRequest)
+        mutableStateOf(gamePageViewModel.interfaceState.pendingNewGameRequest)
     }
 
     var pendingStopGameRequest by remember {
-        mutableStateOf(gamePageViewModel.pageState.pendingStopGameRequest)
+        mutableStateOf(gamePageViewModel.interfaceState.pendingStopGameRequest)
     }
 
     var promotionState by remember {
-        mutableStateOf(gamePageViewModel.pageState.promotionState)
+        mutableStateOf(gamePageViewModel.interfaceState.promotionState)
     }
 
     var computerThinking by remember {
@@ -172,23 +176,23 @@ fun GamePage(
     }
 
     var variationsSelectorData by remember {
-        mutableStateOf(gamePageViewModel.pageState.variationsSelectorData)
+        mutableStateOf(gamePageViewModel.interfaceState.variationsSelectorData)
     }
 
     var highlightedHistoryItemIndex by remember {
-        mutableStateOf(gamePageViewModel.pageState.highlightedHistoryItemIndex)
+        mutableStateOf(gamePageViewModel.interfaceState.highlightedHistoryItemIndex)
     }
 
     var whiteSideType by remember {
-        mutableStateOf(gamePageViewModel.pageState.whiteSideType)
+        mutableStateOf(gamePageViewModel.interfaceState.whiteSideType)
     }
 
     var blackSideType by remember {
-        mutableStateOf(gamePageViewModel.pageState.blackSideType)
+        mutableStateOf(gamePageViewModel.interfaceState.blackSideType)
     }
 
     var isInSolutionMode by remember {
-        mutableStateOf(gamePageViewModel.pageState.isInSolutionMode)
+        mutableStateOf(gamePageViewModel.interfaceState.isInSolutionMode)
     }
 
     /* When going to next position, or last position,
@@ -196,19 +200,19 @@ fun GamePage(
         pass through variations starting at current level.
      */
     var selectedNodeVariationLevel by remember {
-        mutableStateOf(gamePageViewModel.pageState.selectedNodeVariationLevel)
+        mutableStateOf(gamePageViewModel.interfaceState.selectedNodeVariationLevel)
     }
 
     var solutionAvailable by remember {
-        mutableStateOf(gamePageViewModel.pageState.solutionAvailable)
+        mutableStateOf(gamePageViewModel.interfaceState.solutionAvailable)
     }
 
     var variationSelectionOpen by remember {
-        mutableStateOf(gamePageViewModel.pageState.variationSelectionOpen)
+        mutableStateOf(gamePageViewModel.interfaceState.variationSelectionOpen)
     }
 
     var pendingExitPageRequest by remember {
-        mutableStateOf(gamePageViewModel.pageState.pendingExitPageRequest)
+        mutableStateOf(gamePageViewModel.interfaceState.pendingExitPageRequest)
     }
 
     val isLandscape = when (LocalConfiguration.current.orientation) {
@@ -241,43 +245,43 @@ fun GamePage(
         if (gameInProgress) return
 
         if (nodeIndex < 0) {
-            gamePageViewModel.boardState.setCurrentPosition(startPosition)
-            gamePageViewModel.boardState.setLastMoveArrow(null)
+            gamePageViewModel.chessState.boardState.setCurrentPosition(startPosition)
+            gamePageViewModel.chessState.boardState.setLastMoveArrow(null)
 
-            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+            currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
+            lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
 
-            gamePageViewModel.pageState.highlightedHistoryItemIndex = null
-            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
+            gamePageViewModel.interfaceState.highlightedHistoryItemIndex = null
+            highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
 
             return
         }
 
         val currentNode =
-            if (isInSolutionMode) gamePageViewModel.currentSolution[nodeIndex]
-            else gamePageViewModel.movesElements[nodeIndex]
+            if (isInSolutionMode) gamePageViewModel.chessState.gameSolution[nodeIndex]
+            else gamePageViewModel.chessState.playedGameHistory[nodeIndex]
 
         val fen = currentNode.fen
         val lastMoveArrowData = currentNode.lastMoveArrowData
 
         if (fen != null) {
-            gamePageViewModel.boardState.setCurrentPosition(fen)
+            gamePageViewModel.chessState.boardState.setCurrentPosition(fen)
         }
-        gamePageViewModel.boardState.setLastMoveArrow(lastMoveArrowData)
+        gamePageViewModel.chessState.boardState.setLastMoveArrow(lastMoveArrowData)
 
-        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
+        lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
 
-        gamePageViewModel.pageState.highlightedHistoryItemIndex =
+        gamePageViewModel.interfaceState.highlightedHistoryItemIndex =
             if (fen != null) nodeIndex else null
-        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
+        highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
     }
 
     // Select last position in current variation.
     fun selectLastPosition() {
         if (!gameInProgress) {
             // There is at least the first move number element in history at this point.
-            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.movesElements.size < 2)
+            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.chessState.playedGameHistory.size < 2)
             if (noHistoryMove) return
 
             var currentNodeData = NodeSearchParam(
@@ -287,14 +291,14 @@ fun GamePage(
             while (true) {
                 val searchResult = findNextMoveNode(
                     nodeData = currentNodeData,
-                    historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
-                    else gamePageViewModel.movesElements,
+                    historyMoves = if (isInSolutionMode) gamePageViewModel.chessState.gameSolution
+                    else gamePageViewModel.chessState.playedGameHistory,
                     selectedNodeVariationLevel = selectedNodeVariationLevel,
                 )
                 if (searchResult.isLastMoveNodeOfMainVariation || searchResult.hasJustMetCloseParenthesis) {
                     updateMovesNavigatorSelection(searchResult.index)
-                    gamePageViewModel.pageState.highlightedHistoryItemIndex = searchResult.index
-                    gamePageViewModel.pageState.selectedNodeVariationLevel =
+                    gamePageViewModel.interfaceState.highlightedHistoryItemIndex = searchResult.index
+                    gamePageViewModel.interfaceState.selectedNodeVariationLevel =
                         searchResult.variationLevel
                     break
                 } else currentNodeData = NodeSearchParam(
@@ -306,8 +310,8 @@ fun GamePage(
     }
 
     fun handleNaturalEndgame() {
-        if (!gamePageViewModel.pageState.gameInProgress) return
-        val endedStatus = gamePageViewModel.boardState.getNaturalEndGameStatus()
+        if (!gamePageViewModel.interfaceState.gameInProgress) return
+        val endedStatus = gamePageViewModel.chessState.boardState.getNaturalEndGameStatus()
         val message = when (endedStatus) {
             GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
             GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
@@ -320,7 +324,7 @@ fun GamePage(
         message?.let { showMinutedSnackBarAction(message, SnackbarDuration.Long) }
         if (endedStatus != GameEndedStatus.NOT_ENDED) {
             computerThinking = false
-            gamePageViewModel.pageState.gameInProgress = false
+            gamePageViewModel.interfaceState.gameInProgress = false
             gameInProgress = false
             selectLastPosition()
         }
@@ -328,44 +332,44 @@ fun GamePage(
 
     fun doStartNewGame() {
         try {
-            gamePageViewModel.pageState.solutionAvailable =
-                gamePageViewModel.currentSolution.isNotEmpty()
-            solutionAvailable = gamePageViewModel.pageState.solutionAvailable
+            gamePageViewModel.interfaceState.solutionAvailable =
+                gamePageViewModel.chessState.gameSolution.isNotEmpty()
+            solutionAvailable = gamePageViewModel.interfaceState.solutionAvailable
 
             val startFen =
                 if (selectedGame.tags.containsKey("FEN")) selectedGame.tags["FEN"]!! else Board.FEN_START_POSITION
 
             // First we ensure that position is valid when initializing the board
-            gamePageViewModel.boardState.newGame(startFen)
+            gamePageViewModel.chessState.boardState.newGame(startFen)
 
             // Here we are fine to process the rest
             val blackStartGame = startFen.split(" ")[1] == "b"
-            gamePageViewModel.pageState.whiteSideType =
+            gamePageViewModel.interfaceState.whiteSideType =
                 if (blackStartGame) PlayerType.Computer else PlayerType.Human
-            gamePageViewModel.pageState.blackSideType =
+            gamePageViewModel.interfaceState.blackSideType =
                 if (blackStartGame) PlayerType.Human else PlayerType.Computer
-            whiteSideType = gamePageViewModel.pageState.whiteSideType
-            blackSideType = gamePageViewModel.pageState.blackSideType
-            gamePageViewModel.pageState.boardReversed =
+            whiteSideType = gamePageViewModel.interfaceState.whiteSideType
+            blackSideType = gamePageViewModel.interfaceState.blackSideType
+            gamePageViewModel.interfaceState.boardReversed =
                 blackStartGame
-            boardReversed = gamePageViewModel.pageState.boardReversed
+            boardReversed = gamePageViewModel.interfaceState.boardReversed
 
 
-            gamePageViewModel.pageState.promotionState = PendingPromotionData()
-            gamePageViewModel.movesElements.clear()
-            gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}.${if (blackStartGame) ".." else ""}"))
-            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-            startPosition = gamePageViewModel.boardState.getCurrentPosition()
-            gamePageViewModel.stockfishLib.sendCommand("ucinewgame")
-            gamePageViewModel.boardState.clearLastMoveArrow()
-            gamePageViewModel.pageState.highlightedHistoryItemIndex = null
-            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
-            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+            gamePageViewModel.interfaceState.promotionState = PendingPromotionData()
+            gamePageViewModel.chessState.playedGameHistory.clear()
+            gamePageViewModel.chessState.playedGameHistory.add(MoveNumber(text = "${gamePageViewModel.chessState.boardState.moveNumber()}.${if (blackStartGame) ".." else ""}"))
+            currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
+            startPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
+            gamePageViewModel.chessState.stockfishLib.sendCommand("ucinewgame")
+            gamePageViewModel.chessState.boardState.clearLastMoveArrow()
+            gamePageViewModel.interfaceState.highlightedHistoryItemIndex = null
+            highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
+            lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
 
-            gamePageViewModel.pageState.isInSolutionMode = false
-            isInSolutionMode = gamePageViewModel.pageState.isInSolutionMode
+            gamePageViewModel.interfaceState.isInSolutionMode = false
+            isInSolutionMode = gamePageViewModel.interfaceState.isInSolutionMode
 
-            gamePageViewModel.pageState.gameInProgress = true
+            gamePageViewModel.interfaceState.gameInProgress = true
             gameInProgress = true
 
             handleNaturalEndgame()
@@ -375,18 +379,18 @@ fun GamePage(
     }
 
     fun newGameRequest() {
-        val isInInitialPosition = gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+        val isInInitialPosition = gamePageViewModel.chessState.boardState.getCurrentPosition() == EMPTY_FEN
         if (isInInitialPosition) {
             doStartNewGame()
         } else {
-            gamePageViewModel.pageState.pendingNewGameRequest = true
+            gamePageViewModel.interfaceState.pendingNewGameRequest = true
             pendingNewGameRequest = true
         }
     }
 
     fun stopGameRequest() {
-        if (!gamePageViewModel.pageState.gameInProgress) return
-        gamePageViewModel.pageState.pendingStopGameRequest = true
+        if (!gamePageViewModel.interfaceState.gameInProgress) return
+        gamePageViewModel.interfaceState.pendingStopGameRequest = true
         pendingStopGameRequest = true
     }
 
@@ -394,13 +398,13 @@ fun GamePage(
     fun selectFirstPosition() {
         if (!gameInProgress) {
             val fen = startPosition
-            gamePageViewModel.boardState.setCurrentPosition(fen)
+            gamePageViewModel.chessState.boardState.setCurrentPosition(fen)
 
-            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+            currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
             lastMoveArrow = null
-            gamePageViewModel.pageState.highlightedHistoryItemIndex = null
-            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
-            gamePageViewModel.pageState.selectedNodeVariationLevel = 0
+            gamePageViewModel.interfaceState.highlightedHistoryItemIndex = null
+            highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
+            gamePageViewModel.interfaceState.selectedNodeVariationLevel = 0
             selectedNodeVariationLevel = 0
         }
     }
@@ -409,15 +413,15 @@ fun GamePage(
     fun selectPreviousPosition() {
         if (!gameInProgress) {
             // There is at least the first move number element in history at this point.
-            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.movesElements.size < 2)
+            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.chessState.playedGameHistory.size < 2)
             if (noHistoryMove) return
 
             if (highlightedHistoryItemIndex == null) {
                 updateMovesNavigatorSelection(-1)
             } else {
                 val searchResult = findPreviousMoveNode(
-                    historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
-                    else gamePageViewModel.movesElements,
+                    historyMoves = if (isInSolutionMode) gamePageViewModel.chessState.gameSolution
+                    else gamePageViewModel.chessState.playedGameHistory,
                     nodeData = NodeSearchParam(
                         index = highlightedHistoryItemIndex!!,
                         variationLevel = selectedNodeVariationLevel
@@ -425,8 +429,8 @@ fun GamePage(
                     selectedNodeVariationLevel = selectedNodeVariationLevel,
                 )
                 updateMovesNavigatorSelection(searchResult.index)
-                gamePageViewModel.pageState.highlightedHistoryItemIndex = searchResult.index
-                gamePageViewModel.pageState.selectedNodeVariationLevel = searchResult.variationLevel
+                gamePageViewModel.interfaceState.highlightedHistoryItemIndex = searchResult.index
+                gamePageViewModel.interfaceState.selectedNodeVariationLevel = searchResult.variationLevel
             }
         }
     }
@@ -435,12 +439,12 @@ fun GamePage(
     fun selectNextPosition() {
         if (!gameInProgress) {
             // There is at least the first move number element in history at this point.
-            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.movesElements.size < 2)
+            val noHistoryMove = !isInSolutionMode && (gamePageViewModel.chessState.playedGameHistory.size < 2)
             if (noHistoryMove) return
 
             val searchResult = findNextMoveNode(
-                historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
-                else gamePageViewModel.movesElements,
+                historyMoves = if (isInSolutionMode) gamePageViewModel.chessState.gameSolution
+                else gamePageViewModel.chessState.playedGameHistory,
                 nodeData = NodeSearchParam(
                     // There is at least the first move number node
                     index = highlightedHistoryItemIndex ?: 0,
@@ -454,8 +458,8 @@ fun GamePage(
                 We must not update highlighted item index nor currentVariationLevel in GamePageViewModel yet.
                 */
                 val moveNumber = findCurrentNodeMoveNumber(
-                    historyMoves = if (isInSolutionMode) gamePageViewModel.currentSolution
-                    else gamePageViewModel.movesElements,
+                    historyMoves = if (isInSolutionMode) gamePageViewModel.chessState.gameSolution
+                    else gamePageViewModel.chessState.playedGameHistory,
                     innerPreviousNodeSearchParam = InnerPreviousNodeSearchParam(
                         currentNodeIndex = searchResult.index,
                         currentVariationLevel = searchResult.variationLevel,
@@ -473,7 +477,7 @@ fun GamePage(
                 )
                 val isWhiteTurnBeforeMove = gamePageViewModel.isWhiteTurn()
                 val turnPoints = if (isWhiteTurnBeforeMove) "." else "..."
-                gamePageViewModel.pageState.variationsSelectorData =
+                gamePageViewModel.interfaceState.variationsSelectorData =
                     VariationsSelectorData(
                         main = SingleVariationData(
                             text = "$moveNumber$turnPoints${searchResult.mainVariationMoveText!!}",
@@ -486,14 +490,14 @@ fun GamePage(
                             )
                         }
                     )
-                variationsSelectorData = gamePageViewModel.pageState.variationsSelectorData
-                gamePageViewModel.pageState.variationSelectionOpen = true
-                variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
+                variationsSelectorData = gamePageViewModel.interfaceState.variationsSelectorData
+                gamePageViewModel.interfaceState.variationSelectionOpen = true
+                variationSelectionOpen = gamePageViewModel.interfaceState.variationSelectionOpen
             } else {
-                gamePageViewModel.pageState.highlightedHistoryItemIndex = searchResult.index
-                gamePageViewModel.pageState.selectedNodeVariationLevel = searchResult.variationLevel
+                gamePageViewModel.interfaceState.highlightedHistoryItemIndex = searchResult.index
+                gamePageViewModel.interfaceState.selectedNodeVariationLevel = searchResult.variationLevel
 
-                gamePageViewModel.pageState.variationsSelectorData = null
+                gamePageViewModel.interfaceState.variationsSelectorData = null
                 variationsSelectorData = null
                 updateMovesNavigatorSelection(searchResult.index)
             }
@@ -502,11 +506,11 @@ fun GamePage(
     }
 
     fun doStopCurrentGame() {
-        if (!gamePageViewModel.pageState.gameInProgress) return
+        if (!gamePageViewModel.interfaceState.gameInProgress) return
         computerThinking = false
-        gamePageViewModel.pageState.promotionState = PendingPromotionData()
-        promotionState = gamePageViewModel.pageState.promotionState
-        gamePageViewModel.pageState.gameInProgress = false
+        gamePageViewModel.interfaceState.promotionState = PendingPromotionData()
+        promotionState = gamePageViewModel.interfaceState.promotionState
+        gamePageViewModel.interfaceState.gameInProgress = false
         gameInProgress = false
         selectLastPosition()
         showMinutedSnackBarAction(gameStoppedMessage, SnackbarDuration.Short)
@@ -514,29 +518,29 @@ fun GamePage(
 
     // This must be called after having played the move on the board !
     fun addMoveFanToHistory() {
-        val lastMoveFan = gamePageViewModel.boardState.getLastMoveFan()
-        val lastMoveFen = gamePageViewModel.boardState.getCurrentPosition()
-        val localLastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-        gamePageViewModel.movesElements.add(
+        val lastMoveFan = gamePageViewModel.chessState.boardState.getLastMoveFan()
+        val lastMoveFen = gamePageViewModel.chessState.boardState.getCurrentPosition()
+        val localLastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
+        gamePageViewModel.chessState.playedGameHistory.add(
             HalfMoveSAN(
                 text = lastMoveFan,
                 fen = lastMoveFen,
                 lastMoveArrowData = localLastMoveArrow
             )
         )
-        if (gamePageViewModel.boardState.whiteTurn()) {
-            gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}."))
+        if (gamePageViewModel.chessState.boardState.whiteTurn()) {
+            gamePageViewModel.chessState.playedGameHistory.add(MoveNumber(text = "${gamePageViewModel.chessState.boardState.moveNumber()}."))
         }
     }
 
     fun tryToSelectPosition(positionData: Triple<String, MoveData, Int>) {
         if (!gameInProgress) {
-            gamePageViewModel.boardState.setCurrentPosition(positionData.first)
-            gamePageViewModel.boardState.setLastMoveArrow(positionData.second)
-            currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-            lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-            gamePageViewModel.pageState.highlightedHistoryItemIndex = positionData.third
-            highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
+            gamePageViewModel.chessState.boardState.setCurrentPosition(positionData.first)
+            gamePageViewModel.chessState.boardState.setLastMoveArrow(positionData.second)
+            currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
+            lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
+            gamePageViewModel.interfaceState.highlightedHistoryItemIndex = positionData.third
+            highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
         }
     }
 
@@ -544,14 +548,14 @@ fun GamePage(
         if (computerThinking) return
         computerThinking = true
 
-        gamePageViewModel.stockfishLib.sendCommand("position fen $oldPosition")
-        gamePageViewModel.stockfishLib.sendCommand("go infinite")
+        gamePageViewModel.chessState.stockfishLib.sendCommand("position fen $oldPosition")
+        gamePageViewModel.chessState.stockfishLib.sendCommand("go infinite")
 
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
 
             while (!mustExitLoop) {
-                val nextEngineLine = gamePageViewModel.stockfishLib.readNextOutput()
+                val nextEngineLine = gamePageViewModel.chessState.stockfishLib.readNextOutput()
 
                 if (nextEngineLine.startsWith("bestmove")) {
                     val moveParts = nextEngineLine!!.split(" ")
@@ -562,11 +566,11 @@ fun GamePage(
                     computerThinking = false
 
                     if (gameInProgress) {
-                        gamePageViewModel.boardState.makeMove(move)
-                        gamePageViewModel.boardState.setLastMoveArrow(MoveData.parse(move)!!)
+                        gamePageViewModel.chessState.boardState.makeMove(move)
+                        gamePageViewModel.chessState.boardState.setLastMoveArrow(MoveData.parse(move)!!)
                         addMoveFanToHistory()
-                        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
-                        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+                        currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
+                        lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
                         handleNaturalEndgame()
                     }
 
@@ -579,105 +583,105 @@ fun GamePage(
         coroutineScope.launch {
             delay(cpuThinkingTimeoutMs)
             if (readEngineOutputJob?.isActive == true) {
-                gamePageViewModel.stockfishLib.sendCommand("stop")
+                gamePageViewModel.chessState.stockfishLib.sendCommand("stop")
             }
         }
     }
 
     fun handleStandardMoveDoneOnBoard(it: MoveData) {
-        gamePageViewModel.boardState.makeMove(it.toString())
-        gamePageViewModel.boardState.setLastMoveArrow(it)
-        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        gamePageViewModel.chessState.boardState.makeMove(it.toString())
+        gamePageViewModel.chessState.boardState.setLastMoveArrow(it)
+        lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
         currentPosition =
-            gamePageViewModel.boardState.getCurrentPosition()
+            gamePageViewModel.chessState.boardState.getCurrentPosition()
         addMoveFanToHistory()
         handleNaturalEndgame()
     }
 
     fun handlePromotionMoveDoneOnBoard(it: MoveData) {
-        gamePageViewModel.boardState.makeMove(it.toString())
-        gamePageViewModel.boardState.setLastMoveArrow(it)
-        gamePageViewModel.pageState.promotionState =
+        gamePageViewModel.chessState.boardState.makeMove(it.toString())
+        gamePageViewModel.chessState.boardState.setLastMoveArrow(it)
+        gamePageViewModel.interfaceState.promotionState =
             PendingPromotionData()
-        promotionState = gamePageViewModel.pageState.promotionState
-        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
+        promotionState = gamePageViewModel.interfaceState.promotionState
+        lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
         currentPosition =
-            gamePageViewModel.boardState.getCurrentPosition()
+            gamePageViewModel.chessState.boardState.getCurrentPosition()
         addMoveFanToHistory()
         handleNaturalEndgame()
     }
 
     fun toggleHistoryMode() {
-        val isInInitialPosition = gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+        val isInInitialPosition = gamePageViewModel.chessState.boardState.getCurrentPosition() == EMPTY_FEN
         val modeSelectionNotActive = isInInitialPosition || gameInProgress
         if (modeSelectionNotActive) return
 
-        val noSolutionAvailable = gamePageViewModel.currentSolution.isEmpty()
+        val noSolutionAvailable = gamePageViewModel.chessState.gameSolution.isEmpty()
         if (noSolutionAvailable) return
 
-        gamePageViewModel.boardState.clearLastMoveArrow()
-        gamePageViewModel.boardState.setCurrentPosition(startPosition)
+        gamePageViewModel.chessState.boardState.clearLastMoveArrow()
+        gamePageViewModel.chessState.boardState.setCurrentPosition(startPosition)
 
-        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+        lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
+        currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
 
-        gamePageViewModel.pageState.highlightedHistoryItemIndex = null
-        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
-        gamePageViewModel.pageState.selectedNodeVariationLevel = 0
-        selectedNodeVariationLevel = gamePageViewModel.pageState.selectedNodeVariationLevel
-        gamePageViewModel.pageState.isInSolutionMode = !isInSolutionMode
-        isInSolutionMode = gamePageViewModel.pageState.isInSolutionMode
+        gamePageViewModel.interfaceState.highlightedHistoryItemIndex = null
+        highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
+        gamePageViewModel.interfaceState.selectedNodeVariationLevel = 0
+        selectedNodeVariationLevel = gamePageViewModel.interfaceState.selectedNodeVariationLevel
+        gamePageViewModel.interfaceState.isInSolutionMode = !isInSolutionMode
+        isInSolutionMode = gamePageViewModel.interfaceState.isInSolutionMode
     }
 
     fun manuallyUpdateHistoryNode() {
         if (highlightedHistoryItemIndex == null) return
-        val historyNodes = if (isInSolutionMode) gamePageViewModel.currentSolution
-        else gamePageViewModel.movesElements
+        val historyNodes = if (isInSolutionMode) gamePageViewModel.chessState.gameSolution
+        else gamePageViewModel.chessState.playedGameHistory
 
         val currentNode = historyNodes[highlightedHistoryItemIndex!!]
-        gamePageViewModel.boardState.setCurrentPosition(currentNode.fen!!)
-        gamePageViewModel.boardState.setLastMoveArrow(currentNode.lastMoveArrowData)
+        gamePageViewModel.chessState.boardState.setCurrentPosition(currentNode.fen!!)
+        gamePageViewModel.chessState.boardState.setLastMoveArrow(currentNode.lastMoveArrowData)
 
-        lastMoveArrow = gamePageViewModel.boardState.getLastMoveArrow()
-        currentPosition = gamePageViewModel.boardState.getCurrentPosition()
+        lastMoveArrow = gamePageViewModel.chessState.boardState.getLastMoveArrow()
+        currentPosition = gamePageViewModel.chessState.boardState.getCurrentPosition()
     }
 
     fun selectMainVariation() {
-        gamePageViewModel.pageState.highlightedHistoryItemIndex =
+        gamePageViewModel.interfaceState.highlightedHistoryItemIndex =
             variationsSelectorData!!.main.historyIndex
-        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
+        highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
         manuallyUpdateHistoryNode()
 
-        gamePageViewModel.pageState.variationSelectionOpen = false
-        variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
-        gamePageViewModel.pageState.variationsSelectorData = null
+        gamePageViewModel.interfaceState.variationSelectionOpen = false
+        variationSelectionOpen = gamePageViewModel.interfaceState.variationSelectionOpen
+        gamePageViewModel.interfaceState.variationsSelectorData = null
     }
 
     fun selectSubVariation(variationIndex: Int) {
-        gamePageViewModel.pageState.highlightedHistoryItemIndex =
+        gamePageViewModel.interfaceState.highlightedHistoryItemIndex =
             variationsSelectorData!!.variations[variationIndex].historyIndex
-        highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
+        highlightedHistoryItemIndex = gamePageViewModel.interfaceState.highlightedHistoryItemIndex
         manuallyUpdateHistoryNode()
 
-        gamePageViewModel.pageState.variationSelectionOpen = false
-        gamePageViewModel.pageState.variationsSelectorData = null
-        variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
+        gamePageViewModel.interfaceState.variationSelectionOpen = false
+        gamePageViewModel.interfaceState.variationsSelectorData = null
+        variationSelectionOpen = gamePageViewModel.interfaceState.variationSelectionOpen
     }
 
     fun cancelVariationSelection() {
-        gamePageViewModel.pageState.variationSelectionOpen = false
-        gamePageViewModel.pageState.variationsSelectorData = null
-        variationSelectionOpen = gamePageViewModel.pageState.variationSelectionOpen
+        gamePageViewModel.interfaceState.variationSelectionOpen = false
+        gamePageViewModel.interfaceState.variationsSelectorData = null
+        variationSelectionOpen = gamePageViewModel.interfaceState.variationSelectionOpen
     }
 
     fun handleGoBackRequest() {
         val isInInitialPosition =
-            gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+            gamePageViewModel.chessState.boardState.getCurrentPosition() == EMPTY_FEN
         if (isInInitialPosition) {
             navController.popBackStack()
         }
         else {
-            gamePageViewModel.pageState.pendingExitPageRequest = true
+            gamePageViewModel.interfaceState.pendingExitPageRequest = true
             pendingExitPageRequest = true
         }
     }
@@ -725,7 +729,7 @@ fun GamePage(
             position = currentPosition,
             promotionState = promotionState,
             isValidMoveCallback = {
-                gamePageViewModel.boardState.isValidMove(it)
+                gamePageViewModel.chessState.boardState.isValidMove(it)
             },
             dndMoveCallback = {
                 handleStandardMoveDoneOnBoard(it)
@@ -734,12 +738,12 @@ fun GamePage(
                 handlePromotionMoveDoneOnBoard(it)
             },
             cancelPendingPromotionCallback = {
-                gamePageViewModel.pageState.promotionState =
+                gamePageViewModel.interfaceState.promotionState =
                     PendingPromotionData()
             },
             setPendingPromotionCallback = {
-                gamePageViewModel.pageState.promotionState = it
-                promotionState = gamePageViewModel.pageState.promotionState
+                gamePageViewModel.interfaceState.promotionState = it
+                promotionState = gamePageViewModel.interfaceState.promotionState
             },
             computerMoveRequestCallback = {
                 if (!computerThinking) {
@@ -752,12 +756,12 @@ fun GamePage(
     @Composable
     fun historyComponent() {
         val isInInitialPosition =
-            gamePageViewModel.boardState.getCurrentPosition() == EMPTY_FEN
+            gamePageViewModel.chessState.boardState.getCurrentPosition() == EMPTY_FEN
         val modeSelectionActive = !isInInitialPosition && !gameInProgress
         val elements =
             if (modeSelectionActive && isInSolutionMode)
-                gamePageViewModel.currentSolution.toTypedArray()
-            else gamePageViewModel.movesElements.toTypedArray()
+                gamePageViewModel.chessState.gameSolution.toTypedArray()
+            else gamePageViewModel.chessState.playedGameHistory.toTypedArray()
 
         MovesNavigator(
             elements = elements,
@@ -792,12 +796,12 @@ fun GamePage(
             title = exitPageDialogTitle,
             message = exitPageDialogMessage,
             validateCallback = {
-                gamePageViewModel.pageState.pendingExitPageRequest = false
+                gamePageViewModel.interfaceState.pendingExitPageRequest = false
                 pendingExitPageRequest = false
                 navController.popBackStack()
             },
             dismissCallback = {
-                gamePageViewModel.pageState.pendingExitPageRequest = false
+                gamePageViewModel.interfaceState.pendingExitPageRequest = false
                 pendingExitPageRequest = false
             })
 
@@ -806,13 +810,13 @@ fun GamePage(
             title = newGameDialogTitle,
             message = newGameDialogMessage,
             validateCallback = {
-                gamePageViewModel.pageState.pendingNewGameRequest = false
-                gamePageViewModel.pageState.pendingSelectEngineDialog = true
+                gamePageViewModel.interfaceState.pendingNewGameRequest = false
+                gamePageViewModel.interfaceState.pendingSelectEngineDialog = true
                 pendingNewGameRequest = false
                 doStartNewGame()
             },
             dismissCallback = {
-                gamePageViewModel.pageState.pendingNewGameRequest = false
+                gamePageViewModel.interfaceState.pendingNewGameRequest = false
                 pendingNewGameRequest = false
             })
 
@@ -821,12 +825,12 @@ fun GamePage(
             title = stopDialogTitle,
             message = stopDialogMessage,
             validateCallback = {
-                gamePageViewModel.pageState.pendingStopGameRequest = false
+                gamePageViewModel.interfaceState.pendingStopGameRequest = false
                 pendingStopGameRequest = false
                 doStopCurrentGame()
             },
             dismissCallback = {
-                gamePageViewModel.pageState.pendingStopGameRequest = false
+                gamePageViewModel.interfaceState.pendingStopGameRequest = false
                 pendingStopGameRequest = false
             })
 
@@ -850,9 +854,9 @@ fun GamePage(
             text = stringResource(R.string.reverse_board),
             vectorId = R.drawable.ic_reverse,
         ) {
-            gamePageViewModel.pageState.boardReversed =
-                !gamePageViewModel.pageState.boardReversed
-            boardReversed = gamePageViewModel.pageState.boardReversed
+            gamePageViewModel.interfaceState.boardReversed =
+                !gamePageViewModel.interfaceState.boardReversed
+            boardReversed = gamePageViewModel.interfaceState.boardReversed
         }
     }
 
