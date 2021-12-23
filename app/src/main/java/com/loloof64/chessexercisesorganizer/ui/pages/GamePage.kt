@@ -18,14 +18,10 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -68,7 +64,6 @@ class GamePageState {
     var solutionAvailable = false
     var failedToLoadSolution = false
     var variationSelectionOpen = false
-    var weMustChangeStockfish = false
 }
 
 class GamePageViewModel : ViewModel() {
@@ -78,47 +73,26 @@ class GamePageViewModel : ViewModel() {
     var movesElements = mutableListOf<MovesNavigatorElement>()
     var currentSolution: List<MovesNavigatorElement> = listOf()
     var selectedGame = PGNGame(tags = mutableMapOf(), moves = null)
+    val stockfishLib = StockfishLib()
 
     fun isWhiteTurn(): Boolean {
         return boardState.whiteTurn()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stockfishLib.sendCommand("quit")
     }
 }
 
 @Composable
 fun GamePage(
     navController: NavController,
-    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
     gamePageViewModel: GamePageViewModel = viewModel(),
 ) {
     val cpuThinkingTimeoutMs = 2_000L
 
     val context = LocalContext.current
-
-    var stockfishLib by remember {
-        mutableStateOf(StockfishLib())
-    }
-
-    // Disposing StockfishLib on right time
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_DESTROY) {
-                stockfishLib.quit()
-                gamePageViewModel.pageState.weMustChangeStockfish = true
-            }
-            else if (event == Lifecycle.Event.ON_RESUME) {
-                if (gamePageViewModel.pageState.weMustChangeStockfish) {
-                    stockfishLib = StockfishLib()
-                    gamePageViewModel.pageState.weMustChangeStockfish = false
-                }
-            }
-        }
-
-        lifecycleOwner.lifecycle.addObserver(observer)
-
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
 
     val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.currentGames()
 
@@ -382,7 +356,7 @@ fun GamePage(
             gamePageViewModel.movesElements.add(MoveNumber(text = "${gamePageViewModel.boardState.moveNumber()}.${if (blackStartGame) ".." else ""}"))
             currentPosition = gamePageViewModel.boardState.getCurrentPosition()
             startPosition = gamePageViewModel.boardState.getCurrentPosition()
-            stockfishLib.sendCommand("ucinewgame")
+            gamePageViewModel.stockfishLib.sendCommand("ucinewgame")
             gamePageViewModel.boardState.clearLastMoveArrow()
             gamePageViewModel.pageState.highlightedHistoryItemIndex = null
             highlightedHistoryItemIndex = gamePageViewModel.pageState.highlightedHistoryItemIndex
@@ -570,14 +544,14 @@ fun GamePage(
         if (computerThinking) return
         computerThinking = true
 
-        stockfishLib.sendCommand("position fen $oldPosition")
-        stockfishLib.sendCommand("go infinite")
+        gamePageViewModel.stockfishLib.sendCommand("position fen $oldPosition")
+        gamePageViewModel.stockfishLib.sendCommand("go infinite")
 
         readEngineOutputJob = coroutineScope.launch {
             var mustExitLoop = false
 
             while (!mustExitLoop) {
-                val nextEngineLine = stockfishLib.readNextOutput()
+                val nextEngineLine = gamePageViewModel.stockfishLib.readNextOutput()
 
                 if (nextEngineLine.startsWith("bestmove")) {
                     val moveParts = nextEngineLine!!.split(" ")
@@ -605,7 +579,7 @@ fun GamePage(
         coroutineScope.launch {
             delay(cpuThinkingTimeoutMs)
             if (readEngineOutputJob?.isActive == true) {
-                stockfishLib.sendCommand("stop")
+                gamePageViewModel.stockfishLib.sendCommand("stop")
             }
         }
     }
