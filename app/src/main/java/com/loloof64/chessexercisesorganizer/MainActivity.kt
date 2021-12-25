@@ -12,7 +12,7 @@ import com.loloof64.chessexercisesorganizer.core.domain.FileGamesExtractor
 import com.loloof64.chessexercisesorganizer.core.domain.GamesFromFileDataSource
 import com.loloof64.chessexercisesorganizer.core.domain.GamesFromFileExtractorUseCase
 import com.loloof64.chessexercisesorganizer.core.domain.GamesFromFileRepository
-import com.loloof64.chessexercisesorganizer.ui.pages.GamePage
+import com.loloof64.chessexercisesorganizer.ui.pages.game_page.GamePage
 import com.loloof64.chessexercisesorganizer.ui.pages.GamesListPage
 
 object NavHostRoutes {
