@@ -255,6 +255,17 @@ class GamePageViewModel : ViewModel() {
         return endedStatus
     }
 
+    private fun updateStartPositionFromSelectedGame() {
+        val startFEN = if (viewModelState.value.chessState.selectedGame.tags.containsKey("FEN"))
+            viewModelState.value.chessState.selectedGame.tags["FEN"]!!
+        else Board.FEN_START_POSITION
+        viewModelState.update {
+            it.copyWithModifiedInterfaceState(
+                startPosition = startFEN
+            )
+        }
+    }
+
     /**
     throws IllegalPositionException
      */
@@ -265,10 +276,8 @@ class GamePageViewModel : ViewModel() {
             )
         }
 
-        val startFen =
-            if (viewModelState.value.chessState.selectedGame.tags.containsKey("FEN"))
-                viewModelState.value.chessState.selectedGame.tags["FEN"]!!
-            else Board.FEN_START_POSITION
+        val startFen = viewModelState.value.interfaceState.startPosition
+
 
         // First we ensure that position is valid when initializing the board
         viewModelState.value.chessState.board.newGame(startFen)
@@ -742,6 +751,7 @@ class GamePageViewModel : ViewModel() {
                 selectedGame = game
             )
         }
+        updateStartPositionFromSelectedGame()
         updateSolutionFromSelectedGame()
     }
 
