@@ -29,6 +29,7 @@ import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class SingleVariationData(
@@ -53,7 +54,7 @@ fun GamePage(
     gamesList?.let {
         gamePageViewModel.setGamesList(it)
 
-        val selectedGame = it[0]
+        val selectedGame = it[1]
         gamePageViewModel.setSelectedGame(selectedGame)
     }
 
@@ -88,7 +89,7 @@ fun GamePage(
     }
 
     fun handleNaturalEndgame() {
-        val message = when (gamePageViewModel.handleNaturalEndgame()) {
+        val message = when (gamePageViewModel.getNaturalGameEndedStatus()) {
             GameEndedStatus.CHECKMATE_WHITE -> checkmateWhiteText
             GameEndedStatus.CHECKMATE_BLACK -> checkmateBlackText
             GameEndedStatus.STALEMATE -> stalemateText
@@ -97,12 +98,19 @@ fun GamePage(
             GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
             else -> null
         }
-        message?.let { showMinutedSnackBarAction(message, SnackbarDuration.Long) }
+        ////////////////////////////
+        println("Message: $message")
+        ///////////////////////////
+        message?.let {
+            gamePageViewModel.doStopCurrentGame()
+            showMinutedSnackBarAction(message, SnackbarDuration.Long)
+        }
     }
 
     fun doStartNewGame() {
         try {
             gamePageViewModel.doStartNewGame()
+            handleNaturalEndgame()
         } catch (ex: IllegalPositionException) {
             showMinutedSnackBarAction(illegalStartPositionMessage, SnackbarDuration.Short)
         }
@@ -172,9 +180,12 @@ fun GamePage(
             },
             dndMoveCallback = {
                 gamePageViewModel.handleStandardMoveDoneOnBoard(it)
+                handleNaturalEndgame()
+
             },
             promotionMoveCallback = {
                 gamePageViewModel.handlePromotionMoveDoneOnBoard(it)
+                handleNaturalEndgame()
             },
             cancelPendingPromotionCallback = {
                 gamePageViewModel.clearPromotionData()
@@ -184,6 +195,10 @@ fun GamePage(
             },
             computerMoveRequestCallback = {
                 gamePageViewModel.generateComputerMove(it)
+                coroutineScope.launch {
+                    delay(cpuThinkingTimeMs)
+                    handleNaturalEndgame()
+                }
             },
         )
     }

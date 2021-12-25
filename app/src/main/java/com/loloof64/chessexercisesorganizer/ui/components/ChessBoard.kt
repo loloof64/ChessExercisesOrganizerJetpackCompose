@@ -139,7 +139,7 @@ class DynamicBoardDataHandler {
         return boardCopy?.doMove(move, true, true) ?: false
     }
 
-    fun getNaturalEndGameStatus(): GameEndedStatus {
+    fun getNaturalGameEndedStatus(): GameEndedStatus {
         return when {
             boardLogic.isMate -> if (boardLogic.turn) GameEndedStatus.CHECKMATE_BLACK else GameEndedStatus.CHECKMATE_WHITE
             boardLogic.isStalemate -> GameEndedStatus.STALEMATE

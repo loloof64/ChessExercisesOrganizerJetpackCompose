@@ -13,6 +13,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+val cpuThinkingTimeMs = 2_000L
+
 data class GamePageInterfaceState(
     val boardReversed: Boolean = false,
     val gameInProgress: Boolean = false,
@@ -244,19 +246,8 @@ class GamePageViewModel : ViewModel() {
         }
     }
 
-    fun handleNaturalEndgame(): GameEndedStatus? {
-        if (!viewModelState.value.interfaceState.gameInProgress) return null
-        val endedStatus = viewModelState.value.chessState.board.getNaturalEndGameStatus()
-        if (endedStatus != GameEndedStatus.NOT_ENDED) {
-            viewModelState.update {
-                it.copyWithModifiedInterfaceState(
-                    computerThinking = false,
-                    gameInProgress = false,
-                )
-            }
-            selectLastPosition()
-        }
-        return endedStatus
+    fun getNaturalGameEndedStatus(): GameEndedStatus {
+        return viewModelState.value.chessState.board.getNaturalGameEndedStatus()
     }
 
     private fun updateStartPositionFromSelectedGame() {
@@ -318,8 +309,6 @@ class GamePageViewModel : ViewModel() {
                 gameInProgress = true
             )
         }
-
-        handleNaturalEndgame()
     }
 
     fun newGameRequest() {
@@ -472,7 +461,7 @@ class GamePageViewModel : ViewModel() {
      * Returns true if there was a game to stop.
      */
     fun doStopCurrentGame(): Boolean {
-        if (!viewModelState.value.interfaceState.gameInProgress) return false
+        val thereWasAGameToStop = viewModelState.value.interfaceState.gameInProgress
         viewModelState.update {
             it.copyWithModifiedInterfaceState(
                 computerThinking = false,
@@ -481,7 +470,7 @@ class GamePageViewModel : ViewModel() {
             )
         }
         selectLastPosition()
-        return true
+        return thereWasAGameToStop
     }
 
     // This must be called after having played the move on the board !
@@ -545,8 +534,6 @@ class GamePageViewModel : ViewModel() {
     }
 
     fun generateComputerMove(oldPosition: String) {
-        val cpuThinkingTimeoutMs = 2_000L
-
         if (viewModelState.value.interfaceState.computerThinking) return
         viewModelState.update {
             it.copyWithModifiedInterfaceState(
@@ -582,7 +569,6 @@ class GamePageViewModel : ViewModel() {
                         viewModelState.update {
                             it.copyWithModifiedChessState()
                         }
-                        handleNaturalEndgame()
                     }
 
                     mustExitLoop = true
@@ -598,7 +584,7 @@ class GamePageViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
-            delay(cpuThinkingTimeoutMs)
+            delay(cpuThinkingTimeMs)
             if (viewModelState.value.interfaceState.readEngineOutputJob?.isActive == true) {
                 stockfishLib.sendCommand("stop")
             }
@@ -612,7 +598,6 @@ class GamePageViewModel : ViewModel() {
             it.copyWithModifiedChessState()
         }
         addMoveFanToHistory()
-        handleNaturalEndgame()
     }
 
     fun handlePromotionMoveDoneOnBoard(it: MoveData) {
@@ -624,7 +609,6 @@ class GamePageViewModel : ViewModel() {
             )
         }
         addMoveFanToHistory()
-        handleNaturalEndgame()
     }
 
     fun toggleHistoryMode() {
