@@ -156,7 +156,9 @@ class GamePageViewModel : ViewModel() {
 
     val uiState =
         viewModelState
-        .map { it.toUiState() }
+        .map {
+            it.toUiState()
+        }
         .stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
@@ -175,6 +177,7 @@ class GamePageViewModel : ViewModel() {
             viewModelState.update {
                 it.copyWithModifiedInterfaceState(highlightedHistoryItemIndex = null)
             }
+
             return
         }
 
@@ -189,6 +192,7 @@ class GamePageViewModel : ViewModel() {
             viewModelState.value.chessState.board.setCurrentPosition(fen)
         }
         viewModelState.value.chessState.board.setLastMoveArrow(lastMoveArrowData)
+
         viewModelState.update {
             it.copyWithModifiedInterfaceState(
                 highlightedHistoryItemIndex = if (fen != null) nodeIndex else null
@@ -377,6 +381,7 @@ class GamePageViewModel : ViewModel() {
                     ),
                     selectedNodeVariationLevel = viewModelState.value.interfaceState.selectedNodeVariationLevel,
                 )
+                // Order is important here !
                 updateMovesNavigatorSelection(searchResult.index)
                 viewModelState.update {
                     it.copyWithModifiedInterfaceState(
@@ -391,7 +396,7 @@ class GamePageViewModel : ViewModel() {
     // Select next position : if in a variation, cannot go further than the variation end node.
     fun selectNextPosition() {
         if (!viewModelState.value.interfaceState.gameInProgress) {
-            // There is at least the first move number element in history at this point.
+            // There is at least the first move number element in history at this point, so the first index of concern is 1.
             val noHistoryMove = !viewModelState.value.interfaceState.isInSolutionMode && (viewModelState.value.chessState.playedGameHistory.size < 2)
             if (noHistoryMove) return
 
@@ -449,6 +454,8 @@ class GamePageViewModel : ViewModel() {
                     )
                 }
             } else {
+                // Order is important here !
+                updateMovesNavigatorSelection(searchResult.index)
                 viewModelState.update {
                     it.copyWithModifiedInterfaceState(
                         highlightedHistoryItemIndex = searchResult.index,
@@ -456,8 +463,6 @@ class GamePageViewModel : ViewModel() {
                         variationsSelectorData = null,
                     )
                 }
-
-                updateMovesNavigatorSelection(searchResult.index)
             }
 
         }
