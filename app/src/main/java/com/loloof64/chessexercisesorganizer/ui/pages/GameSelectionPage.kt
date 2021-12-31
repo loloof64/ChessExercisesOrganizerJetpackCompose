@@ -339,9 +339,6 @@ fun GameSelectionNavigationBar(
                 ),
                 modifier = Modifier
                     .width(70.dp)
-                    .onFocusChanged {
-                        if (!it.hasFocus) tryUpdatingSelectedValue()
-                    }
             )
             Spacer(Modifier.size(10.dp))
             Button(onClick = { tryUpdatingSelectedValue() }) {
