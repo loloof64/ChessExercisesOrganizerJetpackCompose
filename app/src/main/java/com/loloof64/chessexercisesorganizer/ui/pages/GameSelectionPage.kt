@@ -1,12 +1,18 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,16 +56,18 @@ fun GameSelectionPage(
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(scaffoldState = scaffoldState,
             topBar = {
-                TopAppBar(title = { Text(stringResource(R.string.game_selection_page)) }, navigationIcon = {
-                    IconButton(onClick = {
-                        goBack()
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = arrowBackDescription,
-                        )
-                    }
-                })
+                TopAppBar(
+                    title = { Text(stringResource(R.string.game_selection_page)) },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            goBack()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.ArrowBack,
+                                contentDescription = arrowBackDescription,
+                            )
+                        }
+                    })
             },
             content = {
                 GameSelectionZone(
@@ -132,7 +140,7 @@ fun GameSelectionZone(
         pageIndex = index
     }
 
-    fun currentGameHasSolution() : Boolean {
+    fun currentGameHasSolution(): Boolean {
         return games?.get(pageIndex)?.moves != null
     }
 
@@ -168,16 +176,18 @@ fun GameSelectionZone(
         else -> false
     }
 
+    val scrollState = rememberScrollState()
+
     val configuration = LocalConfiguration.current
 
     val screenHeight = configuration.screenHeightDp.dp
     val screenWidth = configuration.screenWidthDp.dp
 
-    val screenWidthPx = with (LocalDensity.current) {
+    val screenWidthPx = with(LocalDensity.current) {
         screenWidth.toPx()
     }
 
-    val screenHeightPx = with (LocalDensity.current) {
+    val screenHeightPx = with(LocalDensity.current) {
         screenHeight.toPx()
     }
 
@@ -199,7 +209,16 @@ fun GameSelectionZone(
                 handlePreviousGameRequest = ::gotoPreviousGame,
                 handleNextGameRequest = ::gotoNextGame
             )
+            if (!currentGameHasIllegalStartPosition()) {
+                Button(onClick = { handleGameSelected(pageIndex) }) {
+                    Text(selectGameText, fontSize = 12.sp)
+                }
+            }
             GameInformationZone(
+                modifier = if (isLandscape) Modifier else Modifier.scrollable(
+                    scrollState,
+                    orientation = Orientation.Vertical
+                ),
                 whiteText = getWhitePlayer(),
                 blackText = getBlackPlayer(),
                 dateText = getDate(),
@@ -209,20 +228,15 @@ fun GameSelectionZone(
                 hasIllegalSolution = currentGameHasIllegalSolution(),
                 isIllegalPosition = currentGameHasIllegalStartPosition(),
             )
-            if (!currentGameHasIllegalStartPosition()) {
-                Button(onClick = { handleGameSelected(pageIndex) }) {
-                    Text(selectGameText, fontSize = 12.sp)
-                }
-            }
         }
     ) { allMeasurable, constraints ->
         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
             val isBoard = index == 0
             if (isBoard) {
-                val size = (if (isLandscape) screenHeightPx * 0.75f else screenWidthPx * 0.83f).toInt()
+                val size =
+                    (if (isLandscape) screenHeightPx * 0.75f else screenWidthPx * 0.83f).toInt()
                 measurable.measure(Constraints.fixed(size, size))
-            }
-            else {
+            } else {
                 measurable.measure(constraints)
             }
         }
@@ -231,7 +245,7 @@ fun GameSelectionZone(
             var boardWidth = 0
             var currentY = 10
 
-            allPlaceable.forEachIndexed{ index, placeable ->
+            allPlaceable.forEachIndexed { index, placeable ->
                 val isBoard = index == 0
 
                 val currentWidth = placeable.width
@@ -243,7 +257,7 @@ fun GameSelectionZone(
 
                 val xPosition = when {
                     isLandscape && isBoard -> 10
-                    isLandscape -> ((availableWidth - currentWidth - 10 ) / 2) + boardWidth
+                    isLandscape -> ((availableWidth - currentWidth - 10) / 2) + boardWidth
                     else -> (availableWidth - currentWidth) / 2
                 }.toInt()
 
@@ -341,9 +355,10 @@ fun GameSelectionNavigationBar(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextField(value = input, onValueChange = {
-                input = it
-            },
+            TextField(
+                value = input, onValueChange = {
+                    input = it
+                },
                 textStyle = LocalTextStyle.current.copy(
                     fontSize = textSize,
                     textAlign = TextAlign.End
@@ -400,19 +415,58 @@ fun GameInformationZone(
 
     val textColor = if (isIllegalPosition) Color.Red else MaterialTheme.typography.body1.color
 
-    Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .scrollable(rememberScrollState(), orientation = Orientation.Vertical),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         if (infoText.isNotEmpty()) {
-            Text(text = infoText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
+            Text(
+                text = infoText,
+                fontSize = textSize,
+                textAlign = TextAlign.Center,
+                style = TextStyle.Default.copy(color = textColor)
+            )
         }
         Row {
-            Text(text = whiteText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
+            Text(
+                text = whiteText,
+                fontSize = textSize,
+                textAlign = TextAlign.Center,
+                style = TextStyle.Default.copy(color = textColor)
+            )
             Spacer(Modifier.size(10.dp))
-            Text(text = "-", fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
+            Text(
+                text = "-",
+                fontSize = textSize,
+                textAlign = TextAlign.Center,
+                style = TextStyle.Default.copy(color = textColor)
+            )
             Spacer(Modifier.size(10.dp))
-            Text(text = blackText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
+            Text(
+                text = blackText,
+                fontSize = textSize,
+                textAlign = TextAlign.Center,
+                style = TextStyle.Default.copy(color = textColor)
+            )
         }
-        Text(text = dateText, fontSize = textSize,  style = TextStyle.Default.copy(color = textColor))
-        Text(text = eventText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
-        Text(text = siteText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
+        Text(
+            text = dateText,
+            fontSize = textSize,
+            style = TextStyle.Default.copy(color = textColor)
+        )
+        Text(
+            text = eventText,
+            fontSize = textSize,
+            textAlign = TextAlign.Center,
+            style = TextStyle.Default.copy(color = textColor)
+        )
+        Text(
+            text = siteText,
+            fontSize = textSize,
+            textAlign = TextAlign.Center,
+            style = TextStyle.Default.copy(color = textColor)
+        )
     }
 }

@@ -13,13 +13,12 @@ class GamesFromFileRepository(private val gamesExtractor: FileGamesExtractor) {
 
     suspend fun extractGames(fileData: FileData, context: Context) {
         withContext(Dispatchers.IO) {
-            try {
+            games = try {
                 val newGamesList =
                     gamesExtractor.extractGames(fileData = fileData, context = context)
-                games = newGamesList.ifEmpty { null }
+                newGamesList.ifEmpty { null }
             } catch (ex: Exception) {
-                games = null
-                throw ex
+                null
             }
         }
     }

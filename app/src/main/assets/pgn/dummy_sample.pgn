@@ -7,6 +7,7 @@
 [Result "*"]
 [FEN "4k3/8/4K3/4P3/8/8/8/8 w - - 0 30"]
 [Setup "1"]
+[Goal "1-0"]
 
  *
 
@@ -17,8 +18,9 @@
 [White "?"]
 [Black "?"]
 [Result "*"]
-[FEN "2Q5/8/8/8/2K1k3/8/8/4q3 w - - 0 35"]
+[FEN "2Q5/8/8/8/2K1k3/8/8/4q3 b - - 0 35"]
 [Setup "1"]
+[Goal "0-1"]
 
  *
 
@@ -51,10 +53,11 @@
 [White ""]
 [Black ""]
 [Result ""]
-[FEN "8/8/8/8/4k3/8/R7/1R2K3 w - - 0 1"]
+[FEN "7k/8/R7/1R6/8/4K3/8/8 w - - 0 60"]
 [Setup "1"]
+[Goal "#2-0"]
 
-1. Rb3 Kd5 2. Ra4 Kc6 3. Rg4 Kd5 *
+60. Rb7 Kg8 61. Ra8#
 
 [Event "Illegal position - index 5"]
 [Site "?"]
@@ -226,3 +229,16 @@ d4 $1 { Main variation}  ( 4. Nf3) *
 [Setup "1"]
 
 1... Ne7 *
+
+[Event "Checkmate - index 19"]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result ""]
+[FEN "4r3/8/8/8/8/4k3/8/4K3 b - - 0 45"]
+[Setup "1"]
+[Goal "0-#3"]
+
+45... Rf8 46. Kd1 Rc8 47. Ke1 Rc1# 0-1
