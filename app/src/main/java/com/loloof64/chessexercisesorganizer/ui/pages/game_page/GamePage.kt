@@ -1,6 +1,7 @@
 package com.loloof64.chessexercisesorganizer.ui.pages.game_page
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -348,6 +349,12 @@ fun GamePage(
 
                             if (uiState.interfaceState.computerThinking) {
                                 CircularProgressIndicator(modifier = Modifier.size(50.dp))
+                            }
+
+                            BackHandler {
+                                if (!gamePageViewModel.handleGoBackRequest()) {
+                                    doGoBackHome()
+                                }
                             }
                         }
                     ) { allMeasurable, constraints ->
