@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.MyApplication
+import com.loloof64.chessexercisesorganizer.NavHostRoutes
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.*
@@ -91,6 +92,14 @@ fun GamePage(
     val illegalStartPositionMessage = stringResource(R.string.illegal_start_position)
     val arrowBackDescription = stringResource(R.string.arrow_back_button)
 
+    fun doGoBackHome() {
+        navController.navigate(NavHostRoutes.gamesListPage) {
+            popUpTo(NavHostRoutes.gamePage) {
+                inclusive = true
+            }
+        }
+    }
+
     fun showMinutedSnackBarAction(text: String, duration: SnackbarDuration) {
         coroutineScope.launch {
             scaffoldState.snackbarHostState.showSnackbar(
@@ -128,13 +137,6 @@ fun GamePage(
     fun doStopCurrentGame() {
         if (gamePageViewModel.doStopCurrentGame()) {
             showMinutedSnackBarAction(gameStoppedMessage, SnackbarDuration.Short)
-        }
-    }
-
-    fun handleGoBackRequest() {
-        // Not showing the confirm dialog
-        if (!gamePageViewModel.handleGoBackRequest()) {
-            navController.popBackStack()
         }
     }
 
@@ -256,7 +258,7 @@ fun GamePage(
             message = exitPageDialogMessage,
             validateCallback = {
                 gamePageViewModel.cancelExitPageConfirmation()
-                navController.popBackStack()
+                doGoBackHome()
             },
             dismissCallback = {
                 gamePageViewModel.cancelExitPageConfirmation()
@@ -320,7 +322,11 @@ fun GamePage(
                         topAppBarComponents()
                     },
                     navigationIcon = {
-                        IconButton(onClick = ::handleGoBackRequest) {
+                        IconButton(onClick = {
+                            if (!gamePageViewModel.handleGoBackRequest()) {
+                                doGoBackHome()
+                            }
+                        }) {
                             Icon(
                                 imageVector = Icons.Filled.ArrowBack,
                                 contentDescription = arrowBackDescription,
