@@ -4,10 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowLeft
-import androidx.compose.material.icons.filled.ArrowRight
-import androidx.compose.material.icons.filled.FirstPage
-import androidx.compose.material.icons.filled.LastPage
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -44,10 +41,25 @@ fun GameSelectionPage(
         navController.navigate("gamePage/${gameIndex}")
     }
 
+    fun goBack() {
+        navController.popBackStack()
+    }
+
+    val arrowBackDescription = stringResource(R.string.arrow_back_button)
+
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(scaffoldState = scaffoldState,
             topBar = {
-                TopAppBar(title = { Text(stringResource(R.string.game_selection_page)) })
+                TopAppBar(title = { Text(stringResource(R.string.game_selection_page)) }, navigationIcon = {
+                    IconButton(onClick = {
+                        goBack()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = arrowBackDescription,
+                        )
+                    }
+                })
             },
             content = {
                 GameSelectionZone(
