@@ -226,8 +226,10 @@ fun GameSelectionZone(
                     hasIllegalSolution = currentGameHasIllegalSolution(),
                     isIllegalPosition = currentGameHasIllegalStartPosition(),
                 )
-                Button(onClick = { handleGameSelected(pageIndex) }) {
-                    Text(selectGameText, fontSize = 12.sp)
+                if (!currentGameHasIllegalStartPosition()) {
+                    Button(onClick = { handleGameSelected(pageIndex) }) {
+                        Text(selectGameText, fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -260,8 +262,10 @@ fun GameSelectionZone(
                 hasIllegalSolution = currentGameHasIllegalSolution(),
                 isIllegalPosition = currentGameHasIllegalStartPosition(),
             )
-            Button(onClick = { handleGameSelected(pageIndex) }) {
-                Text(selectGameText, fontSize = 12.sp)
+            if (!currentGameHasIllegalStartPosition()) {
+                Button(onClick = { handleGameSelected(pageIndex) }) {
+                    Text(selectGameText, fontSize = 12.sp)
+                }
             }
         }
     }
