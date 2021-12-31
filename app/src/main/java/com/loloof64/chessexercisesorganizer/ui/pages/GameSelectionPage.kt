@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -409,19 +410,21 @@ fun GameInformationZone(
         else -> ""
     }
 
+    val textColor = if (isIllegalPosition) Color.Red else MaterialTheme.typography.body1.color
+
     Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (infoText.isNotEmpty()) {
-            Text(text = infoText, fontSize = textSize, textAlign = TextAlign.Center)
+            Text(text = infoText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
         }
         Row {
-            Text(text = whiteText, fontSize = textSize, textAlign = TextAlign.Center)
+            Text(text = whiteText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
             Spacer(Modifier.size(10.dp))
-            Text(text = "-", fontSize = textSize, textAlign = TextAlign.Center)
+            Text(text = "-", fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
             Spacer(Modifier.size(10.dp))
-            Text(text = blackText, fontSize = textSize, textAlign = TextAlign.Center)
+            Text(text = blackText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
         }
-        Text(text = dateText, fontSize = textSize)
-        Text(text = eventText, fontSize = textSize, textAlign = TextAlign.Center)
-        Text(text = siteText, fontSize = textSize, textAlign = TextAlign.Center)
+        Text(text = dateText, fontSize = textSize,  style = TextStyle.Default.copy(color = textColor))
+        Text(text = eventText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
+        Text(text = siteText, fontSize = textSize, textAlign = TextAlign.Center,  style = TextStyle.Default.copy(color = textColor))
     }
 }
