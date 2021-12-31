@@ -64,4 +64,12 @@
     <string name="arrow_back_button">Volver</string>
     <string name="confirm_exit_game_page_message">¿Estás seguro de que quieres salir de la página y el juego actuales?</string>
     <string name="confirm_exit_game_page_title">¿Salir?</string>
+    <string name="first_game">Primer juego</string>
+    <string name="previous_game">Juego anterior</string>
+    <string name="next_game">Siguiente juego</string>
+    <string name="last_game">Último juego</string>
+    <string name="game_selection_page">Página de selección de juego</string>
+    <string name="update_button">Poner al día</string>
+    <string name="no_game_in_pgn">¡Ningún juego en el PGN elegido!</string>
+    <string name="select_game">Elegir este juego</string>
 </resources>

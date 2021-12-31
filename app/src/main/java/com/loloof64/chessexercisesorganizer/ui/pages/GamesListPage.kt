@@ -72,7 +72,7 @@ fun GamesListPage(
                                     SnackbarDuration.Short
                                 )
                             } else {
-                                navController.navigate(NavHostRoutes.gamePage)
+                                navController.navigate(NavHostRoutes.gameSelectorPage)
                             }
                         }
                     }

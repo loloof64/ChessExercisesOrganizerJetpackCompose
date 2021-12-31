@@ -15,23 +15,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import com.alonsoruibal.chess.Board
-import com.alonsoruibal.chess.Move
-import com.alonsoruibal.chess.bitboard.BitboardUtils
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.google.accompanist.flowlayout.FlowRow
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessexercisesorganizer.core.pgnparser.GameTermination
-import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
-import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNNode
 import com.loloof64.chessexercisesorganizer.ui.components.MoveData
-import java.lang.RuntimeException
 
 class MoveNumber(text: String) : MovesNavigatorElement(text)
 

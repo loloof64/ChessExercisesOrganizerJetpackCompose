@@ -31,6 +31,7 @@ import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.lang.IndexOutOfBoundsException
 
 data class SingleVariationData(
     val text: String,
@@ -45,27 +46,38 @@ data class VariationsSelectorData(
 @Composable
 fun GamePage(
     navController: NavController,
+    gameId: Int,
     gamePageViewModel: GamePageViewModel = viewModel(),
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
 
     val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.currentGames()
+    val noGameText = stringResource(R.string.no_game_in_pgn)
 
     gamesList?.let {
         gamePageViewModel.setGamesList(it)
 
-        val selectedGame = it[1]
-        gamePageViewModel.setSelectedGame(selectedGame)
-    }
+        var selectedIndex = gameId
+        if (selectedIndex < 0) selectedIndex = 0
+        if (selectedIndex > gamesList.size) selectedIndex = gamesList.size - 1
 
-    val scaffoldState = rememberScaffoldState()
+        try {
+            val selectedGame = it[selectedIndex]
+            gamePageViewModel.setSelectedGame(selectedGame)
+        }
+        catch (ex: IndexOutOfBoundsException) {
+            coroutineScope.launch {
+                scaffoldState.snackbarHostState.showSnackbar(noGameText)
+            }
+        }
+    }
 
     val isLandscape = when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
     }
-
-    val coroutineScope = rememberCoroutineScope()
 
     val uiState by gamePageViewModel.uiState.collectAsState(Dispatchers.Main.immediate)
 
@@ -98,9 +110,6 @@ fun GamePage(
             GameEndedStatus.DRAW_MISSING_MATERIAL -> missingMaterialText
             else -> null
         }
-        ////////////////////////////
-        println("Message: $message")
-        ///////////////////////////
         message?.let {
             gamePageViewModel.doStopCurrentGame()
             showMinutedSnackBarAction(message, SnackbarDuration.Long)
@@ -307,7 +316,6 @@ fun GamePage(
             topBar = {
                 TopAppBar(
                     title = { Text(stringResource(R.string.game_page)) },
-                    backgroundColor = Color(0xFF4F7E33),
                     actions = {
                         topAppBarComponents()
                     },

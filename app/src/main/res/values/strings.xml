@@ -63,4 +63,12 @@
     <string name="arrow_back_button">Go back</string>
     <string name="confirm_exit_game_page_title">Exit page ?</string>
     <string name="confirm_exit_game_page_message">Do you really want to exit page and leave current game ?</string>
+    <string name="first_game">First game</string>
+    <string name="previous_game">Previous game</string>
+    <string name="next_game">Next game</string>
+    <string name="last_game">Last game</string>
+    <string name="game_selection_page">Game selection page</string>
+    <string name="update_button">Update</string>
+    <string name="no_game_in_pgn">No game in selected PGN !</string>
+    <string name="select_game">Select game</string>
 </resources>

@@ -64,4 +64,12 @@
     <string name="arrow_back_button">Revenir</string>
     <string name="confirm_exit_game_page_title">Partir ?</string>
     <string name="confirm_exit_game_page_message">Souhaitez-vous vraiment quitter la page et la partie courante ?</string>
+    <string name="first_game">Première partie</string>
+    <string name="previous_game">Partie précédente</string>
+    <string name="next_game">Partie suivante</string>
+    <string name="last_game">Dernière partie</string>
+    <string name="game_selection_page">Page sélection de partie</string>
+    <string name="update_button">Mettre à jour</string>
+    <string name="no_game_in_pgn">Aucune partie dans le PGN choisi !</string>
+    <string name="select_game">Choisir cette partie</string>
 </resources>
