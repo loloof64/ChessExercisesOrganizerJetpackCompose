@@ -14,11 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -58,7 +61,6 @@ fun GameSelectionPage(
 
 @Composable
 fun GameSelectionZone(
-    modifier: Modifier = Modifier,
     handleGameSelected: (Int) -> Unit = { _ -> },
 ) {
     val context = LocalContext.current
@@ -127,7 +129,7 @@ fun GameSelectionZone(
         val solutionRoot = games?.get(pageIndex)?.moves
         if (solutionRoot == null) return false
         else {
-            try {
+            return try {
                 var currentNode = solutionRoot
                 val startPosition = getStartPosition()
                 val testGame = startPosition.toBoard()
@@ -137,10 +139,9 @@ fun GameSelectionZone(
                     if (!legalMove) throw IllegalMoveException()
                     currentNode = currentNode?.nextNode
                 } while (currentNode != null)
-                return false
-            }
-            catch (ex: IllegalMoveException) {
-                return true
+                false
+            } catch (ex: IllegalMoveException) {
+                true
             }
         }
     }
@@ -149,29 +150,6 @@ fun GameSelectionZone(
         val startPosition = games?.get(pageIndex)?.tags?.get("FEN") ?: STANDARD_FEN
         val testBoard = startPosition.toBoard()
         return !testBoard.checkValidityCompletely()
-    }
-
-    var whitePlayer by rememberSaveable {
-        mutableStateOf(getWhitePlayer())
-    }
-    var blackPlayer by rememberSaveable {
-        mutableStateOf(getBlackPlayer())
-    }
-    var date by rememberSaveable {
-        mutableStateOf(getDate())
-    }
-    var event by rememberSaveable {
-        mutableStateOf(getEvent())
-    }
-    var site by rememberSaveable {
-        mutableStateOf(getSite())
-    }
-
-    var startPosition by rememberSaveable {
-        mutableStateOf(getStartPosition())
-    }
-    var reversed by rememberSaveable {
-        mutableStateOf(getReversedStatus())
     }
 
     val isLandscape = when (LocalConfiguration.current.orientation) {
@@ -184,80 +162,38 @@ fun GameSelectionZone(
     val screenHeight = configuration.screenHeightDp.dp
     val screenWidth = configuration.screenWidthDp.dp
 
-    val selectGameText = stringResource(R.string.select_game)
-
-    SideEffect {
-        whitePlayer = getWhitePlayer()
-        blackPlayer = getBlackPlayer()
-        date = getDate()
-        event = getEvent()
-        site = getSite()
-
-        startPosition = getStartPosition()
-        reversed = getReversedStatus()
+    val screenWidthPx = with (LocalDensity.current) {
+        screenWidth.toPx()
     }
 
-    if (isLandscape) {
-        Row(modifier = modifier.fillMaxSize()) {
+    val screenHeightPx = with (LocalDensity.current) {
+        screenHeight.toPx()
+    }
+
+    val selectGameText = stringResource(R.string.select_game)
+
+    Layout(
+        content = {
             StaticChessBoard(
-                position = startPosition,
-                reversed = reversed,
-                modifier = Modifier.size(screenHeight * 0.83f),
+                position = getStartPosition(),
+                reversed = getReversedStatus(),
+                modifier = Modifier.size(if (isLandscape) screenHeight * 0.83f else screenWidth * 0.75f),
             )
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                GameSelectionNavigationBar(
-                    pageIndex = pageIndex, pagesCount = pagesCount,
-                    onPageSelected = { gotoSelectedPage(it) },
-                    handleFirstGameRequest = ::gotoFirstPage,
-                    handleLastGameRequest = ::gotoLastPage,
-                    handlePreviousGameRequest = ::gotoPreviousGame,
-                    handleNextGameRequest = ::gotoNextGame
-                )
-                GameInformationZone(
-                    whiteText = whitePlayer,
-                    blackText = blackPlayer,
-                    dateText = date,
-                    eventText = event,
-                    siteText = site,
-                    hasSolution = currentGameHasSolution(),
-                    hasIllegalSolution = currentGameHasIllegalSolution(),
-                    isIllegalPosition = currentGameHasIllegalStartPosition(),
-                )
-                if (!currentGameHasIllegalStartPosition()) {
-                    Button(onClick = { handleGameSelected(pageIndex) }) {
-                        Text(selectGameText, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-    } else {
-        Column(
-            modifier = modifier
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
             GameSelectionNavigationBar(
-                pageIndex = pageIndex, pagesCount = pagesCount,
+                pageIndex = pageIndex,
+                pagesCount = pagesCount,
                 onPageSelected = { gotoSelectedPage(it) },
                 handleFirstGameRequest = ::gotoFirstPage,
                 handleLastGameRequest = ::gotoLastPage,
                 handlePreviousGameRequest = ::gotoPreviousGame,
-                handleNextGameRequest = ::gotoNextGame,
-            )
-            StaticChessBoard(
-                position = startPosition,
-                reversed = reversed,
-                modifier = Modifier.size(screenWidth * 0.75f),
+                handleNextGameRequest = ::gotoNextGame
             )
             GameInformationZone(
-                whiteText = whitePlayer,
-                blackText = blackPlayer,
-                dateText = date,
-                eventText = event,
-                siteText = site,
+                whiteText = getWhitePlayer(),
+                blackText = getBlackPlayer(),
+                dateText = getDate(),
+                eventText = getEvent(),
+                siteText = getSite(),
                 hasSolution = currentGameHasSolution(),
                 hasIllegalSolution = currentGameHasIllegalSolution(),
                 isIllegalPosition = currentGameHasIllegalStartPosition(),
@@ -268,7 +204,47 @@ fun GameSelectionZone(
                 }
             }
         }
+    ) { allMeasurable, constraints ->
+        val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
+            val isBoard = index == 0
+            if (isBoard) {
+                val size = (if (isLandscape) screenHeightPx * 0.75f else screenWidthPx * 0.83f).toInt()
+                measurable.measure(Constraints.fixed(size, size))
+            }
+            else {
+                measurable.measure(constraints)
+            }
+        }
+
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            var boardWidth = 0
+            var currentY = 10
+
+            allPlaceable.forEachIndexed{ index, placeable ->
+                val isBoard = index == 0
+
+                val currentWidth = placeable.width
+                val currentHeight = placeable.height
+
+                if (isBoard) boardWidth = currentWidth
+
+                val availableWidth = if (isLandscape) screenHeightPx else screenWidthPx
+
+                val xPosition = when {
+                    isLandscape && isBoard -> 10
+                    isLandscape -> ((availableWidth - currentWidth - 10 ) / 2) + boardWidth
+                    else -> (availableWidth - currentWidth) / 2
+                }.toInt()
+
+                placeable.place(xPosition, currentY)
+
+                if (!isLandscape || !isBoard) {
+                    currentY += 10 + currentHeight
+                }
+            }
+        }
     }
+
 }
 
 @Composable
