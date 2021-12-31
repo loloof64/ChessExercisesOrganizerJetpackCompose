@@ -72,4 +72,6 @@
     <string name="update_button">Poner al día</string>
     <string name="no_game_in_pgn">¡Ningún juego en el PGN elegido!</string>
     <string name="select_game">Elegir este juego</string>
+    <string name="has_solution">Tiene solución.</string>
+    <string name="illegal_solution">¡La solución es ilegal!</string>
 </resources>

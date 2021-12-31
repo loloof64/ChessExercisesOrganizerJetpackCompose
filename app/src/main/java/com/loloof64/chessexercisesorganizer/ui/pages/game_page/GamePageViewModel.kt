@@ -13,7 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-val cpuThinkingTimeMs = 2_000L
+const val cpuThinkingTimeMs = 2_000L
 
 data class GamePageInterfaceState(
     val boardReversed: Boolean = false,

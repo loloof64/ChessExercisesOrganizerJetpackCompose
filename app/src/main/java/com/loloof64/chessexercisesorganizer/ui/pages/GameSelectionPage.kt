@@ -2,8 +2,6 @@ package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowLeft
@@ -23,11 +21,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.MyApplication
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.components.StaticChessBoard
+import com.loloof64.chessexercisesorganizer.ui.components.toBoard
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+
+class IllegalMoveException : Exception()
 
 @Composable
 fun GameSelectionPage(
@@ -46,7 +48,7 @@ fun GameSelectionPage(
             },
             content = {
                 GameSelectionZone(
-                    handleGameSelected = {selectGame(it)}
+                    handleGameSelected = { selectGame(it) }
                 )
             }
         )
@@ -56,7 +58,7 @@ fun GameSelectionPage(
 @Composable
 fun GameSelectionZone(
     modifier: Modifier = Modifier,
-    handleGameSelected: (Int) -> Unit = {_ -> },
+    handleGameSelected: (Int) -> Unit = { _ -> },
 ) {
     val context = LocalContext.current
     val games = (context.applicationContext as MyApplication)
@@ -116,6 +118,38 @@ fun GameSelectionZone(
         pageIndex = index
     }
 
+    fun currentGameHasSolution() : Boolean {
+        return games?.get(pageIndex)?.moves != null
+    }
+
+    fun currentGameHasIllegalSolution(): Boolean {
+        val solutionRoot = games?.get(pageIndex)?.moves
+        if (solutionRoot == null) return false
+        else {
+            try {
+                var currentNode = solutionRoot
+                val startPosition = getStartPosition()
+                val testGame = startPosition.toBoard()
+                do {
+                    val legalMove =
+                        testGame.doMove(Move.getFromString(testGame, currentNode?.moveValue, true))
+                    if (!legalMove) throw IllegalMoveException()
+                    currentNode = currentNode?.nextNode
+                } while (currentNode != null)
+                return false
+            }
+            catch (ex: IllegalMoveException) {
+                return true
+            }
+        }
+    }
+
+    fun currentGameHasIllegalStartPosition(): Boolean {
+        val startPosition = games?.get(pageIndex)?.tags?.get("FEN") ?: STANDARD_FEN
+        val testBoard = startPosition.toBoard()
+        return !testBoard.checkValidityCompletely()
+    }
+
     var whitePlayer by rememberSaveable {
         mutableStateOf(getWhitePlayer())
     }
@@ -169,8 +203,10 @@ fun GameSelectionZone(
                 reversed = reversed,
                 modifier = Modifier.size(screenHeight * 0.83f),
             )
-            Column(modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 GameSelectionNavigationBar(
                     pageIndex = pageIndex, pagesCount = pagesCount,
                     onPageSelected = { gotoSelectedPage(it) },
@@ -185,17 +221,21 @@ fun GameSelectionZone(
                     dateText = date,
                     eventText = event,
                     siteText = site,
+                    hasSolution = currentGameHasSolution(),
+                    hasIllegalSolution = currentGameHasIllegalSolution(),
+                    isIllegalPosition = currentGameHasIllegalStartPosition(),
                 )
-                Button(onClick = {handleGameSelected(pageIndex)}) {
+                Button(onClick = { handleGameSelected(pageIndex) }) {
                     Text(selectGameText, fontSize = 12.sp)
                 }
             }
         }
-    }
-    else {
-        Column(modifier = modifier
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally) {
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             GameSelectionNavigationBar(
                 pageIndex = pageIndex, pagesCount = pagesCount,
                 onPageSelected = { gotoSelectedPage(it) },
@@ -207,7 +247,7 @@ fun GameSelectionZone(
             StaticChessBoard(
                 position = startPosition,
                 reversed = reversed,
-                modifier = Modifier.size(screenWidth * 0.83f),
+                modifier = Modifier.size(screenWidth * 0.75f),
             )
             GameInformationZone(
                 whiteText = whitePlayer,
@@ -215,9 +255,12 @@ fun GameSelectionZone(
                 dateText = date,
                 eventText = event,
                 siteText = site,
+                hasSolution = currentGameHasSolution(),
+                hasIllegalSolution = currentGameHasIllegalSolution(),
+                isIllegalPosition = currentGameHasIllegalStartPosition(),
             )
-            Button(onClick = {handleGameSelected(pageIndex)}) {
-              Text(selectGameText, fontSize = 12.sp)
+            Button(onClick = { handleGameSelected(pageIndex) }) {
+                Text(selectGameText, fontSize = 12.sp)
             }
         }
     }
@@ -259,7 +302,9 @@ fun GameSelectionNavigationBar(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = { handleFirstGameRequest() }) {
                 Icon(
@@ -298,12 +343,19 @@ fun GameSelectionNavigationBar(
                 )
             }
         }
-        Row(modifier = Modifier
-            .fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             TextField(value = input, onValueChange = {
                 input = it
             },
-                textStyle = LocalTextStyle.current.copy(fontSize = textSize, textAlign = TextAlign.End),
+                textStyle = LocalTextStyle.current.copy(
+                    fontSize = textSize,
+                    textAlign = TextAlign.End
+                ),
                 modifier = Modifier
                     .width(70.dp)
                     .onFocusChanged {
@@ -327,7 +379,7 @@ fun Pagination(
     val textSize = 20.sp
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-        Text(text = "${pageIndex+1}", fontSize = textSize, textAlign = TextAlign.Center)
+        Text(text = "${pageIndex + 1}", fontSize = textSize, textAlign = TextAlign.Center)
         Text(text = "/", fontSize = textSize, textAlign = TextAlign.Center)
         Text(text = "$pagesCount", fontSize = textSize, textAlign = TextAlign.Center)
     }
@@ -341,10 +393,26 @@ fun GameInformationZone(
     dateText: String = "????.??.??",
     eventText: String = "?",
     siteText: String = "?",
+    hasSolution: Boolean,
+    isIllegalPosition: Boolean,
+    hasIllegalSolution: Boolean,
 ) {
-    val textSize = 20.sp
+    val textSize = 16.sp
+    val hasSolutionText = stringResource(R.string.has_solution)
+    val isIllegalPositionText = stringResource(R.string.illegal_start_position)
+    val hasIllegalSolutionText = stringResource(R.string.illegal_solution)
+
+    val infoText = when {
+        hasIllegalSolution -> hasIllegalSolutionText
+        isIllegalPosition -> isIllegalPositionText
+        hasSolution -> hasSolutionText
+        else -> ""
+    }
 
     Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (infoText.isNotEmpty()) {
+            Text(text = infoText, fontSize = textSize, textAlign = TextAlign.Center)
+        }
         Row {
             Text(text = whiteText, fontSize = textSize, textAlign = TextAlign.Center)
             Spacer(Modifier.size(10.dp))
@@ -353,12 +421,7 @@ fun GameInformationZone(
             Text(text = blackText, fontSize = textSize, textAlign = TextAlign.Center)
         }
         Text(text = dateText, fontSize = textSize)
-        Row {
-            Text(text = eventText, fontSize = textSize, textAlign = TextAlign.Center)
-            Spacer(Modifier.size(10.dp))
-            Text(text = "|", fontSize = textSize, textAlign = TextAlign.Center)
-            Spacer(Modifier.size(10.dp))
-            Text(text = siteText, fontSize = textSize, textAlign = TextAlign.Center)
-        }
+        Text(text = eventText, fontSize = textSize, textAlign = TextAlign.Center)
+        Text(text = siteText, fontSize = textSize, textAlign = TextAlign.Center)
     }
 }

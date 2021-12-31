@@ -71,4 +71,6 @@
     <string name="update_button">Update</string>
     <string name="no_game_in_pgn">No game in selected PGN !</string>
     <string name="select_game">Select game</string>
+    <string name="has_solution">Has a solution</string>
+    <string name="illegal_solution">Has illegal solution !</string>
 </resources>
