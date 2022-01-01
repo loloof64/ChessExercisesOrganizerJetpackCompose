@@ -18,8 +18,10 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,6 +59,26 @@ fun GamePage(
 
     val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.currentGames()
     val noGameText = stringResource(R.string.no_game_in_pgn)
+
+    fun getGoalText(): String {
+        val whiteCheckmateRegex = """#(\d+)-0""".toRegex()
+        val blackCheckmateRegex = """0-#(\d+)""".toRegex()
+
+        val goalTypeText = gamesList?.get(gameId)?.tags?.get("Goal") ?: ""
+        val checkmateMoves = when {
+            whiteCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(whiteCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
+            blackCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(blackCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
+            else -> -1
+        }
+        return when {
+            goalTypeText == "1-0" -> context.getString(R.string.white_should_win)
+            goalTypeText == "0-1" -> context.getString(R.string.black_should_win)
+            goalTypeText == "1/2-1/2" -> context.getString(R.string.it_should_be_draw)
+            whiteCheckmateRegex.matches(goalTypeText) -> context.getString(R.string.white_should_checkmate, checkmateMoves)
+            blackCheckmateRegex.matches(goalTypeText) -> context.getString(R.string.black_should_checkmate, checkmateMoves)
+            else -> ""
+        }
+    }
 
     gamesList?.let {
         gamePageViewModel.setGamesList(it)
@@ -313,6 +335,11 @@ fun GamePage(
         }
     }
 
+    val goalText = getGoalText()
+    val goatTextHeightPx = with(LocalDensity.current) {
+        16.sp.toPx().toInt()
+    }
+
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
             scaffoldState = scaffoldState,
@@ -341,6 +368,9 @@ fun GamePage(
                     Layout(
                         content = {
                             chessBoardComponent()
+                            if (goalText.isNotEmpty()) {
+                                Text(goalText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
                             Box {
                                 historyComponent()
                                 variationSelectionDropDownComponent()
@@ -362,6 +392,7 @@ fun GamePage(
                             if (isLandscape) constraints.maxHeight else constraints.maxWidth
                         val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
                             val isBoard = index == 0
+                            val isGoalText = goalText.isNotEmpty() && index == 1
                             val isCircularProgressBar =
                                 index == allMeasurable.size - 1 && uiState.interfaceState.computerThinking
 
@@ -374,11 +405,14 @@ fun GamePage(
                                     maxHeight = boardSize
                                 )
                             )
-                            else { // movesNavigator
+                            else { // movesNavigator and goal text
                                 val width =
                                     if (isLandscape) constraints.maxWidth - boardSize else constraints.maxWidth
-                                val height =
-                                    if (isLandscape) constraints.maxHeight else constraints.maxHeight - boardSize
+                                val height = when {
+                                    isGoalText -> goatTextHeightPx
+                                    isLandscape -> constraints.maxHeight
+                                    else -> constraints.maxHeight - boardSize
+                                }
                                 measurable.measure(
                                     constraints.copy(
                                         minWidth = width,
@@ -407,7 +441,7 @@ fun GamePage(
                                 if (isBoard || isCircularProgressBar) {
                                     placeStdComponent(placeable, 0)
                                 } else { // movesNavigator
-                                    val componentsGap = 5
+                                    val componentsGap = 0
                                     placeStdComponent(placeable, boardSize + componentsGap)
                                 }
                             }

@@ -176,22 +176,36 @@ fun GameSelectionZone(
 
     val selectGameText = stringResource(R.string.select_game)
 
-    val whiteCheckmateRegex = """#(\d+)-0""".toRegex()
-    val blackCheckmateRegex = """0-#(\d+)""".toRegex()
-
     fun getGoalText(): String {
+        val whiteCheckmateRegex = """#(\d+)-0""".toRegex()
+        val blackCheckmateRegex = """0-#(\d+)""".toRegex()
+
         val goalTypeText = games?.get(pageIndex)?.tags?.get("Goal") ?: ""
         val checkmateMoves = when {
-            whiteCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(whiteCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
-            blackCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(blackCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
+            whiteCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(
+                whiteCheckmateRegex.matchEntire(
+                    goalTypeText
+                )!!.groupValues[1]
+            )
+            blackCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(
+                blackCheckmateRegex.matchEntire(
+                    goalTypeText
+                )!!.groupValues[1]
+            )
             else -> -1
         }
         return when {
             goalTypeText == "1-0" -> context.getString(R.string.white_should_win)
             goalTypeText == "0-1" -> context.getString(R.string.black_should_win)
             goalTypeText == "1/2-1/2" -> context.getString(R.string.it_should_be_draw)
-            whiteCheckmateRegex.matches(goalTypeText) -> context.getString(R.string.white_should_checkmate, checkmateMoves)
-            blackCheckmateRegex.matches(goalTypeText) -> context.getString(R.string.black_should_checkmate, checkmateMoves)
+            whiteCheckmateRegex.matches(goalTypeText) -> context.getString(
+                R.string.white_should_checkmate,
+                checkmateMoves
+            )
+            blackCheckmateRegex.matches(goalTypeText) -> context.getString(
+                R.string.black_should_checkmate,
+                checkmateMoves
+            )
             else -> ""
         }
     }
