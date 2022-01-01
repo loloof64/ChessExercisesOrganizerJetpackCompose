@@ -10,12 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -23,19 +24,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.loloof64.chessexercisesorganizer.MyApplication
 import com.loloof64.chessexercisesorganizer.NavHostRoutes
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessexercisesorganizer.ui.components.*
-import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.*
+import com.loloof64.chessexercisesorganizer.ui.components.DynamicChessBoard
+import com.loloof64.chessexercisesorganizer.ui.components.EMPTY_FEN
+import com.loloof64.chessexercisesorganizer.ui.components.GameEndedStatus
+import com.loloof64.chessexercisesorganizer.ui.components.IllegalPositionException
+import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigator
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.lang.IndexOutOfBoundsException
 
 data class SingleVariationData(
     val text: String,
@@ -50,6 +56,7 @@ data class VariationsSelectorData(
 @Composable
 fun GamePage(
     navController: NavController,
+    modifier: Modifier = Modifier,
     gameId: Int,
     gamePageViewModel: GamePageViewModel = viewModel(),
 ) {
@@ -200,8 +207,9 @@ fun GamePage(
     }
 
     @Composable
-    fun chessBoardComponent() {
+    fun chessBoardComponent(modifier: Modifier = Modifier) {
         DynamicChessBoard(
+            modifier = modifier,
             whiteSideType = uiState.interfaceState.whiteSideType,
             blackSideType = uiState.interfaceState.blackSideType,
             reversed = uiState.interfaceState.boardReversed,
@@ -336,9 +344,11 @@ fun GamePage(
     }
 
     val goalText = getGoalText()
-    val goatTextHeightPx = with(LocalDensity.current) {
-        16.sp.toPx().toInt()
-    }
+
+    val configuration = LocalConfiguration.current
+
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
@@ -365,90 +375,55 @@ fun GamePage(
             },
             content = {
                 Surface(color = MaterialTheme.colors.background) {
-                    Layout(
-                        content = {
-                            chessBoardComponent()
-                            if (goalText.isNotEmpty()) {
-                                Text(goalText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    if (isLandscape) {
+                        val boardSize = screenHeight * 0.85f
+                        Row(modifier = modifier.fillMaxSize()) {
+                            Box(modifier = Modifier.size(boardSize)) {
+                                chessBoardComponent(modifier = Modifier.size(boardSize))
+                                if (uiState.interfaceState.computerThinking) {
+                                    CircularProgressIndicator(modifier = Modifier.size(boardSize))
+                                }
                             }
-                            Box {
-                                historyComponent()
-                                variationSelectionDropDownComponent()
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                if (goalText.isNotEmpty()) {
+                                    Text(goalText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    historyComponent()
+                                    variationSelectionDropDownComponent()
+                                }
+                                dialogs()
                             }
-                            dialogs()
-
-                            if (uiState.interfaceState.computerThinking) {
-                                CircularProgressIndicator(modifier = Modifier.size(50.dp))
-                            }
-
                             BackHandler {
                                 if (!gamePageViewModel.handleGoBackRequest()) {
                                     doGoBackHome()
                                 }
                             }
                         }
-                    ) { allMeasurable, constraints ->
-                        val boardSize =
-                            if (isLandscape) constraints.maxHeight else constraints.maxWidth
-                        val allPlaceable = allMeasurable.mapIndexed { index, measurable ->
-                            val isBoard = index == 0
-                            val isGoalText = goalText.isNotEmpty() && index == 1
-                            val isCircularProgressBar =
-                                index == allMeasurable.size - 1 && uiState.interfaceState.computerThinking
-
-
-                            if (isBoard || isCircularProgressBar) measurable.measure(
-                                constraints.copy(
-                                    minWidth = boardSize,
-                                    minHeight = boardSize,
-                                    maxWidth = boardSize,
-                                    maxHeight = boardSize
-                                )
-                            )
-                            else { // movesNavigator and goal text
-                                val width =
-                                    if (isLandscape) constraints.maxWidth - boardSize else constraints.maxWidth
-                                val height = when {
-                                    isGoalText -> goatTextHeightPx
-                                    isLandscape -> constraints.maxHeight
-                                    else -> constraints.maxHeight - boardSize
-                                }
-                                measurable.measure(
-                                    constraints.copy(
-                                        minWidth = width,
-                                        minHeight = height,
-                                        maxWidth = width,
-                                        maxHeight = height
-                                    )
-                                )
-                            }
-                        }
-
-                        layout(constraints.maxWidth, constraints.maxHeight) {
-                            fun placeStdComponent(placeable: Placeable, location: Int) {
-                                if (isLandscape) {
-                                    placeable.place(location, 0)
-                                } else {
-                                    placeable.place(0, location)
+                    }
+                    else {
+                        Column(modifier = modifier.fillMaxSize()) {
+                            Box(modifier = Modifier.size(screenWidth)) {
+                                chessBoardComponent(modifier = Modifier.size(screenWidth))
+                                if (uiState.interfaceState.computerThinking) {
+                                    CircularProgressIndicator(modifier = Modifier.size(screenWidth))
                                 }
                             }
-
-                            allPlaceable.forEachIndexed { index, placeable ->
-                                val isBoard = index == 0
-                                val isCircularProgressBar =
-                                    index == allPlaceable.size - 1 && uiState.interfaceState.computerThinking
-
-                                if (isBoard || isCircularProgressBar) {
-                                    placeStdComponent(placeable, 0)
-                                } else { // movesNavigator
-                                    val componentsGap = 0
-                                    placeStdComponent(placeable, boardSize + componentsGap)
+                            if (goalText.isNotEmpty()) {
+                                Text(goalText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                historyComponent()
+                                variationSelectionDropDownComponent()
+                            }
+                            dialogs()
+                            BackHandler {
+                                if (!gamePageViewModel.handleGoBackRequest()) {
+                                    doGoBackHome()
                                 }
                             }
                         }
                     }
-
-
                 }
             },
         )
