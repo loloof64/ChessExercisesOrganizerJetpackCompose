@@ -74,4 +74,9 @@
     <string name="select_game">Choisir cette partie</string>
     <string name="has_solution">Dispose d\'une solution</string>
     <string name="illegal_solution">La solution est illégale !</string>
+    <string name="white_should_win">Les Blancs doivent gagner</string>
+    <string name="black_should_win">Les Noirs doivent gagner</string>
+    <string name="it_should_be_draw">Cela doit être partie nulle</string>
+    <string name="white_should_checkmate">Les Blancs peuvent faire échec et mat en %1$d coups</string>
+    <string name="black_should_checkmate">Les Noirs peuvent faire échec et mat en %1$d coups</string>
 </resources>

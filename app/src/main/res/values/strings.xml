@@ -73,4 +73,9 @@
     <string name="select_game">Select game</string>
     <string name="has_solution">Has a solution</string>
     <string name="illegal_solution">Has illegal solution !</string>
+    <string name="white_should_win">White should win</string>
+    <string name="black_should_win">Black should win</string>
+    <string name="it_should_be_draw">It should be draw</string>
+    <string name="white_should_checkmate">White should checkmate in %1$d moves</string>
+    <string name="black_should_checkmate">Black should checkmate in %1$d moves</string>
 </resources>

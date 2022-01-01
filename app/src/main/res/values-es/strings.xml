@@ -74,4 +74,9 @@
     <string name="select_game">Elegir este juego</string>
     <string name="has_solution">Tiene solución.</string>
     <string name="illegal_solution">¡La solución es ilegal!</string>
+    <string name="white_should_win">Los Blancos deben ganar</string>
+    <string name="black_should_win">Los Negros deben ganar</string>
+    <string name="it_should_be_draw">Debe ser un empate</string>
+    <string name="white_should_checkmate">Los Blancos pueden hacer jaque mate en %1$d golpes</string>
+    <string name="black_should_checkmate">Los Negros pueden hacer jaque mate en %1$d golpes</string>
 </resources>
