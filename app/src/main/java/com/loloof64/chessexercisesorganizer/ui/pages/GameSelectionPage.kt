@@ -83,14 +83,6 @@ fun GameSelectionZone(
         mutableStateOf(0)
     }
 
-    var checkmateMoves by rememberSaveable {
-        mutableStateOf(0)
-    }
-
-    var goalText by rememberSaveable {
-        mutableStateOf("")
-    }
-
     fun getWhitePlayer(): String {
         return games?.get(pageIndex)?.tags?.get("White") ?: "?"
     }
@@ -184,25 +176,23 @@ fun GameSelectionZone(
 
     val selectGameText = stringResource(R.string.select_game)
 
-    val goalTypeText = games?.get(pageIndex)?.tags?.get("Goal") ?: ""
     val whiteCheckmateRegex = """#(\d+)-0""".toRegex()
     val blackCheckmateRegex = """0-#(\d+)""".toRegex()
 
-    goalText = when {
-        goalTypeText == "1-0" -> stringResource(R.string.white_should_win)
-        goalTypeText == "0-1" -> stringResource(R.string.black_should_win)
-        goalTypeText == "1/2-1/2" -> stringResource(R.string.it_should_be_draw)
-        whiteCheckmateRegex.matches(goalTypeText) -> stringResource(R.string.white_should_checkmate, checkmateMoves)
-        blackCheckmateRegex.matches(goalTypeText) -> stringResource(R.string.black_should_checkmate, checkmateMoves)
-        else -> ""
-    }
-
-
-    SideEffect {
-        checkmateMoves = when {
+    fun getGoalText(): String {
+        val goalTypeText = games?.get(pageIndex)?.tags?.get("Goal") ?: ""
+        val checkmateMoves = when {
             whiteCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(whiteCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
             blackCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(blackCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
             else -> -1
+        }
+        return when {
+            goalTypeText == "1-0" -> context.getString(R.string.white_should_win)
+            goalTypeText == "0-1" -> context.getString(R.string.black_should_win)
+            goalTypeText == "1/2-1/2" -> context.getString(R.string.it_should_be_draw)
+            whiteCheckmateRegex.matches(goalTypeText) -> context.getString(R.string.white_should_checkmate, checkmateMoves)
+            blackCheckmateRegex.matches(goalTypeText) -> context.getString(R.string.black_should_checkmate, checkmateMoves)
+            else -> ""
         }
     }
 
@@ -226,6 +216,7 @@ fun GameSelectionZone(
                     handleNextGameRequest = ::gotoNextGame
                 )
                 GameInformationZone(
+                    goal = getGoalText(),
                     whiteText = getWhitePlayer(),
                     blackText = getBlackPlayer(),
                     dateText = getDate(),
@@ -262,7 +253,7 @@ fun GameSelectionZone(
                 modifier = Modifier.size(screenWidth * 0.75f),
             )
             GameInformationZone(
-                goal = goalText,
+                goal = getGoalText(),
                 whiteText = getWhitePlayer(),
                 blackText = getBlackPlayer(),
                 dateText = getDate(),
