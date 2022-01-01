@@ -288,8 +288,8 @@ fun GameSelectionNavigationBar(
     val iconsTint = Color.Blue
     val textSize = 20.sp
 
-    var input by rememberSaveable {
-        mutableStateOf("${pageIndex + 1}")
+    var input by remember {
+        mutableStateOf("1")
     }
 
     fun tryUpdatingSelectedValue() {
