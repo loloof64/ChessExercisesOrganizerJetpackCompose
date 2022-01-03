@@ -77,8 +77,16 @@
     <string name="white_should_win">Les Blancs doivent gagner</string>
     <string name="black_should_win">Les Noirs doivent gagner</string>
     <string name="it_should_be_draw">Cela doit être partie nulle</string>
-    <string name="white_should_checkmate">Les Blancs peuvent faire échec et mat en %1$d coups</string>
-    <string name="black_should_checkmate">Les Noirs peuvent faire échec et mat en %1$d coups</string>
+    <plurals name="white_should_checkmate">
+        <item quantity="one">Les Blancs peuvent faire échec et mat en %1$d coup</item>
+        <item quantity="many">Les Blancs peuvent faire échec et mat en %1$d coups</item>
+        <item quantity="other">Les Blancs peuvent faire échec et mat en %1$d coups</item>
+    </plurals>
+    <plurals name="black_should_checkmate">
+        <item quantity="one">Les Noirs peuvent faire échec et mat en %1$d coup</item>
+        <item quantity="many">Les Noirs peuvent faire échec et mat en %1$d coups</item>
+        <item quantity="other">Les Noirs peuvent faire échec et mat en %1$d coups</item>
+    </plurals>
     <string name="KP_K">Roi+Pion / Roi</string>
     <string name="K2R_K">Roi+2Tours / Roi</string>
     <string name="KR_K">Roi+Tour / Roi</string>

@@ -76,8 +76,14 @@
     <string name="white_should_win">White should win</string>
     <string name="black_should_win">Black should win</string>
     <string name="it_should_be_draw">It should be draw</string>
-    <string name="white_should_checkmate">White should checkmate in %1$d moves</string>
-    <string name="black_should_checkmate">Black should checkmate in %1$d moves</string>
+    <plurals name="white_should_checkmate">
+        <item quantity="one">White should checkmate in %1$d move</item>
+        <item quantity="other">White should checkmate in %1$d moves</item>
+    </plurals>
+    <plurals name="black_should_checkmate">
+        <item quantity="one">Black should checkmate in %1$d move</item>
+        <item quantity="other">Black should checkmate in %1$d moves</item>
+    </plurals>
     <string name="KP_K">King+Pawn / King</string>
     <string name="K2R_K">King+2Rooks / King</string>
     <string name="KR_K">King+Rook / King</string>

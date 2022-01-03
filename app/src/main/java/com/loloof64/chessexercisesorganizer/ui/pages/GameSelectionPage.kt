@@ -198,13 +198,15 @@ fun GameSelectionZone(
             goalTypeText == "1-0" -> context.getString(R.string.white_should_win)
             goalTypeText == "0-1" -> context.getString(R.string.black_should_win)
             goalTypeText == "1/2-1/2" -> context.getString(R.string.it_should_be_draw)
-            whiteCheckmateRegex.matches(goalTypeText) -> context.getString(
-                R.string.white_should_checkmate,
-                checkmateMoves
+            whiteCheckmateRegex.matches(goalTypeText) -> context.resources.getQuantityString(
+                R.plurals.white_should_checkmate,
+                checkmateMoves,
+                checkmateMoves,
             )
-            blackCheckmateRegex.matches(goalTypeText) -> context.getString(
-                R.string.black_should_checkmate,
-                checkmateMoves
+            blackCheckmateRegex.matches(goalTypeText) -> context.resources.getQuantityString(
+                R.plurals.black_should_checkmate,
+                checkmateMoves,
+                checkmateMoves,
             )
             else -> ""
         }
