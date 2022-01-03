@@ -79,4 +79,8 @@
     <string name="it_should_be_draw">Debe ser un empate</string>
     <string name="white_should_checkmate">Los Blancos pueden hacer jaque mate en %1$d golpes</string>
     <string name="black_should_checkmate">Los Negros pueden hacer jaque mate en %1$d golpes</string>
+    <string name="KP_K">Rey+Peón / Rey</string>
+    <string name="K2R_K">Rey+2Torres / Rey</string>
+    <string name="KR_K">Rey+Torre / Rey</string>
+    <string name="KQ_K">Rey+Dame / Rey</string>
 </resources>

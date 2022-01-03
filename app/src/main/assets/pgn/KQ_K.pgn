@@ -1,0 +1,25 @@
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "4k3/8/4K3/8/8/8/8/Q7 w - - 0 46"]
+[Setup "1"]
+[Goal "#1-0"]
+
+46. Qa8# ( 46. Qh8#) *
+
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "6k1/Q7/4K3/8/8/8/8/8 w - - 0 32"]
+[Setup "1"]
+[Goal "#2-0"]
+
+32. Kf6 Kh8 ( 32... Kf8 33. Qb8# ( 33. Qf7#)( 33. Qa8#))33. Qg7#  *

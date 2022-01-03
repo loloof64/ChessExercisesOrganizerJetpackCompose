@@ -1,0 +1,39 @@
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "8/8/8/3k4/8/1r6/r7/4K3 b - - 0 48"]
+[Setup "1"]
+[Goal "0-#1"]
+
+48... Rb1#  *
+
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "4k3/8/8/8/r7/1r6/8/4K3 b - - 0 36"]
+[Setup "1"]
+[Goal "0-#2"]
+
+36... Ra2 37. Kd1 Rb1#  *
+
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+[FEN "5rk1/RR6/8/8/8/8/8/4K3 w - - 0 41"]
+[Setup "1"]
+[Goal "#3-0"]
+
+41. Rg7+ Kh8 42. Rh7+ Kg8 43. Rag7#  *
+

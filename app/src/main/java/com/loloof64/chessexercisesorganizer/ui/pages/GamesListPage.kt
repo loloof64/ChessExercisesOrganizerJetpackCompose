@@ -102,6 +102,11 @@ fun FileItem(
 
 @Composable
 fun SampleGamesList(itemSelectedHandler: (itemData: FileData) -> Unit = { _ -> }) {
+    val pgnKPK = stringResource(R.string.KP_K)
+    val pgnKQK = stringResource(R.string.KQ_K)
+    val pgnK2RK = stringResource(R.string.K2R_K)
+    val pgnKRK = stringResource(R.string.KR_K)
+
     LazyColumn(
         modifier = Modifier
             .background(Color.White)
@@ -110,8 +115,10 @@ fun SampleGamesList(itemSelectedHandler: (itemData: FileData) -> Unit = { _ -> }
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         arrayOf(
-            AssetFileData(caption = "Test sample", assetPath = "pgn/dummy_sample.pgn"),
-            AssetFileData(caption = "Error sample", assetPath = "pgn/error.pgn"),
+            AssetFileData(caption = pgnKPK, assetPath = "pgn/KP_K.pgn"),
+            AssetFileData(caption = pgnKQK, assetPath = "pgn/KQ_K.pgn"),
+            AssetFileData(caption = pgnK2RK, assetPath = "pgn/K2R_K.pgn"),
+            AssetFileData(caption = pgnKRK, assetPath = "pgn/KR_K.pgn"),
         ).map {
             item {
                 Box(modifier = Modifier.clickable {
