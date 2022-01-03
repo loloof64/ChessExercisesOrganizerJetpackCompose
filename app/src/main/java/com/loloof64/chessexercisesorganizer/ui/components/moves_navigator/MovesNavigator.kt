@@ -98,7 +98,7 @@ fun MovesNavigator(
     handleNextPositionRequest: () -> Unit = {},
     historyModeToggleRequestHandler: () -> Unit = {},
 ) {
-    val lineHeightPixels = with(LocalDensity.current) { 34.sp.toPx() }
+    val lineHeightPixels = with(LocalDensity.current) { 52.sp.toPx() }
     val scrollAmount =
         if (mustBeVisibleByDefaultElementIndex != null) ((mustBeVisibleByDefaultElementIndex / 6) * lineHeightPixels).toInt() else 0
     val vertScrollState = ScrollState(scrollAmount)
