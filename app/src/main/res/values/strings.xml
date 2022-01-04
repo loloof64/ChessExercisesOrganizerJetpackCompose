@@ -88,4 +88,6 @@
     <string name="K2R_K">King+2Rooks / King</string>
     <string name="KR_K">King+Rook / King</string>
     <string name="KQ_K">King+Queen / King</string>
+    <string name="sample_games">Samples</string>
+    <string name="custom_games">Customs</string>
 </resources>

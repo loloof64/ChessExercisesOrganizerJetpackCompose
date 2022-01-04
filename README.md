@@ -20,3 +20,5 @@ Using some pictures from [SvgRepo](https://www.svgrepo.com) :
 * start_flags: from https://www.svgrepo.com/svg/43187/race (by SVG Repo)
 * reverse: from https://www.svgrepo.com/svg/182847/sort (by SVG Repo)
 * red_cross: from https://www.svgrepo.com/svg/188772/unchecked-cross (by SVG Repo)
+* homework: from https://www.svgrepo.com/svg/132029/homework (by SVG Repo)
+* gift: from https://www.svgrepo.com/svg/80193/gift (by SVG Repo)

@@ -20,6 +20,8 @@ import com.loloof64.chessexercisesorganizer.ui.pages.GameSelectionPage
 
 object NavHostRoutes {
     const val gamesListPage = "gamesList"
+    const val sampleGamesListPage = "sampleGamesList"
+    const val customGamesListPage = "customGamesList"
     const val gamePage = "gamePage/{gameId}"
     const val gameSelectorPage = "gameSelector"
 }
@@ -53,7 +55,7 @@ fun MainContent() {
     NavHost(navController, startDestination = NavHostRoutes.gamesListPage) {
         composable(NavHostRoutes.gamesListPage) {
             GamesListPage(
-                navController = navController,
+                hostNavController = navController,
             )
         }
         composable(NavHostRoutes.gamePage,  arguments = listOf(navArgument("gameId") { type = NavType.IntType })) {

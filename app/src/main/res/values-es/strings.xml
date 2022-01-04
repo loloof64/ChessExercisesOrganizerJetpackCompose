@@ -89,4 +89,6 @@
     <string name="K2R_K">Rey+2Torres / Rey</string>
     <string name="KR_K">Rey+Torre / Rey</string>
     <string name="KQ_K">Rey+Dame / Rey</string>
+    <string name="sample_games">Regalos</string>
+    <string name="custom_games">Construidos</string>
 </resources>
