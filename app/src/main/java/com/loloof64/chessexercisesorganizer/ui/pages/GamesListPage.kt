@@ -1,17 +1,20 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
+import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -32,12 +38,16 @@ import androidx.navigation.compose.rememberNavController
 import com.loloof64.chessexercisesorganizer.MyApplication
 import com.loloof64.chessexercisesorganizer.NavHostRoutes
 import com.loloof64.chessexercisesorganizer.R
-import com.loloof64.chessexercisesorganizer.core.domain.AssetFileData
-import com.loloof64.chessexercisesorganizer.core.domain.FileData
+import com.loloof64.chessexercisesorganizer.core.domain.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import com.loloof64.chessexercisesorganizer.utils.update
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 sealed class GamesListPageScreen(
     val route: String,
@@ -99,13 +109,84 @@ fun Samples(
 }
 
 @Composable
+fun CurrentPath(modifier: Modifier = Modifier, currentPath: String) {
+    val context = LocalContext.current
+    val localFilesPath = context.filesDir.absolutePath
+
+    Text(
+        text = currentPath.replace(localFilesPath, context.getString(R.string.internal_files_root)),
+        color = Color.Blue,
+        fontSize = 20.sp,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color.Yellow)
+            .scrollable(state = rememberScrollState(), orientation = Orientation.Horizontal)
+    )
+}
+
+data class CustomsViewModelState(
+    val itemsList: List<FileData> = listOf(),
+) {
+
+}
+
+class CustomsViewModel : ViewModel() {
+    private val viewModelState = MutableStateFlow(CustomsViewModelState())
+
+    val uiState =
+        viewModelState
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                viewModelState.value
+            )
+
+    private val internalFilesUseCase by lazy {
+        InternalFolderFilesUseCase(
+            InternalFilesRepository()
+        )
+    }
+
+    fun update(folder: File, context: Context) {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            val newItemsList = internalFilesUseCase.getInternalGamesList(folder = folder, context = context)
+            viewModelState.update {
+                it.copy(itemsList = newItemsList)
+            }
+        }
+    }
+}
+
+@Composable
 fun Customs(
     hostNavController: NavController,
+    customsViewModel: CustomsViewModel = viewModel(),
 ) {
-    val itemsList = listOf("My exercise")
-    LazyColumn {
-        items(itemsList) {
-            Text(it)
+    val context = LocalContext.current
+
+    var currentPath by rememberSaveable {
+        mutableStateOf(context.filesDir)
+    }
+
+    val uiState by customsViewModel.uiState.collectAsState(Dispatchers.Main.immediate)
+
+    LaunchedEffect(true) {
+        ///////////////////////
+        println("Initialising internal folders")
+        //////////////////////////
+        customsViewModel.update(folder = currentPath, context = context)
+    }
+
+    Column {
+        CurrentPath(currentPath = currentPath.absolutePath)
+        LazyColumn {
+            items(customsViewModel.uiState.value.itemsList) {
+                when (it) {
+                    is InternalFolderData -> FolderItem(fileData = it)
+                    is InternalFileData -> FileItem(fileData = it)
+                    else -> throw IllegalArgumentException("Cannot process element $it !")
+                }
+            }
         }
     }
 }
@@ -163,8 +244,17 @@ fun GamesListPage(
                 }
             },
         ) { innerPadding ->
-            NavHost(navController, startDestination = GamesListPageScreen.Samples.route, Modifier.padding(innerPadding)) {
-                composable(GamesListPageScreen.Samples.route) { Samples(hostNavController = hostNavController, scaffoldState = scaffoldState) }
+            NavHost(
+                navController,
+                startDestination = GamesListPageScreen.Samples.route,
+                Modifier.padding(innerPadding)
+            ) {
+                composable(GamesListPageScreen.Samples.route) {
+                    Samples(
+                        hostNavController = hostNavController,
+                        scaffoldState = scaffoldState
+                    )
+                }
                 composable(GamesListPageScreen.Customs.route) { Customs(hostNavController = hostNavController) }
             }
         }
@@ -174,18 +264,49 @@ fun GamesListPage(
 @Composable
 fun FileItem(
     fileData: FileData,
+    modifier: Modifier = Modifier,
 ) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start,
+    ) {
         Image(
             painter = painterResource(id = R.drawable.ic_text_file),
             contentDescription = fileData.caption,
-            modifier = Modifier.size(60.dp)
+            modifier = Modifier.size(50.dp)
         )
+        Spacer(modifier = Modifier.size(10.dp))
         Text(
             text = fileData.caption,
             color = Color.Black,
             fontSize = 26.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+fun FolderItem(
+    fileData: FileData,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_folder),
+            contentDescription = fileData.caption,
+            modifier = Modifier.size(50.dp)
+        )
+        Spacer(modifier = Modifier.size(10.dp))
+        Text(
+            text = fileData.caption,
+            color = Color.Black,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
         )
     }
 }
@@ -205,10 +326,10 @@ fun SampleGamesList(itemSelectedHandler: (itemData: FileData) -> Unit = { _ -> }
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         arrayOf(
-            AssetFileData(caption = pgnKPK, assetPath = "pgn/KP_K.pgn"),
-            AssetFileData(caption = pgnKQK, assetPath = "pgn/KQ_K.pgn"),
-            AssetFileData(caption = pgnK2RK, assetPath = "pgn/K2R_K.pgn"),
-            AssetFileData(caption = pgnKRK, assetPath = "pgn/KR_K.pgn"),
+            AssetFileData(caption = pgnKPK, assetRelativePath = "pgn/KP_K.pgn"),
+            AssetFileData(caption = pgnKQK, assetRelativePath = "pgn/KQ_K.pgn"),
+            AssetFileData(caption = pgnK2RK, assetRelativePath = "pgn/K2R_K.pgn"),
+            AssetFileData(caption = pgnKRK, assetRelativePath = "pgn/KR_K.pgn"),
         ).map {
             item {
                 Box(modifier = Modifier.clickable {
@@ -224,7 +345,12 @@ fun SampleGamesList(itemSelectedHandler: (itemData: FileData) -> Unit = { _ -> }
 @Composable
 @Preview
 fun FileItemPreview() {
-    FileItem(fileData = AssetFileData(caption = "My sample", assetPath = "pgn/dummy_sample.pgn"))
+    FileItem(
+        fileData = AssetFileData(
+            caption = "My sample",
+            assetRelativePath = "pgn/dummy_sample.pgn"
+        )
+    )
 }
 
 @Composable

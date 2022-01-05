@@ -16,6 +16,7 @@ Using ANTLR 4 grammar from project [Pgn Parser](https://github.com/bkiers/PGN-pa
 
 Using some pictures from [SvgRepo](https://www.svgrepo.com) :
 * text_file: from https://www.svgrepo.com/svg/286579/document (by SVG Repo)
+* folder: from https://www.svgrepo.com/svg/43457/folder (by SVG Repo)
 * stop: from https://www.svgrepo.com/svg/121905/stop (by SVG Repo)
 * start_flags: from https://www.svgrepo.com/svg/43187/race (by SVG Repo)
 * reverse: from https://www.svgrepo.com/svg/182847/sort (by SVG Repo)

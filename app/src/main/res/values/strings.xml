@@ -90,4 +90,5 @@
     <string name="KQ_K">King+Queen / King</string>
     <string name="sample_games">Samples</string>
     <string name="custom_games">Customs</string>
+    <string name="internal_files_root">[Interns]</string>
 </resources>
