@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -49,19 +51,24 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
+object NestedNavHostRoutes {
+    const val sampleGamesListPage = "sampleGamesList"
+    const val customGamesListPage = "customGamesList"
+}
+
 sealed class GamesListPageScreen(
     val route: String,
     @StringRes val textId: Int,
     @DrawableRes val imageId: Int
 ) {
     object Samples : GamesListPageScreen(
-        route = NavHostRoutes.sampleGamesListPage,
+        route = NestedNavHostRoutes.sampleGamesListPage,
         textId = R.string.sample_games,
         imageId = R.drawable.ic_gift,
     )
 
     object Customs : GamesListPageScreen(
-        route = NavHostRoutes.customGamesListPage,
+        route = NestedNavHostRoutes.customGamesListPage,
         textId = R.string.custom_games,
         imageId = R.drawable.ic_homework,
     )
@@ -126,11 +133,9 @@ fun CurrentPath(modifier: Modifier = Modifier, currentPath: String) {
 
 data class CustomsViewModelState(
     val itemsList: List<FileData> = listOf(),
-) {
+)
 
-}
-
-class CustomsViewModel : ViewModel() {
+class GamesListPageViewModel : ViewModel() {
     private val viewModelState = MutableStateFlow(CustomsViewModelState())
 
     val uiState =
@@ -149,38 +154,48 @@ class CustomsViewModel : ViewModel() {
 
     fun update(folder: File, context: Context) {
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            val newItemsList = internalFilesUseCase.getInternalGamesList(folder = folder, context = context)
+            val newItemsList =
+                internalFilesUseCase.getInternalGamesList(folder = folder, context = context)
             viewModelState.update {
                 it.copy(itemsList = newItemsList)
             }
+        }
+    }
+
+    suspend fun createNewFile(name: String, hostFolder: File, context: Context): Boolean {
+        return withContext(Dispatchers.Main.immediate) {
+            internalFilesUseCase.createNewFile(
+                name = name,
+                hostFolder = hostFolder,
+                context = context
+            )
         }
     }
 }
 
 @Composable
 fun Customs(
-    hostNavController: NavController,
-    customsViewModel: CustomsViewModel = viewModel(),
+    gamesListPageViewModel: GamesListPageViewModel,
+    currentPath: File,
 ) {
     val context = LocalContext.current
 
-    var currentPath by rememberSaveable {
-        mutableStateOf(context.filesDir)
-    }
-
-    val uiState by customsViewModel.uiState.collectAsState(Dispatchers.Main.immediate)
+    val uiState by gamesListPageViewModel.uiState.collectAsState(Dispatchers.Main.immediate)
 
     LaunchedEffect(true) {
         ///////////////////////
         println("Initialising internal folders")
         //////////////////////////
-        customsViewModel.update(folder = currentPath, context = context)
+        gamesListPageViewModel.update(folder = currentPath, context = context)
     }
 
     Column {
         CurrentPath(currentPath = currentPath.absolutePath)
-        LazyColumn {
-            items(customsViewModel.uiState.value.itemsList) {
+        LazyColumn(
+            contentPadding = PaddingValues(10.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            items(uiState.itemsList) {
                 when (it) {
                     is InternalFolderData -> FolderItem(fileData = it)
                     is InternalFileData -> FileItem(fileData = it)
@@ -194,15 +209,90 @@ fun Customs(
 @Composable
 fun GamesListPage(
     hostNavController: NavController,
+    gamesListPageViewModel: GamesListPageViewModel = viewModel(),
 ) {
     val navController = rememberNavController()
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
 
+    val coroutineScope = rememberCoroutineScope()
+
     val items = listOf(
         GamesListPageScreen.Samples,
         GamesListPageScreen.Customs,
     )
+
+    var currentPath by rememberSaveable {
+        mutableStateOf(context.filesDir)
+    }
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val isCustomFilesTab =
+        currentDestination?.route?.equals(NestedNavHostRoutes.customGamesListPage) == true
+
+    var newFileNameDialogOpen by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    fun showNewFileNameDialog() {
+        newFileNameDialogOpen = true
+    }
+
+    @Composable
+    fun dialogs(
+        handleNewFileNameDefined: (String) -> Unit,
+    ) {
+        val commonFontSize = 18.sp
+        var newFileName by rememberSaveable {
+            mutableStateOf("")
+        }
+        if (newFileNameDialogOpen) {
+            AlertDialog(
+                buttons = {
+                    Row(
+                        modifier = Modifier.padding(all = 8.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Button(
+                            onClick = {
+                                handleNewFileNameDefined(newFileName)
+                                newFileNameDialogOpen = false
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color.Green,
+                                contentColor = MaterialTheme.colors.primarySurface
+                            )
+                        ) {
+                            Text(context.getString(R.string.ok), fontSize = commonFontSize)
+                        }
+                        Spacer(modifier = Modifier.size(10.dp))
+                        Button(
+                            onClick = { newFileNameDialogOpen = false },
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color.Red,
+                                contentColor = MaterialTheme.colors.primarySurface
+                            )
+                        ) {
+                            Text(context.getString(R.string.Cancel), fontSize = commonFontSize)
+                        }
+                    }
+                },
+                text = {
+                    TextField(
+                        value = newFileName,
+                        onValueChange = { newFileName = it },
+                        placeholder = {
+                            Text(context.getString(R.string.enter_file_name), fontSize = 11.sp)
+                        }
+                    )
+                },
+                onDismissRequest = {
+                    newFileNameDialogOpen = false
+                },
+            )
+        }
+    }
 
     ChessExercisesOrganizerJetpackComposeTheme {
         Scaffold(
@@ -210,10 +300,15 @@ fun GamesListPage(
             topBar = {
                 TopAppBar(title = { Text(stringResource(R.string.games_list_page)) })
             },
+            floatingActionButton = {
+                if (isCustomFilesTab) {
+                    FloatingActionButton(onClick = ::showNewFileNameDialog) {
+                        Icon(Icons.Filled.Add, context.getString(R.string.add_element))
+                    }
+                }
+            },
             bottomBar = {
                 BottomNavigation {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentDestination = navBackStackEntry?.destination
                     items.forEach { screen ->
                         BottomNavigationItem(
                             icon = {
@@ -255,8 +350,32 @@ fun GamesListPage(
                         scaffoldState = scaffoldState
                     )
                 }
-                composable(GamesListPageScreen.Customs.route) { Customs(hostNavController = hostNavController) }
+                composable(GamesListPageScreen.Customs.route) {
+                    Customs(
+                        gamesListPageViewModel = gamesListPageViewModel,
+                        currentPath = currentPath,
+                    )
+                }
             }
+            dialogs(
+                handleNewFileNameDefined = {
+                    coroutineScope.launch(Dispatchers.Main.immediate) {
+                        val success = gamesListPageViewModel.createNewFile(
+                            name = it,
+                            hostFolder = currentPath,
+                            context = context
+                        )
+                        if (success) {
+                            gamesListPageViewModel.update(folder = currentPath, context = context)
+                        } else {
+                            scaffoldState.snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.file_creation_error),
+                                duration = SnackbarDuration.Short,
+                            )
+                        }
+                    }
+                }
+            )
         }
     }
 }

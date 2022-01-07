@@ -94,4 +94,7 @@
     <string name="sample_games">Fournis</string>
     <string name="custom_games">Personnels</string>
     <string name="internal_files_root">[Internes]</string>
+    <string name="add_element">Ajouter un élément</string>
+    <string name="enter_file_name">Nom du fichier (sans l\'extension *.pgn)</string>
+    <string name="file_creation_error">Echec de création du fichier !</string>
 </resources>

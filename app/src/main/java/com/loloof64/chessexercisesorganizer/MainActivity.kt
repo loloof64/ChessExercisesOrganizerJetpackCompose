@@ -20,8 +20,6 @@ import com.loloof64.chessexercisesorganizer.ui.pages.GamesListPage
 
 object NavHostRoutes {
     const val gamesListPage = "gamesList"
-    const val sampleGamesListPage = "sampleGamesList"
-    const val customGamesListPage = "customGamesList"
     const val gamePage = "gamePage/{gameId}"
     const val gameSelectorPage = "gameSelector"
 }

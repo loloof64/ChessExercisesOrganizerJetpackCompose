@@ -91,4 +91,7 @@
     <string name="sample_games">Samples</string>
     <string name="custom_games">Customs</string>
     <string name="internal_files_root">[Interns]</string>
+    <string name="add_element">Add an element</string>
+    <string name="enter_file_name">File name (without *.pgn extension)</string>
+    <string name="file_creation_error">Failed to create file !</string>
 </resources>

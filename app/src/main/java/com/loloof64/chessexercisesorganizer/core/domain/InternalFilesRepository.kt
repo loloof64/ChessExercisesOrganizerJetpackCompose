@@ -1,9 +1,11 @@
 package com.loloof64.chessexercisesorganizer.core.domain
 
 import android.content.Context
+import com.loloof64.chessexercisesorganizer.utils.stripPgnExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 
 class InternalFilesRepository {
 
@@ -29,6 +31,25 @@ class InternalFilesRepository {
                     InternalFileData(caption = it.name, localRelativePath = localRelativePath)
                 }
             } ?: listOf()
+        }
+    }
+
+    suspend fun createNewFile(name: String, hostFolder: File, context: Context): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (name.isEmpty()) return@withContext false
+
+                val internalRootFolderPath = context.filesDir.absolutePath
+                val isInInternalFolder = hostFolder.absolutePath.startsWith(internalRootFolderPath)
+                if (!isInInternalFolder) throw IllegalArgumentException("Given folder is not inside project internal files ($hostFolder) !")
+
+                val newFile = File(hostFolder, "${name.stripPgnExtension()}.pgn")
+                newFile.createNewFile()
+                return@withContext true
+            } catch (ex: IOException) {
+                println(ex)
+                return@withContext false
+            }
         }
     }
 

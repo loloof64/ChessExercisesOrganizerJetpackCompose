@@ -92,4 +92,7 @@
     <string name="sample_games">Regalos</string>
     <string name="custom_games">Construidos</string>
     <string name="internal_files_root">[Internos]</string>
+    <string name="add_element">Añadir artículo</string>
+    <string name="enter_file_name">Nombre del archivo (sin la extensión * .pgn)</string>
+    <string name="file_creation_error">¡Fracasado en la creación del archivo!</string>
 </resources>

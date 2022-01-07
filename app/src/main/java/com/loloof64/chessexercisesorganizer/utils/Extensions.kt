@@ -9,3 +9,9 @@ fun <T> MutableStateFlow<T>.update(
         block(this)
     }
 }
+
+fun String.stripPgnExtension() : String {
+    return if (this.endsWith(".pgn")) {
+        this.subSequence(0 until this.lastIndexOf(".pgn")).toString()
+    } else this
+}

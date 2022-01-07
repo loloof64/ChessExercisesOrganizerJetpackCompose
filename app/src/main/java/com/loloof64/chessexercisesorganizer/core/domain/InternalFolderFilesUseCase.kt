@@ -11,4 +11,10 @@ class InternalFolderFilesUseCase(private val internalFilesRepository: InternalFi
             internalFilesRepository.getInternalGamesList(folder, context)
         }
     }
+
+    suspend fun createNewFile(name: String, hostFolder: File, context: Context): Boolean {
+        return withContext(Dispatchers.IO) {
+            return@withContext internalFilesRepository.createNewFile(name = name, hostFolder = hostFolder, context = context)
+        }
+    }
 }
