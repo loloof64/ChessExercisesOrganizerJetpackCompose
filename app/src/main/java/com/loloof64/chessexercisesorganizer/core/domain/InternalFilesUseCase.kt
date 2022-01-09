@@ -7,8 +7,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
-class InternalFilesRepository {
-
+class InternalFilesUseCase {
     suspend fun getInternalGamesList(folder: File, context: Context): List<FileData> {
         return withContext(Dispatchers.IO) {
             val internalRootFolderPath = context.filesDir.absolutePath

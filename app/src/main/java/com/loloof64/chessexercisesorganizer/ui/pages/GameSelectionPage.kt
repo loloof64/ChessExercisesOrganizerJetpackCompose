@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.alonsoruibal.chess.Move
 import com.loloof64.chessexercisesorganizer.MyApplication
+import com.loloof64.chessexercisesorganizer.NavHostRoutes
 import com.loloof64.chessexercisesorganizer.R
+import com.loloof64.chessexercisesorganizer.core.pgnparser.PGNGame
 import com.loloof64.chessexercisesorganizer.ui.components.STANDARD_FEN
 import com.loloof64.chessexercisesorganizer.ui.components.StaticChessBoard
 import com.loloof64.chessexercisesorganizer.ui.components.toBoard
@@ -29,17 +31,58 @@ import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetp
 class IllegalMoveException : Exception()
 
 @Composable
+fun ValidationButtonIfAppropriate(mustBeShown: Boolean, handleGameSelected: () -> Unit) {
+    val context = LocalContext.current
+    if (mustBeShown) {
+        Button(onClick = { handleGameSelected() }) {
+            Text(context.getString(R.string.select_game), fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
 fun GameSelectionPage(
     navController: NavController,
 ) {
     val scaffoldState = rememberScaffoldState()
 
+    val context = LocalContext.current
+
+    val games = (context.applicationContext as MyApplication)
+        .gamesFromFileExtractorUseCase.games
+
+    val pagesCount = games?.size ?: 0
+
+    var pageIndex by rememberSaveable {
+        mutableStateOf(0)
+    }
+
     fun selectGame(gameIndex: Int) {
-        navController.navigate("gamePage/${gameIndex}")
+        navController.navigate(NavHostRoutes.getGamePage(gameIndex))
     }
 
     fun goBack() {
         navController.popBackStack()
+    }
+
+    fun gotoFirstPage() {
+        pageIndex = 0
+    }
+
+    fun gotoLastPage() {
+        pageIndex = pagesCount - 1
+    }
+
+    fun gotoPreviousGame() {
+        if (pageIndex > 0) pageIndex--
+    }
+
+    fun gotoNextGame() {
+        if (pageIndex < pagesCount - 1) pageIndex++
+    }
+
+    fun gotoSelectedPage(index: Int) {
+        pageIndex = index
     }
 
     val arrowBackDescription = stringResource(R.string.arrow_back_button)
@@ -62,7 +105,21 @@ fun GameSelectionPage(
             },
             content = {
                 GameSelectionZone(
-                    handleGameSelected = { selectGame(it) }
+                    pageIndex = pageIndex,
+                    handleGameSelected = { selectGame(it) },
+                    validationButton = { mustBeShown, gameIndex ->
+                        ValidationButtonIfAppropriate(
+                            mustBeShown = mustBeShown,
+                            handleGameSelected = {
+                                selectGame(gameIndex)
+                            })
+                    },
+                    gotoFirstPage = ::gotoFirstPage,
+                    gotoPreviousPage = ::gotoPreviousGame,
+                    gotoNextPage = ::gotoNextGame,
+                    gotoLastPage = ::gotoLastPage,
+                    gotoSelectedPage = ::gotoSelectedPage,
+                    games = games,
                 )
             }
         )
@@ -72,16 +129,18 @@ fun GameSelectionPage(
 @Composable
 fun GameSelectionZone(
     modifier: Modifier = Modifier,
+    pageIndex: Int,
+    games: List<PGNGame>?,
+    validationButton: @Composable (Boolean, Int) -> Unit = { _, _ -> },
     handleGameSelected: (Int) -> Unit = { _ -> },
+    gotoFirstPage: () -> Unit,
+    gotoPreviousPage: () -> Unit,
+    gotoNextPage: () -> Unit,
+    gotoLastPage: () -> Unit,
+    gotoSelectedPage: (Int) -> Unit,
 ) {
     val context = LocalContext.current
-    val games = (context.applicationContext as MyApplication)
-        .gamesFromFileExtractorUseCase.currentGames()
     val pagesCount = games?.size ?: 0
-
-    var pageIndex by rememberSaveable {
-        mutableStateOf(0)
-    }
 
     fun getWhitePlayer(): String {
         return games?.get(pageIndex)?.tags?.get("White") ?: "?"
@@ -110,26 +169,6 @@ fun GameSelectionZone(
     fun getReversedStatus(): Boolean {
         val fen = games?.get(pageIndex)?.tags?.get("FEN") ?: STANDARD_FEN
         return fen.split(" ")[1] == "b"
-    }
-
-    fun gotoFirstPage() {
-        pageIndex = 0
-    }
-
-    fun gotoLastPage() {
-        pageIndex = pagesCount - 1
-    }
-
-    fun gotoPreviousGame() {
-        if (pageIndex > 0) pageIndex--
-    }
-
-    fun gotoNextGame() {
-        if (pageIndex < pagesCount - 1) pageIndex++
-    }
-
-    fun gotoSelectedPage(index: Int) {
-        pageIndex = index
     }
 
     fun currentGameHasSolution(): Boolean {
@@ -226,10 +265,10 @@ fun GameSelectionZone(
                 GameSelectionNavigationBar(
                     pageIndex = pageIndex, pagesCount = pagesCount,
                     onPageSelected = { gotoSelectedPage(it) },
-                    handleFirstGameRequest = ::gotoFirstPage,
-                    handleLastGameRequest = ::gotoLastPage,
-                    handlePreviousGameRequest = ::gotoPreviousGame,
-                    handleNextGameRequest = ::gotoNextGame
+                    handleFirstGameRequest = { gotoFirstPage() },
+                    handleLastGameRequest = { gotoLastPage() },
+                    handlePreviousGameRequest = { gotoPreviousPage() },
+                    handleNextGameRequest = { gotoNextPage() }
                 )
                 GameInformationZone(
                     goal = getGoalText(),
@@ -242,11 +281,7 @@ fun GameSelectionZone(
                     hasIllegalSolution = currentGameHasIllegalSolution(),
                     isIllegalPosition = currentGameHasIllegalStartPosition(),
                 )
-                if (!currentGameHasIllegalStartPosition()) {
-                    Button(onClick = { handleGameSelected(pageIndex) }) {
-                        Text(selectGameText, fontSize = 12.sp)
-                    }
-                }
+                validationButton(!currentGameHasIllegalStartPosition(), pageIndex)
             }
         }
     } else {
@@ -258,10 +293,10 @@ fun GameSelectionZone(
             GameSelectionNavigationBar(
                 pageIndex = pageIndex, pagesCount = pagesCount,
                 onPageSelected = { gotoSelectedPage(it) },
-                handleFirstGameRequest = ::gotoFirstPage,
-                handleLastGameRequest = ::gotoLastPage,
-                handlePreviousGameRequest = ::gotoPreviousGame,
-                handleNextGameRequest = ::gotoNextGame,
+                handleFirstGameRequest = { gotoFirstPage() },
+                handleLastGameRequest = { gotoLastPage() },
+                handlePreviousGameRequest = { gotoPreviousPage() },
+                handleNextGameRequest = { gotoNextPage() },
             )
             StaticChessBoard(
                 position = getStartPosition(),

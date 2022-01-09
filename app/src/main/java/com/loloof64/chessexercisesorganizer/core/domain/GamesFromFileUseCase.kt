@@ -7,19 +7,38 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 
-class GamesFromFileRepository(private val gamesExtractor: FileGamesExtractor) {
+sealed class FileData(open val caption: String, open val path: String)
+data class AssetFileData(override val caption: String, val assetRelativePath: String) :
+    FileData(caption = caption, path = assetRelativePath)
+data class InternalFileData(override val caption: String, val localRelativePath: String) :
+    FileData(caption = caption, path = localRelativePath)
+data class InternalFolderData(override val caption: String, val localRelativePath: String):
+    FileData(caption = caption, path = localRelativePath)
 
-    var games: List<PGNGame>? = null
+class GamesFromFileUseCase {
+    private val gamesExtractor = FileGamesExtractor()
+
+    var games: MutableList<PGNGame>? = null
+        private set
 
     suspend fun extractGames(fileData: FileData, context: Context) {
         withContext(Dispatchers.IO) {
             games = try {
                 val newGamesList =
-                    gamesExtractor.extractGames(fileData = fileData, context = context)
+                    gamesExtractor.extractGames(fileData = fileData, context = context).toMutableList()
                 newGamesList.ifEmpty { null }
             } catch (ex: Exception) {
                 null
             }
+        }
+    }
+
+    fun insertGameAt(index: Int, game: PGNGame) {
+        if (games == null) {
+            games = mutableListOf(game)
+        }
+        else {
+            games?.add(index, game)
         }
     }
 }

@@ -3,15 +3,12 @@ package com.loloof64.chessexercisesorganizer.ui.pages
 import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +39,7 @@ import com.loloof64.chessexercisesorganizer.NavHostRoutes
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.core.domain.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
+import com.loloof64.chessexercisesorganizer.utils.encodePath
 import com.loloof64.chessexercisesorganizer.utils.update
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,7 +99,7 @@ fun Samples(
                         context = context
                     )
                 val games = (context.applicationContext as MyApplication)
-                    .gamesFromFileExtractorUseCase.currentGames()
+                    .gamesFromFileExtractorUseCase.games
                 if (games.isNullOrEmpty()) {
                     showMinutedSnackBarAction(
                         gamesLoadingErrorMessage,
@@ -147,9 +145,7 @@ class GamesListPageViewModel : ViewModel() {
             )
 
     private val internalFilesUseCase by lazy {
-        InternalFolderFilesUseCase(
-            InternalFilesRepository()
-        )
+        InternalFilesUseCase()
     }
 
     fun update(folder: File, context: Context) {
@@ -173,19 +169,25 @@ class GamesListPageViewModel : ViewModel() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Customs(
     gamesListPageViewModel: GamesListPageViewModel,
     currentPath: File,
+    fileContextualMenuOpen: Boolean,
+    fileContextualMenuIndex: Int?,
+    openFileContextualMenu: (Int, FileData) -> Unit,
+    handleFileContextualMenuDismiss: () -> Unit,
+    handleEditFile: (FileData) -> Unit,
 ) {
     val context = LocalContext.current
 
     val uiState by gamesListPageViewModel.uiState.collectAsState(Dispatchers.Main.immediate)
 
+    /*
+    We only need this in the first re-composition
+     */
     LaunchedEffect(true) {
-        ///////////////////////
-        println("Initialising internal folders")
-        //////////////////////////
         gamesListPageViewModel.update(folder = currentPath, context = context)
     }
 
@@ -195,11 +197,25 @@ fun Customs(
             contentPadding = PaddingValues(10.dp),
             verticalArrangement = Arrangement.spacedBy(7.dp)
         ) {
-            items(uiState.itemsList) {
-                when (it) {
-                    is InternalFolderData -> FolderItem(fileData = it)
-                    is InternalFileData -> FileItem(fileData = it)
-                    else -> throw IllegalArgumentException("Cannot process element $it !")
+            itemsIndexed(uiState.itemsList) { index, item ->
+                Box {
+                    when (item) {
+                        is InternalFolderData -> FolderItem(fileData = item)
+                        is InternalFileData -> FileItem(fileData = item, modifier = Modifier.combinedClickable(onLongClick = {
+                            openFileContextualMenu(index, item)
+                        }, onClick = {}))
+                        else -> throw IllegalArgumentException("Cannot process element $item !")
+                    }
+                    DropdownMenu(expanded = fileContextualMenuOpen && fileContextualMenuIndex == index, onDismissRequest = {
+                        handleFileContextualMenuDismiss()
+                    }) {
+                        DropdownMenuItem(onClick = {
+                            handleFileContextualMenuDismiss()
+                            handleEditFile(item)
+                        }) {
+                            Text(text = context.getString(R.string.edit_file))
+                        }
+                    }
                 }
             }
         }
@@ -239,6 +255,30 @@ fun GamesListPage(
         newFileNameDialogOpen = true
     }
 
+    var fileContextualMenuOpen by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var fileContextualMenuItem by rememberSaveable {
+        mutableStateOf<FileData?>(null)
+    }
+
+    var fileContextualMenuIndex by rememberSaveable {
+        mutableStateOf<Int?>(null)
+    }
+
+    fun handleEditFile(fileData: FileData) {
+        coroutineScope.launch(Dispatchers.Main.immediate) {
+            (context.applicationContext as MyApplication)
+                .gamesFromFileExtractorUseCase.extractGames(
+                    fileData = fileData,
+                    context = context
+                )
+            val encodedPath = fileData.path.encodePath()
+            hostNavController.navigate(NavHostRoutes.getPgnFileEditorPage(encodedPath))
+        }
+    }
+
     @Composable
     fun dialogs(
         handleNewFileNameDefined: (String) -> Unit,
@@ -247,6 +287,7 @@ fun GamesListPage(
         var newFileName by rememberSaveable {
             mutableStateOf("")
         }
+
         if (newFileNameDialogOpen) {
             AlertDialog(
                 buttons = {
@@ -354,6 +395,19 @@ fun GamesListPage(
                     Customs(
                         gamesListPageViewModel = gamesListPageViewModel,
                         currentPath = currentPath,
+                        openFileContextualMenu = { index, fileItem ->
+                            fileContextualMenuIndex = index
+                            fileContextualMenuItem = fileItem
+                            fileContextualMenuOpen = true
+                        },
+                        fileContextualMenuIndex = fileContextualMenuIndex,
+                        fileContextualMenuOpen = fileContextualMenuOpen,
+                        handleFileContextualMenuDismiss = {
+                            fileContextualMenuIndex = null
+                            fileContextualMenuItem = null
+                            fileContextualMenuOpen = false
+                        },
+                        handleEditFile = ::handleEditFile,
                     )
                 }
             }

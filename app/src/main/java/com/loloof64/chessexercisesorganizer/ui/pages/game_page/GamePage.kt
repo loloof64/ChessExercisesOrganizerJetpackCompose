@@ -63,7 +63,7 @@ fun GamePage(
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
 
-    val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.currentGames()
+    val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.games
     val noGameText = stringResource(R.string.no_game_in_pgn)
 
     fun getGoalText(): String {

@@ -97,4 +97,8 @@
     <string name="add_element">Ajouter un élément</string>
     <string name="enter_file_name">Nom du fichier (sans l\'extension *.pgn)</string>
     <string name="file_creation_error">Echec de création du fichier !</string>
+    <string name="edit_file">Editer</string>
+    <string name="add_game_to_file">Ajouter une partie ici</string>
+    <string name="pgn_games_editor_page">Page éditeur parties d\'un PGN</string>
+    <string name="game_editor_page">Page éditeur de partie</string>
 </resources>

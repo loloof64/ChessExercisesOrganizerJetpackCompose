@@ -94,4 +94,8 @@
     <string name="add_element">Add an element</string>
     <string name="enter_file_name">File name (without *.pgn extension)</string>
     <string name="file_creation_error">Failed to create file !</string>
+    <string name="edit_file">Edit</string>
+    <string name="add_game_to_file">Add game here</string>
+    <string name="pgn_games_editor_page">Pgn games editor page</string>
+    <string name="game_editor_page">Game editor page</string>
 </resources>

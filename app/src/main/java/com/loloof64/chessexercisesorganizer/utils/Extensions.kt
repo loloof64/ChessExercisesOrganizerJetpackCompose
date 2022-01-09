@@ -15,3 +15,11 @@ fun String.stripPgnExtension() : String {
         this.subSequence(0 until this.lastIndexOf(".pgn")).toString()
     } else this
 }
+
+fun String.encodePath(): String {
+    return this.replace("/".toRegex(), "#")
+}
+
+fun String.decodePath(): String {
+    return this.replace("#".toRegex(), "/")
+}
