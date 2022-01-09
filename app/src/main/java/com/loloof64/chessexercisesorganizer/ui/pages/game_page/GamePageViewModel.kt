@@ -335,6 +335,7 @@ class GamePageViewModel : ViewModel() {
     // Select first position of the game.
     fun selectFirstPosition() {
         if (!viewModelState.value.interfaceState.gameInProgress) {
+
             val fen = viewModelState.value.interfaceState.startPosition
             viewModelState.value.chessState.board.setCurrentPosition(fen)
             viewModelState.value.chessState.board.clearLastMoveArrow()

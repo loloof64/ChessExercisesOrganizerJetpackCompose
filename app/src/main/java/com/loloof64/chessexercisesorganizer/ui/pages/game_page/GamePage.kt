@@ -187,45 +187,49 @@ fun GamePage(
     }
 
     @Composable
-    fun variationSelectionDropDownComponent() = DropdownMenu(
-        expanded = uiState.interfaceState.variationSelectionOpen,
-        onDismissRequest = {
-            coroutineScope.launch {
-                gamePageViewModel.cancelVariationSelection()
-            }
-        },
-    ) {
-        DropdownMenuItem(onClick = {
-            coroutineScope.launch {
-                gamePageViewModel.selectMainVariation()
-            }
-        }) {
-            Text(
-                text = uiState.interfaceState.variationsSelectorData!!.main.text,
-                modifier = Modifier
-                    .background(Color.Green)
-                    .fillMaxSize(),
-                color = Color.Blue,
-                style = MaterialTheme.typography.body1,
-                fontSize = 28.sp,
-            )
-        }
-        Divider()
-        uiState.interfaceState.variationsSelectorData!!.variations.mapIndexed { index, elt ->
-            DropdownMenuItem(onClick = {
-                coroutineScope.launch {
-                    gamePageViewModel.selectSubVariation(index)
+    fun variationSelectionDropDownComponent() {
+        if (uiState.interfaceState.variationsSelectorData != null) {
+            DropdownMenu(
+                expanded = uiState.interfaceState.variationSelectionOpen,
+                onDismissRequest = {
+                    coroutineScope.launch {
+                        gamePageViewModel.cancelVariationSelection()
+                    }
+                },
+            ) {
+                DropdownMenuItem(onClick = {
+                    coroutineScope.launch {
+                        gamePageViewModel.selectMainVariation()
+                    }
+                }) {
+                    Text(
+                        text = uiState.interfaceState.variationsSelectorData?.main?.text ?: "",
+                        modifier = Modifier
+                            .background(Color.Green)
+                            .fillMaxSize(),
+                        color = Color.Blue,
+                        style = MaterialTheme.typography.body1,
+                        fontSize = 28.sp,
+                    )
                 }
-            }) {
-                Text(
-                    text = elt.text,
-                    modifier = Modifier
-                        .background(Color(0xFFF97916))
-                        .fillMaxSize(),
-                    color = Color.Blue,
-                    style = MaterialTheme.typography.body1,
-                    fontSize = 28.sp,
-                )
+                Divider()
+                uiState.interfaceState.variationsSelectorData?.variations?.mapIndexed { index, elt ->
+                    DropdownMenuItem(onClick = {
+                        coroutineScope.launch {
+                            gamePageViewModel.selectSubVariation(index)
+                        }
+                    }) {
+                        Text(
+                            text = elt.text,
+                            modifier = Modifier
+                                .background(Color(0xFFF97916))
+                                .fillMaxSize(),
+                            color = Color.Blue,
+                            style = MaterialTheme.typography.body1,
+                            fontSize = 28.sp,
+                        )
+                    }
+                }
             }
         }
     }
@@ -414,9 +418,7 @@ fun GamePage(
                                 }
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     historyComponent()
-                                    if (uiState.interfaceState.variationsSelectorData != null) {
-                                        variationSelectionDropDownComponent()
-                                    }
+                                    variationSelectionDropDownComponent()
                                 }
                                 dialogs()
                             }
@@ -439,9 +441,7 @@ fun GamePage(
                             }
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 historyComponent()
-                                if (uiState.interfaceState.variationsSelectorData != null) {
-                                    variationSelectionDropDownComponent()
-                                }
+                                variationSelectionDropDownComponent()
                             }
                             dialogs()
                             BackHandler {
