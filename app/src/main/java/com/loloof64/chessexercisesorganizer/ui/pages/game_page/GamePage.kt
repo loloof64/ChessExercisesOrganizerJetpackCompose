@@ -63,7 +63,8 @@ fun GamePage(
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
 
-    val gamesList = (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.games
+    val gamesList =
+        (context.applicationContext as MyApplication).gamesFromFileExtractorUseCase.games
     val noGameText = stringResource(R.string.no_game_in_pgn)
 
     fun getGoalText(): String {
@@ -73,16 +74,32 @@ fun GamePage(
 
         val goalTypeText = gamesList?.get(gameId)?.tags?.get("Goal") ?: ""
         val checkmateMoves = when {
-            whiteCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(whiteCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
-            blackCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(blackCheckmateRegex.matchEntire(goalTypeText)!!.groupValues[1])
+            whiteCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(
+                whiteCheckmateRegex.matchEntire(
+                    goalTypeText
+                )!!.groupValues[1]
+            )
+            blackCheckmateRegex.matches(goalTypeText) -> Integer.parseInt(
+                blackCheckmateRegex.matchEntire(
+                    goalTypeText
+                )!!.groupValues[1]
+            )
             else -> -1
         }
         return when {
             goalTypeText == "1-0" -> context.getString(R.string.white_should_win)
             goalTypeText == "0-1" -> context.getString(R.string.black_should_win)
             goalTypeText == "1/2-1/2" -> context.getString(R.string.it_should_be_draw)
-            whiteCheckmateRegex.matches(goalTypeText) -> resources.getQuantityString(R.plurals.white_should_checkmate, checkmateMoves, checkmateMoves)
-            blackCheckmateRegex.matches(goalTypeText) -> resources.getQuantityString(R.plurals.black_should_checkmate, checkmateMoves, checkmateMoves)
+            whiteCheckmateRegex.matches(goalTypeText) -> resources.getQuantityString(
+                R.plurals.white_should_checkmate,
+                checkmateMoves,
+                checkmateMoves
+            )
+            blackCheckmateRegex.matches(goalTypeText) -> resources.getQuantityString(
+                R.plurals.black_should_checkmate,
+                checkmateMoves,
+                checkmateMoves
+            )
             else -> ""
         }
     }
@@ -97,8 +114,7 @@ fun GamePage(
         try {
             val selectedGame = it[selectedIndex]
             gamePageViewModel.setSelectedGame(selectedGame)
-        }
-        catch (ex: IndexOutOfBoundsException) {
+        } catch (ex: IndexOutOfBoundsException) {
             coroutineScope.launch {
                 scaffoldState.snackbarHostState.showSnackbar(noGameText)
             }
@@ -174,11 +190,15 @@ fun GamePage(
     fun variationSelectionDropDownComponent() = DropdownMenu(
         expanded = uiState.interfaceState.variationSelectionOpen,
         onDismissRequest = {
-            gamePageViewModel.cancelVariationSelection()
+            coroutineScope.launch {
+                gamePageViewModel.cancelVariationSelection()
+            }
         },
     ) {
         DropdownMenuItem(onClick = {
-            gamePageViewModel.selectMainVariation()
+            coroutineScope.launch {
+                gamePageViewModel.selectMainVariation()
+            }
         }) {
             Text(
                 text = uiState.interfaceState.variationsSelectorData!!.main.text,
@@ -192,7 +212,11 @@ fun GamePage(
         }
         Divider()
         uiState.interfaceState.variationsSelectorData!!.variations.mapIndexed { index, elt ->
-            DropdownMenuItem(onClick = { gamePageViewModel.selectSubVariation(index) }) {
+            DropdownMenuItem(onClick = {
+                coroutineScope.launch {
+                    gamePageViewModel.selectSubVariation(index)
+                }
+            }) {
                 Text(
                     text = elt.text,
                     modifier = Modifier
@@ -263,11 +287,11 @@ fun GamePage(
             elementSelectionRequestCallback = {
                 gamePageViewModel.tryToSelectPosition(it)
             },
-            handleFirstPositionRequest = {gamePageViewModel.selectFirstPosition()},
-            handleLastPositionRequest = {gamePageViewModel.selectLastPosition()},
-            handlePreviousPositionRequest = {gamePageViewModel.selectPreviousPosition()},
-            handleNextPositionRequest = {gamePageViewModel.selectNextPosition()},
-            historyModeToggleRequestHandler = {gamePageViewModel.toggleHistoryMode()},
+            handleFirstPositionRequest = { gamePageViewModel.selectFirstPosition() },
+            handleLastPositionRequest = { gamePageViewModel.selectLastPosition() },
+            handlePreviousPositionRequest = { gamePageViewModel.selectPreviousPosition() },
+            handleNextPositionRequest = { gamePageViewModel.selectNextPosition() },
+            historyModeToggleRequestHandler = { gamePageViewModel.toggleHistoryMode() },
             isInSolutionMode = uiState.interfaceState.isInSolutionMode,
             modeSelectionActive = modeSelectionActive && uiState.interfaceState.solutionAvailable,
             failedToLoadSolution = uiState.interfaceState.failedToLoadSolution,
@@ -390,7 +414,9 @@ fun GamePage(
                                 }
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     historyComponent()
-                                    variationSelectionDropDownComponent()
+                                    if (uiState.interfaceState.variationsSelectorData != null) {
+                                        variationSelectionDropDownComponent()
+                                    }
                                 }
                                 dialogs()
                             }
@@ -400,8 +426,7 @@ fun GamePage(
                                 }
                             }
                         }
-                    }
-                    else {
+                    } else {
                         Column(modifier = modifier.fillMaxSize()) {
                             Box(modifier = Modifier.size(screenWidth)) {
                                 chessBoardComponent(modifier = Modifier.size(screenWidth))
@@ -414,7 +439,9 @@ fun GamePage(
                             }
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 historyComponent()
-                                variationSelectionDropDownComponent()
+                                if (uiState.interfaceState.variationsSelectorData != null) {
+                                    variationSelectionDropDownComponent()
+                                }
                             }
                             dialogs()
                             BackHandler {

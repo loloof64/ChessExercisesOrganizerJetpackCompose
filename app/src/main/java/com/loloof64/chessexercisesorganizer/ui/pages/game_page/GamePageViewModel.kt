@@ -8,10 +8,8 @@ import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.*
 import com.loloof64.chessexercisesorganizer.utils.update
 import com.loloof64.stockfish.StockfishLib
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 
 const val cpuThinkingTimeMs = 2_000L
 
@@ -158,14 +156,14 @@ class GamePageViewModel : ViewModel() {
 
     val uiState =
         viewModelState
-        .map {
-            it.toUiState()
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            viewModelState.value.toUiState()
-        )
+            .map {
+                it.toUiState()
+            }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                viewModelState.value.toUiState()
+            )
 
     private fun updateMovesNavigatorSelection(nodeIndex: Int) {
         if (viewModelState.value.interfaceState.gameInProgress) return
@@ -312,7 +310,8 @@ class GamePageViewModel : ViewModel() {
     }
 
     fun newGameRequest() {
-        val isInInitialPosition = viewModelState.value.chessState.board.getCurrentPosition() == EMPTY_FEN
+        val isInInitialPosition =
+            viewModelState.value.chessState.board.getCurrentPosition() == EMPTY_FEN
         if (isInInitialPosition) {
             doStartNewGame()
         } else {
@@ -345,7 +344,7 @@ class GamePageViewModel : ViewModel() {
                     highlightedHistoryItemIndex = null,
                     selectedNodeVariationLevel = 0,
 
-                )
+                    )
             }
 
         }
@@ -355,7 +354,8 @@ class GamePageViewModel : ViewModel() {
     fun selectPreviousPosition() {
         if (!viewModelState.value.interfaceState.gameInProgress) {
             // There is at least the first move number element in history at this point.
-            val noHistoryMove = !viewModelState.value.interfaceState.isInSolutionMode && (viewModelState.value.chessState.playedGameHistory.size < 2)
+            val noHistoryMove =
+                !viewModelState.value.interfaceState.isInSolutionMode && (viewModelState.value.chessState.playedGameHistory.size < 2)
             if (noHistoryMove) return
 
             if (viewModelState.value.interfaceState.highlightedHistoryItemIndex == null) {
@@ -386,7 +386,8 @@ class GamePageViewModel : ViewModel() {
     fun selectNextPosition() {
         if (!viewModelState.value.interfaceState.gameInProgress) {
             // There is at least the first move number element in history at this point, so the first index of concern is 1.
-            val noHistoryMove = !viewModelState.value.interfaceState.isInSolutionMode && (viewModelState.value.chessState.playedGameHistory.size < 2)
+            val noHistoryMove =
+                !viewModelState.value.interfaceState.isInSolutionMode && (viewModelState.value.chessState.playedGameHistory.size < 2)
             if (noHistoryMove) return
 
             val searchResult = findNextMoveNode(
@@ -478,7 +479,8 @@ class GamePageViewModel : ViewModel() {
         val lastMoveFan = viewModelState.value.chessState.board.getLastMoveFan()
         val lastMoveFen = viewModelState.value.chessState.board.getCurrentPosition()
         val localLastMoveArrow = viewModelState.value.chessState.board.getLastMoveArrow()
-        val playedGameHistoryCopy = viewModelState.value.chessState.playedGameHistory.toMutableList()
+        val playedGameHistoryCopy =
+            viewModelState.value.chessState.playedGameHistory.toMutableList()
         playedGameHistoryCopy.add(
             HalfMoveSAN(
                 text = lastMoveFan,
@@ -612,8 +614,10 @@ class GamePageViewModel : ViewModel() {
     }
 
     fun toggleHistoryMode() {
-        val isInInitialPosition = viewModelState.value.chessState.board.getCurrentPosition() == EMPTY_FEN
-        val modeSelectionNotActive = isInInitialPosition || viewModelState.value.interfaceState.gameInProgress
+        val isInInitialPosition =
+            viewModelState.value.chessState.board.getCurrentPosition() == EMPTY_FEN
+        val modeSelectionNotActive =
+            isInInitialPosition || viewModelState.value.interfaceState.gameInProgress
         if (modeSelectionNotActive) return
 
         val noSolutionAvailable = viewModelState.value.chessState.gameSolution.isEmpty()
@@ -634,10 +638,12 @@ class GamePageViewModel : ViewModel() {
 
     private fun manuallyUpdateHistoryNode() {
         if (viewModelState.value.interfaceState.highlightedHistoryItemIndex == null) return
-        val historyNodes = if (viewModelState.value.interfaceState.isInSolutionMode) viewModelState.value.chessState.gameSolution
-        else viewModelState.value.chessState.playedGameHistory
+        val historyNodes =
+            if (viewModelState.value.interfaceState.isInSolutionMode) viewModelState.value.chessState.gameSolution
+            else viewModelState.value.chessState.playedGameHistory
 
-        val currentNode = historyNodes[viewModelState.value.interfaceState.highlightedHistoryItemIndex!!]
+        val currentNode =
+            historyNodes[viewModelState.value.interfaceState.highlightedHistoryItemIndex!!]
 
         viewModelState.value.chessState.board.setCurrentPosition(currentNode.fen!!)
         viewModelState.value.chessState.board.setLastMoveArrow(currentNode.lastMoveArrowData)
@@ -647,51 +653,74 @@ class GamePageViewModel : ViewModel() {
         }
     }
 
-    fun selectMainVariation() {
-        viewModelState.update {
-            it.copyWithModifiedInterfaceState(
-                highlightedHistoryItemIndex = viewModelState.value.interfaceState
-                    .variationsSelectorData!!.main.historyIndex,
-            )
-        }
-        manuallyUpdateHistoryNode()
-        viewModelState.update {
-            it.copyWithModifiedInterfaceState(
-                variationSelectionOpen = false,
-                variationsSelectorData = null,
-            )
-        }
-    }
-
-    fun selectSubVariation(variationIndex: Int) {
-        viewModelState.update {
-            it.copyWithModifiedInterfaceState(
-                highlightedHistoryItemIndex = viewModelState.value.interfaceState
-                    .variationsSelectorData!!.variations[variationIndex].historyIndex
-            )
-        }
-        manuallyUpdateHistoryNode()
-        viewModelState.update {
-            it.copyWithModifiedInterfaceState(
-                variationSelectionOpen = false,
-                variationsSelectorData = null,
-            )
+    suspend fun selectMainVariation() {
+        withContext(Dispatchers.Main.immediate) {
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    highlightedHistoryItemIndex = viewModelState.value.interfaceState
+                        .variationsSelectorData!!.main.historyIndex,
+                )
+            }
+            manuallyUpdateHistoryNode()
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    variationSelectionOpen = false,
+                )
+            }
+            delay(700)
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    variationsSelectorData = null,
+                )
+            }
         }
     }
 
-    fun cancelVariationSelection() {
-        viewModelState.update {
-            it.copyWithModifiedInterfaceState(
-                variationSelectionOpen = false,
-                variationsSelectorData = null,
-            )
+    suspend fun selectSubVariation(variationIndex: Int) {
+        withContext(Dispatchers.Main.immediate) {
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    highlightedHistoryItemIndex = viewModelState.value.interfaceState
+                        .variationsSelectorData!!.variations[variationIndex].historyIndex
+                )
+            }
+            manuallyUpdateHistoryNode()
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    variationSelectionOpen = false,
+                )
+            }
+            delay(700)
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    variationsSelectorData = null,
+                )
+            }
         }
+
+    }
+
+    suspend fun cancelVariationSelection() {
+        withContext(Dispatchers.Main.immediate) {
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    variationSelectionOpen = false,
+                )
+            }
+            delay(700)
+            viewModelState.update {
+                it.copyWithModifiedInterfaceState(
+                    variationsSelectorData = null,
+                )
+            }
+        }
+
     }
 
     /**
      * Returns false if the request needs to be processed immediately, true if it requires user agreement.
      */
-    fun handleGoBackRequest() : Boolean {
+    fun handleGoBackRequest(): Boolean {
         val isInInitialPosition =
             viewModelState.value.chessState.board.getCurrentPosition() == EMPTY_FEN
         return if (isInInitialPosition) {
@@ -746,7 +775,8 @@ class GamePageViewModel : ViewModel() {
 
     private fun updateSolutionFromSelectedGame() {
         try {
-            val solutionHistory = buildHistoryFromPGNGame(viewModelState.value.chessState.selectedGame)
+            val solutionHistory =
+                buildHistoryFromPGNGame(viewModelState.value.chessState.selectedGame)
             viewModelState.update {
                 it.copyWithModifiedChessState(
                     gameSolution = solutionHistory
