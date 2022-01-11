@@ -44,10 +44,6 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
     }
 
     fun updatePosition(file: Int, rank: Int) {
-        //////////////////////////
-        println("Before $positionFen")
-        //////////////////////////
-
         val positionParts = positionFen.split(" ").toMutableList()
         val boardPart = positionParts[0]
         val board = boardPart.fenBoardPartToPiecesArray()
@@ -57,10 +53,6 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
         val newBoardFen = board.toBoardFen()
         positionParts[0] = newBoardFen
         positionFen = positionParts.joinToString(" ")
-
-        //////////////////////////
-        println("After $positionFen")
-        //////////////////////////
     }
 
     fun goBack() {

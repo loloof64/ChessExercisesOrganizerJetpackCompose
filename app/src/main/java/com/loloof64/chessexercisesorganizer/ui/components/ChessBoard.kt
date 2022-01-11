@@ -8,21 +8,18 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.Button
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowLeft
 import androidx.compose.material.icons.filled.ArrowRight
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -308,7 +305,7 @@ fun ChessPieceSelector(
         handleValueUpdate(piece)
     }
 
-    Column {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row {
             IconButton(onClick = ::gotoPreviousIndex) {
                 Icon(
@@ -328,25 +325,19 @@ fun ChessPieceSelector(
                 )
             }
         }
+        Spacer(modifier = Modifier.size(2.dp))
         val isARecognizedPiece = "pnbrqkPNBRQK".contains(piece)
         if (isARecognizedPiece) {
             Row {
-                Button(onClick = ::setWhitePiece) {
-                    Text(
-                        " ",
-                        Modifier
-                            .background(Color.White)
-                            .size(5.dp)
-                    )
-                }
-                Button(onClick = ::setBlackPiece) {
-                    Text(
-                        " ",
-                        Modifier
-                            .background(Color.Black)
-                            .size(5.dp)
-                    )
-                }
+                Button(
+                    onClick = ::setWhitePiece, colors = ButtonDefaults.buttonColors(Color.White),
+                    modifier = Modifier.size(30.dp).border(width = 2.dp, color = Color.Black)
+                ){}
+                Spacer(modifier = Modifier.size(2.dp).border(width = 2.dp, color = Color.Black))
+                Button(
+                    onClick = ::setBlackPiece, colors = ButtonDefaults.buttonColors(Color.Black),
+                    modifier = Modifier.size(30.dp)
+                ){}
             }
         }
     }
@@ -1422,39 +1413,6 @@ fun DynamicChessBoardPreview() {
 
 @Preview
 @Composable
-fun DynamicReversedChessBoardPreview() {
-    DynamicChessBoard(modifier = Modifier.size(300.dp), reversed = true, position = STANDARD_FEN)
-}
-
-@Preview
-@Composable
-fun DynamicChessBoardCustomPositionPreview() {
-    DynamicChessBoard(
-        modifier = Modifier.size(300.dp),
-        position = STANDARD_FEN,
-        //startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
-    )
-}
-
-@Preview
-@Composable
-fun DynamicChessBoardCustomPositionReversedPreview() {
-    DynamicChessBoard(
-        modifier = Modifier.size(300.dp),
-        reversed = true,
-        position = STANDARD_FEN,
-        //startPosition = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
-    )
-}
-
-@Preview
-@Composable
-fun StaticChessBoardPreview() {
-    StaticChessBoard(modifier = Modifier.size(300.dp))
-}
-
-@Preview
-@Composable
-fun StaticChessBoardReversedPreview() {
-    StaticChessBoard(modifier = Modifier.size(300.dp), reversed = true)
+fun ChessPieceSelectorPreview() {
+    ChessPieceSelector(handleValueUpdate = { }, modifier = Modifier.size(300.dp))
 }
