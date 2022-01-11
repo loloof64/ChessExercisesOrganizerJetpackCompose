@@ -103,6 +103,13 @@
     <string name="load_old_position">Old position</string>
     <string name="clear_posiiton">Clear position</string>
     <string name="load_default_position">Default position</string>
-    <string name="validate_position">Validate modifications</string>
-    <string name="cancel_position">Cancel modifications</string>
+    <string name="validate_position">Validate position</string>
+    <string name="cancel_position">Cancel position</string>
+    <string name="white_turn">White turn</string>
+    <string name="black_turn">Black turn</string>
+    <string name="illegal_position">Illegal position !</string>
+    <string name="white00">White 0-0</string>
+    <string name="white000">White 0-0-0</string>
+    <string name="black00">Black 0-0</string>
+    <string name="black000">Black 0-0-0</string>
 </resources>
