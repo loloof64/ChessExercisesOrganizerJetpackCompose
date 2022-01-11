@@ -74,10 +74,14 @@ fun MainContent() {
                     ?: throw IllegalArgumentException("No encoded path given !")
             )
         }
-        composable(NavHostRoutes.gameEditorPage) {
+        composable(
+            NavHostRoutes.gameEditorPage,
+            arguments = listOf(navArgument("index") { type = NavType.IntType })
+        ) {
             GameEditorPage(
                 navController = navController,
-                index = it.arguments?.getInt("index") ?: throw IllegalArgumentException("No game index given !")
+                index = it.arguments?.getInt("index")
+                    ?: throw IllegalArgumentException("No game index given !")
             )
         }
     }

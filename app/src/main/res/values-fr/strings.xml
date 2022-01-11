@@ -101,4 +101,6 @@
     <string name="add_game_to_file">Ajouter une partie ici</string>
     <string name="pgn_games_editor_page">Page éditeur parties d\'un PGN</string>
     <string name="game_editor_page">Page éditeur de partie</string>
+    <string name="previous_value">Valeur précédente</string>
+    <string name="next_value">Valeur suivante</string>
 </resources>

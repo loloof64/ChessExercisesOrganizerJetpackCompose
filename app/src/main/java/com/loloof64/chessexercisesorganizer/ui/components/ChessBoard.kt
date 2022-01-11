@@ -3,12 +3,23 @@ package com.loloof64.chessexercisesorganizer.ui.components
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.TweenSpec
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.Button
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowLeft
+import androidx.compose.material.icons.filled.ArrowRight
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,6 +35,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
@@ -151,7 +163,8 @@ class DynamicBoardDataHandler {
     }
 }
 
-class IllegalPositionException(startFen: String) : java.lang.IllegalArgumentException("Illegal position : $startFen !")
+class IllegalPositionException(startFen: String) :
+    java.lang.IllegalArgumentException("Illegal position : $startFen !")
 
 data class MoveData(
     val startFile: Int = Int.MIN_VALUE,
@@ -216,6 +229,182 @@ class PromotionQueen : PromotionPiece('q')
 class PromotionRook : PromotionPiece('r')
 class PromotionBishop : PromotionPiece('b')
 class PromotionKnight : PromotionPiece('n')
+
+@Composable
+fun ChessPiecePreview(
+    modifier: Modifier = Modifier,
+    piece: Char
+) {
+    val context = LocalContext.current
+    Canvas(modifier = modifier.background(Color.Cyan)) {
+        val cellSize = this.size.minDimension
+
+        val notEmptyPiece = "PNBRQKpnbrqk".contains(piece)
+        if (notEmptyPiece) {
+            val imageRef = piece.getPieceImageID()
+            val vectorDrawable =
+                VectorDrawableCompat.create(context.resources, imageRef, null)
+            drawIntoCanvas {
+                if (vectorDrawable != null) it.nativeCanvas.drawVector(
+                    vectorDrawable,
+                    0f,
+                    0f,
+                    cellSize.toInt(),
+                    cellSize.toInt()
+                )
+            }
+        }
+    }
+}
+
+private const val piecesBank = ".pnbrqk"
+
+private fun getPieceValue(isWhite: Boolean, index: Int): Char {
+    val rawValue = piecesBank[index]
+    return if (isWhite) rawValue.uppercaseChar() else rawValue.lowercaseChar()
+}
+
+@Composable
+fun ChessPieceSelector(
+    modifier: Modifier = Modifier,
+    handleValueUpdate: (Char) -> Unit,
+) {
+
+    var pieceIsWhite by rememberSaveable {
+        mutableStateOf(true)
+    }
+
+    var pieceIndex by rememberSaveable {
+        mutableStateOf(0)
+    }
+
+    var piece by rememberSaveable {
+        mutableStateOf(getPieceValue(isWhite = pieceIsWhite, index = pieceIndex))
+    }
+
+    fun gotoNextIndex() {
+        if (pieceIndex >= (piecesBank.length - 1)) pieceIndex = 0
+        else pieceIndex++
+        piece = getPieceValue(isWhite = pieceIsWhite, index = pieceIndex)
+        handleValueUpdate(piece)
+    }
+
+    fun gotoPreviousIndex() {
+        if (pieceIndex <= 0) pieceIndex = piecesBank.length - 1
+        else pieceIndex--
+        piece = getPieceValue(isWhite = pieceIsWhite, index = pieceIndex)
+        handleValueUpdate(piece)
+    }
+
+    fun setWhitePiece() {
+        pieceIsWhite = true
+        piece = getPieceValue(isWhite = pieceIsWhite, index = pieceIndex)
+        handleValueUpdate(piece)
+    }
+
+    fun setBlackPiece() {
+        pieceIsWhite = false
+        piece = getPieceValue(isWhite = pieceIsWhite, index = pieceIndex)
+        handleValueUpdate(piece)
+    }
+
+    Column {
+        Row {
+            IconButton(onClick = ::gotoPreviousIndex) {
+                Icon(
+                    contentDescription = stringResource(id = R.string.previous_value),
+                    imageVector = Icons.Filled.ArrowLeft,
+                    tint = Color(0xFFCDDC39),
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+            ChessPiecePreview(piece = piece, modifier = Modifier.size(50.dp))
+            IconButton(onClick = ::gotoNextIndex) {
+                Icon(
+                    contentDescription = stringResource(id = R.string.next_value),
+                    imageVector = Icons.Filled.ArrowRight,
+                    tint = Color(0xFFCDDC39),
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+        }
+        val isARecognizedPiece = "pnbrqkPNBRQK".contains(piece)
+        if (isARecognizedPiece) {
+            Row {
+                Button(onClick = ::setWhitePiece) {
+                    Text(
+                        " ",
+                        Modifier
+                            .background(Color.White)
+                            .size(5.dp)
+                    )
+                }
+                Button(onClick = ::setBlackPiece) {
+                    Text(
+                        " ",
+                        Modifier
+                            .background(Color.Black)
+                            .size(5.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EditableChessBoard(
+    modifier: Modifier = Modifier,
+    positionFen: String,
+    handleValueUpdate: (Int, Int) -> Unit,
+) {
+    val context = LocalContext.current
+    val boardLogic = positionFen.toBoard()
+    var selectedFile by rememberSaveable {
+        mutableStateOf(0)
+    }
+    var selectedRank by rememberSaveable {
+        mutableStateOf(0)
+    }
+
+    var cellsSize by remember { mutableStateOf(0f) }
+
+    fun updateSelectedCell(offset: Offset) {
+        val file = ((offset.x - cellsSize * 0.5) / cellsSize).toInt()
+        val rank = 7 - ((offset.y - cellsSize * 0.5) / cellsSize).toInt()
+        if (file < 0 || file > 7) return
+        if (rank < 0 || rank > 7) return
+
+        handleValueUpdate(file, rank)
+    }
+
+    Canvas(
+        modifier = modifier
+            .background(Color(214, 59, 96))
+            .pointerInput(selectedFile, selectedRank) {
+                detectTapGestures(
+                    onTap = { updateSelectedCell(it) }
+                )
+            }
+    ) {
+        val minSize = if (size.width < size.height) size.width else size.height
+        cellsSize = minSize / 9f
+
+        drawCells(
+            cellsSize, dndData = DndData()
+        )
+        drawFilesCoordinates(cellsSize, reversed = false)
+        drawRanksCoordinates(cellsSize, reversed = false)
+        drawPlayerTurn(cellsSize, boardLogic)
+        drawPieces(
+            context = context,
+            cellsSize = cellsSize,
+            position = boardLogic,
+            reversed = false,
+        )
+
+    }
+}
 
 /**
  * Be careful !  computerMoveRequestCallback may be called on each recomposition : you should check
@@ -829,7 +1018,7 @@ private fun DrawScope.drawCells(
             val backgroundColor =
                 when {
                     isDndTargetCell -> Color(112, 209, 35)
-                    isDndStartCell -> Color(214, 59, 96)
+                    isDndStartCell -> Color(255, 87, 34, 255)
                     isDndCrossCell -> Color(178, 46, 230)
                     isWhiteCell -> Color(255, 206, 158)
                     else -> Color(209, 139, 71)
@@ -865,7 +1054,7 @@ private fun DrawScope.drawPendingPromotionCells(
                 val backgroundColor =
                     when {
                         isDndTargetCell -> Color(112, 209, 35)
-                        isDndStartCell -> Color(214, 59, 96)
+                        isDndStartCell -> Color(255, 87, 34, 255)
                         isDndCrossCell -> Color(178, 46, 230)
                         isWhiteCell -> Color(255, 206, 158)
                         else -> Color(209, 139, 71)
@@ -1034,7 +1223,8 @@ private fun DrawScope.drawPieces(
 
             val square = getSquareFromCellCoordinates(file, rank)
             val piece = position.getPieceAt(square)
-            if (piece != NO_PIECE) {
+            val notEmptyPiece = "PNBRQKpnbrqk".contains(piece)
+            if (notEmptyPiece) {
                 val isDraggedPiece = (dndData.startFile == file) && (dndData.startRank == rank)
                 val isPendingPromotionPiece =
                     (promotionData.startFile == file) && (promotionData.startRank == rank)

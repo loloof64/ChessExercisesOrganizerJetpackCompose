@@ -98,4 +98,6 @@
     <string name="add_game_to_file">Add game here</string>
     <string name="pgn_games_editor_page">Pgn games editor page</string>
     <string name="game_editor_page">Game editor page</string>
+    <string name="previous_value">Previous value</string>
+    <string name="next_value">Next value</string>
 </resources>

@@ -99,4 +99,6 @@
     <string name="add_game_to_file">Agrega un juego aquí</string>
     <string name="pgn_games_editor_page">Página del editor de juegos del PGN</string>
     <string name="game_editor_page">Página del editor de juego</string>
+    <string name="previous_value">Valor anterior</string>
+    <string name="next_value">Siguiente valor</string>
 </resources>
