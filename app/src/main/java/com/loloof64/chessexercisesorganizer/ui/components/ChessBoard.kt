@@ -264,6 +264,7 @@ private fun getPieceValue(isWhite: Boolean, index: Int): Char {
 @Composable
 fun ChessPieceSelector(
     modifier: Modifier = Modifier,
+    firstPieceValue: Char,
     handleValueUpdate: (Char) -> Unit,
 ) {
 
@@ -275,8 +276,8 @@ fun ChessPieceSelector(
         mutableStateOf(0)
     }
 
-    var piece by rememberSaveable {
-        mutableStateOf(getPieceValue(isWhite = pieceIsWhite, index = pieceIndex))
+    var piece by remember {
+        mutableStateOf(firstPieceValue)
     }
 
     fun gotoNextIndex() {
@@ -1414,5 +1415,5 @@ fun DynamicChessBoardPreview() {
 @Preview
 @Composable
 fun ChessPieceSelectorPreview() {
-    ChessPieceSelector(handleValueUpdate = { }, modifier = Modifier.size(300.dp))
+    ChessPieceSelector(handleValueUpdate = { }, modifier = Modifier.size(300.dp), firstPieceValue = '.')
 }

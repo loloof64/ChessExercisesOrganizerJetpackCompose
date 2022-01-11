@@ -103,4 +103,9 @@
     <string name="game_editor_page">Page éditeur de partie</string>
     <string name="previous_value">Valeur précédente</string>
     <string name="next_value">Valeur suivante</string>
+    <string name="load_old_position">Ancienne position</string>
+    <string name="load_default_position">Position par défaut</string>
+    <string name="clear_posiiton">Effacer position</string>
+    <string name="validate_position">Valider modifications</string>
+    <string name="cancel_position">Annuler modifications</string>
 </resources>

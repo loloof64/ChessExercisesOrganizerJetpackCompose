@@ -101,4 +101,9 @@
     <string name="game_editor_page">Página del editor de juego</string>
     <string name="previous_value">Valor anterior</string>
     <string name="next_value">Siguiente valor</string>
+    <string name="clear_posiiton">Eliminar posición</string>
+    <string name="load_default_position">Posición por defecto</string>
+    <string name="load_old_position">Posición anterior</string>
+    <string name="validate_position">Validar modificaciones</string>
+    <string name="cancel_position">Cancelar modificaciones</string>
 </resources>

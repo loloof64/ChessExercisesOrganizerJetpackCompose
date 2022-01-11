@@ -100,4 +100,9 @@
     <string name="game_editor_page">Game editor page</string>
     <string name="previous_value">Previous value</string>
     <string name="next_value">Next value</string>
+    <string name="load_old_position">Old position</string>
+    <string name="clear_posiiton">Clear position</string>
+    <string name="load_default_position">Default position</string>
+    <string name="validate_position">Validate modifications</string>
+    <string name="cancel_position">Cancel modifications</string>
 </resources>
