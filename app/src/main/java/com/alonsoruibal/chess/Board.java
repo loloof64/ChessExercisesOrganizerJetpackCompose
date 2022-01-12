@@ -882,6 +882,7 @@ public class Board {
      * - pieces counts
      * - no pawn on 1st / 8th rank
      * - other king is not in check
+     * No check for castle, nor en passant square.
      *
      * Added by loloof64
      */

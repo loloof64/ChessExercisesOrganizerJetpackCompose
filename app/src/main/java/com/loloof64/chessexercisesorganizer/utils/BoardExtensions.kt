@@ -1,5 +1,8 @@
 package com.loloof64.chessexercisesorganizer.utils
 
+import com.alonsoruibal.chess.bitboard.BitboardUtils
+import com.loloof64.chessexercisesorganizer.ui.components.toBoard
+
 fun String.fenBoardPartToPiecesArray(): MutableList<MutableList<Char>> {
     val lines = this.split("/").reversed()
     return lines.map {
@@ -197,4 +200,115 @@ fun String.getEnPassantSquareValueIndex(): Int {
         this.startsWith("h") -> 8
         else -> 0
     }
+}
+
+fun getAlgebraic(file: Int, rank: Int): String {
+    return "${('a'.code + file).toChar()}${('1'.code + rank).toChar()}"
+}
+
+fun String.correctEnPassantSquare(): String {
+    val parts = this.split(" ").toMutableList()
+    if (parts.size < 4) return this
+
+    val enPassantSquare = BitboardUtils.algebraic2Square(parts[3])
+    if (enPassantSquare == 0L) return this
+
+    val enPassantFile = parts[3][0].code - 'a'.code
+    val enPassantRank = parts[3][1].code - '1'.code
+
+    val matchingBoard = this.toBoard()
+
+    val pieceAboveEP = if (enPassantRank < 7) {
+        matchingBoard.getPieceAt(
+            BitboardUtils.algebraic2Square(
+                getAlgebraic(
+                    enPassantFile,
+                    enPassantRank + 1
+                )
+            )
+        )
+    } else {
+        0
+    }
+    val pieceBelowEP = if (enPassantRank > 0) {
+        matchingBoard.getPieceAt(
+            BitboardUtils.algebraic2Square(
+                getAlgebraic(
+                    enPassantFile,
+                    enPassantRank - 1
+                )
+            )
+        )
+    } else {
+        0
+    }
+
+    val pieceOnAdjacentDiagLeftBelow = if (enPassantRank > 0 && enPassantFile > 0) {
+        matchingBoard.getPieceAt(
+            BitboardUtils.algebraic2Square(
+                getAlgebraic(
+                    enPassantFile - 1,
+                    enPassantRank - 1
+                )
+            )
+        )
+    } else {
+        0
+    }
+
+    val pieceOnAdjacentDiagRightBelow = if (enPassantRank > 0 && enPassantFile < 7) {
+        matchingBoard.getPieceAt(
+            BitboardUtils.algebraic2Square(
+                getAlgebraic(
+                    enPassantFile + 1,
+                    enPassantRank - 1
+                )
+            )
+        )
+    } else {
+        0
+    }
+
+    val pieceOnAdjacentDiagLeftAbove = if (enPassantRank < 7 && enPassantFile > 0) {
+        matchingBoard.getPieceAt(
+            BitboardUtils.algebraic2Square(
+                getAlgebraic(
+                    enPassantFile - 1,
+                    enPassantRank + 1
+                )
+            )
+        )
+    } else {
+        0
+    }
+
+    val pieceOnAdjacentDiagRightAbove = if (enPassantRank < 7 && enPassantFile < 7) {
+        matchingBoard.getPieceAt(
+            BitboardUtils.algebraic2Square(
+                getAlgebraic(
+                    enPassantFile + 1,
+                    enPassantRank + 1
+                )
+            )
+        )
+    } else {
+        0
+    }
+
+    val isWhiteTurn = parts[1] == "w";
+    if (isWhiteTurn && enPassantRank != 5) {
+        parts[3] = "-"
+    } else if (!isWhiteTurn && enPassantRank != 2) {
+        parts[3] = "-"
+    } else if (isWhiteTurn && pieceBelowEP != 'p') {
+        parts[3] = "-"
+    } else if (!isWhiteTurn && pieceAboveEP != 'P') {
+        parts[3] = "-"
+    } else if ((isWhiteTurn && pieceOnAdjacentDiagLeftBelow != 'P') && (isWhiteTurn && pieceOnAdjacentDiagRightBelow != 'P')) {
+        parts[3] = "-"
+    } else if ((!isWhiteTurn && pieceOnAdjacentDiagLeftAbove != 'p') && (!isWhiteTurn && pieceOnAdjacentDiagRightAbove != 'p')) {
+        parts[3] = "-"
+    }
+
+    return parts.joinToString(" ")
 }

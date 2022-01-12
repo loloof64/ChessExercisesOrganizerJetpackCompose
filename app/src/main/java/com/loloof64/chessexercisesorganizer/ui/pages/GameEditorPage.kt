@@ -380,7 +380,8 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                 modifier = Modifier.fillMaxSize(),
                 oldPosition = oldPosition,
                 handlePositionChanged = {
-                    oldPosition = it
+                    val correctedNewPosition = it.correctEnPassantSquare()
+                    oldPosition = correctedNewPosition
                 },
                 handleIllegalPosition = {
                     coroutineScope.launch {
