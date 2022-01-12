@@ -112,4 +112,5 @@
     <string name="white000">White 0-0-0</string>
     <string name="black00">Black 0-0</string>
     <string name="black000">Black 0-0-0</string>
+    <string name="en_passant_square">en passant capture</string>
 </resources>

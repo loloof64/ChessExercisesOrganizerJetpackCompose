@@ -1,29 +1,5 @@
 package com.loloof64.chessexercisesorganizer.utils
 
-import kotlinx.coroutines.flow.MutableStateFlow
-
-fun <T> MutableStateFlow<T>.update(
-    block: T.(T) -> T
-) {
-    value = value.run {
-        block(this)
-    }
-}
-
-fun String.stripPgnExtension(): String {
-    return if (this.endsWith(".pgn")) {
-        this.subSequence(0 until this.lastIndexOf(".pgn")).toString()
-    } else this
-}
-
-fun String.encodePath(): String {
-    return this.replace("/".toRegex(), "#")
-}
-
-fun String.decodePath(): String {
-    return this.replace("#".toRegex(), "/")
-}
-
 fun String.fenBoardPartToPiecesArray(): MutableList<MutableList<Char>> {
     val lines = this.split("/").reversed()
     return lines.map {
@@ -191,4 +167,34 @@ fun String.toggleBlack000(): String {
     }
 
     return parts.joinToString(" ")
+}
+
+fun String.setEnPassantSquare(newValue: String): String {
+    val parts = this.split(" ").toMutableList()
+    if (parts.size < 4) return this
+
+    parts[3] = newValue
+
+    return parts.joinToString(" ")
+}
+
+fun String.getEnPassantSquare(): String {
+    val parts = this.split(" ").toMutableList()
+    if (parts.size < 4) return this
+
+    return parts[3]
+}
+
+fun String.getEnPassantSquareValueIndex(): Int {
+    return when {
+        this.startsWith("a") -> 1
+        this.startsWith("b") -> 2
+        this.startsWith("c") -> 3
+        this.startsWith("d") -> 4
+        this.startsWith("e") -> 5
+        this.startsWith("f") -> 6
+        this.startsWith("g") -> 7
+        this.startsWith("h") -> 8
+        else -> 0
+    }
 }

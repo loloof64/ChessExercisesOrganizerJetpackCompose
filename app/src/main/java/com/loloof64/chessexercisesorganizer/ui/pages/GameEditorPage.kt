@@ -1,6 +1,7 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -14,13 +15,21 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.chessexercisesorganizer.utils.*
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+
+private fun getEnPassantValues(whiteTurn: Boolean): List<String> {
+    return if (whiteTurn) {
+        listOf("-", "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6")
+    } else {
+        listOf("-", "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3")
+    }
+}
 
 @Composable
 fun PositionEditor(
@@ -66,6 +75,22 @@ fun PositionEditor(
 
     var black000 by rememberSaveable {
         mutableStateOf(positionFen.hasBlack000())
+    }
+
+    var enPassantSquareMenuExpanded by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var enPassantSquareValues by rememberSaveable {
+        mutableStateOf(getEnPassantValues(whiteTurn = whiteTurn))
+    }
+
+    var enPassantSquareValueIndex by rememberSaveable {
+        mutableStateOf(0)
+    }
+
+    var enPassantSquare by rememberSaveable {
+        mutableStateOf(enPassantSquareValues[enPassantSquareValueIndex])
     }
 
     fun updatePosition(file: Int, rank: Int) {
@@ -152,12 +177,27 @@ fun PositionEditor(
         handlePositionChanged(positionFen)
     }
 
+    fun handleEnPassantSquareSelected(index: Int) {
+        enPassantSquareValueIndex = index
+        enPassantSquareMenuExpanded = false
+        val tempEnPassantSquare = enPassantSquareValues[enPassantSquareValueIndex]
+        positionFen = positionFen.setEnPassantSquare(tempEnPassantSquare)
+        handlePositionChanged(positionFen)
+    }
+
     SideEffect {
         whiteTurn = positionFen.isWhiteTurn()
         white00 = positionFen.hasWhite00()
         white000 = positionFen.hasWhite000()
         black00 = positionFen.hasBlack00()
         black000 = positionFen.hasBlack000()
+        enPassantSquare = positionFen.getEnPassantSquare()
+        enPassantSquareValues = getEnPassantValues(whiteTurn = whiteTurn)
+        enPassantSquareValueIndex = enPassantSquare.getEnPassantSquareValueIndex()
+
+        ////////////////////////////////////
+        println(positionFen)
+        ////////////////////////////////////
     }
 
     @Composable
@@ -197,18 +237,39 @@ fun PositionEditor(
             Spacer(modifier = Modifier.size(5.dp))
             Row {
                 Text(context.getString(R.string.white00))
-                Checkbox(checked = white00, onCheckedChange = {toggleWhite00()})
+                Checkbox(checked = white00, onCheckedChange = { toggleWhite00() })
                 Spacer(modifier = Modifier.size(2.dp))
                 Text(context.getString(R.string.white000))
-                Checkbox(checked = white000, onCheckedChange = {toggleWhite000()})
+                Checkbox(checked = white000, onCheckedChange = { toggleWhite000() })
             }
             Spacer(modifier = Modifier.size(5.dp))
             Row {
                 Text(context.getString(R.string.black00))
-                Checkbox(checked = black00, onCheckedChange = {toggleBlack00()})
+                Checkbox(checked = black00, onCheckedChange = { toggleBlack00() })
                 Spacer(modifier = Modifier.size(2.dp))
                 Text(context.getString(R.string.black000))
-                Checkbox(checked = black000, onCheckedChange = {toggleBlack000()})
+                Checkbox(checked = black000, onCheckedChange = { toggleBlack000() })
+            }
+            Spacer(modifier = Modifier.size(5.dp))
+            Row {
+                Text(
+                    context.getString(R.string.en_passant_square),
+                    modifier = Modifier.clickable {
+                        enPassantSquareMenuExpanded = !enPassantSquareMenuExpanded
+                    }
+                )
+                DropdownMenu(expanded = enPassantSquareMenuExpanded,
+                    onDismissRequest = { enPassantSquareMenuExpanded = false }) {
+                    enPassantSquareValues.forEachIndexed { index, item ->
+                        DropdownMenuItem(onClick = { handleEnPassantSquareSelected(index) }) {
+                            Text(item)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.size(5.dp))
+                Text(
+                    enPassantSquareValues[enPassantSquareValueIndex],
+                )
             }
         }
     }

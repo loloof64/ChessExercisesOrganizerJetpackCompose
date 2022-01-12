@@ -115,4 +115,5 @@
     <string name="white000">0-0-0 Blanc</string>
     <string name="black00">0-0 Noir</string>
     <string name="black000">0-0-0 Noir</string>
+    <string name="en_passant_square">prise en passant</string>
 </resources>
