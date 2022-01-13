@@ -108,9 +108,13 @@
     <string name="white_turn">White turn</string>
     <string name="black_turn">Black turn</string>
     <string name="illegal_position">Illegal position !</string>
-    <string name="white00">White 0-0</string>
-    <string name="white000">White 0-0-0</string>
-    <string name="black00">Black 0-0</string>
-    <string name="black000">Black 0-0-0</string>
-    <string name="en_passant_square">en passant capture</string>
+    <string name="white00">White 0–0</string>
+    <string name="white000">White 0–0–0</string>
+    <string name="black00">Black 0–0</string>
+    <string name="black000">Black 0–0–0</string>
+    <string name="en_passant_square">En passant capture</string>
+    <string name="draw_half_moves_count">Half moves count for draw</string>
+    <string name="move_number">Move number</string>
+    <string name="standard_parameters">Standard</string>
+    <string name="advanced_parameters">Advanced</string>
 </resources>

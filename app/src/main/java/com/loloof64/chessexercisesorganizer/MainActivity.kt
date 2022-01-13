@@ -4,12 +4,14 @@ import android.app.Application
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.accompanist.pager.ExperimentalPagerApi
 import com.loloof64.chessexercisesorganizer.core.domain.GamesFromFileUseCase
 import com.loloof64.chessexercisesorganizer.ui.pages.EditPgnFilePage
 import com.loloof64.chessexercisesorganizer.ui.pages.GameEditorPage
@@ -35,6 +37,8 @@ class MyApplication : Application() {
     }
 }
 
+@ExperimentalPagerApi
+@ExperimentalMaterialApi
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +50,8 @@ class MainActivity : AppCompatActivity() {
 
 }
 
+@ExperimentalPagerApi
+@ExperimentalMaterialApi
 @Composable
 fun MainContent() {
     val navController = rememberNavController()

@@ -182,7 +182,7 @@ fun String.setEnPassantSquare(newValue: String): String {
 }
 
 fun String.getEnPassantSquare(): String {
-    val parts = this.split(" ").toMutableList()
+    val parts = this.split(" ")
     if (parts.size < 4) return this
 
     return parts[3]
@@ -311,4 +311,34 @@ fun String.correctEnPassantSquare(): String {
     }
 
     return parts.joinToString(" ")
+}
+
+fun String.setDrawHalfMovesCount(value: Int): String {
+    val parts = this.split(" ").toMutableList()
+    if (parts.size < 5) return this
+
+    parts[4] = "${if (value < 0) 0 else value}"
+    return parts.joinToString(" ")
+}
+
+fun String.getDrawHalfMovesCount(): Int {
+    val parts = this.split(" ")
+    if (parts.size < 5) return 0
+
+    return Integer.parseInt(parts[4])
+}
+
+fun String.setMoveNumber(value: Int): String {
+    val parts = this.split(" ").toMutableList()
+    if (parts.size < 6) return this
+
+    parts[5] = "${if (value < 0) 0 else value}"
+    return parts.joinToString(" ")
+}
+
+fun String.getMoveNumber(): Int {
+    val parts = this.split(" ")
+    if (parts.size < 6) return 0
+
+    return Integer.parseInt(parts[5])
 }

@@ -3,6 +3,7 @@ package com.loloof64.chessexercisesorganizer.ui.pages
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -14,14 +15,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.google.accompanist.pager.ExperimentalPagerApi
+import com.google.accompanist.pager.HorizontalPager
+import com.google.accompanist.pager.rememberPagerState
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.chessexercisesorganizer.utils.*
 import kotlinx.coroutines.launch
+import java.lang.NumberFormatException
 
 private fun getEnPassantValues(whiteTurn: Boolean): List<String> {
     return if (whiteTurn) {
@@ -31,6 +36,42 @@ private fun getEnPassantValues(whiteTurn: Boolean): List<String> {
     }
 }
 
+private typealias EditorTabScreen = @Composable () -> Unit
+
+private data class PositionEditorFieldsTabItem(val titleRef: Int, val screen: EditorTabScreen)
+
+@Composable
+fun NumericValueEditor(initialValue: Int, caption: String,
+                       handleValueChanged: (Int) -> Unit, handleDismissRequest: () -> Unit) {
+    var fieldValue by rememberSaveable {
+        mutableStateOf("$initialValue")
+    }
+    val context = LocalContext.current
+
+    AlertDialog(onDismissRequest = {handleDismissRequest()}, buttons = {
+        Button(onClick = {
+            val valueToNotify = try {
+                Integer.parseInt(fieldValue)
+            } catch (ex: NumberFormatException) {
+                return@Button
+            }
+            handleDismissRequest()
+            handleValueChanged(valueToNotify)
+        }) {
+            Text(context.getString(R.string.update_button))
+        }
+    }, text = {
+        Row(horizontalArrangement = Arrangement.Center) {
+            Text(caption)
+            TextField(fieldValue, onValueChange = {
+                fieldValue = it
+            }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        }
+    })
+}
+
+@ExperimentalPagerApi
+@ExperimentalMaterialApi
 @Composable
 fun PositionEditor(
     modifier: Modifier = Modifier,
@@ -44,10 +85,14 @@ fun PositionEditor(
 
     val context = LocalContext.current
 
+    val fieldsPagerState = rememberPagerState()
+
     val isLandscape = when (configuration.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
     }
+
+    val coroutineScope = rememberCoroutineScope()
 
     var positionFen by rememberSaveable {
         mutableStateOf(oldPosition)
@@ -91,6 +136,22 @@ fun PositionEditor(
 
     var enPassantSquare by rememberSaveable {
         mutableStateOf(enPassantSquareValues[enPassantSquareValueIndex])
+    }
+
+    var drawHalfMovesCount by rememberSaveable {
+        mutableStateOf(positionFen.getDrawHalfMovesCount())
+    }
+
+    var moveNumber by rememberSaveable {
+        mutableStateOf(positionFen.getMoveNumber())
+    }
+
+    var halfMovesCountEditorActive by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var moveNumberEditorActive by rememberSaveable {
+        mutableStateOf(false)
     }
 
     fun updatePosition(file: Int, rank: Int) {
@@ -177,11 +238,23 @@ fun PositionEditor(
         handlePositionChanged(positionFen)
     }
 
-    fun handleEnPassantSquareSelected(index: Int) {
+    fun updateEnPassantSquare(index: Int) {
         enPassantSquareValueIndex = index
         enPassantSquareMenuExpanded = false
         val tempEnPassantSquare = enPassantSquareValues[enPassantSquareValueIndex]
         positionFen = positionFen.setEnPassantSquare(tempEnPassantSquare)
+        handlePositionChanged(positionFen)
+    }
+
+    fun updateDrawHalfMovesCount(value: Int) {
+        drawHalfMovesCount = value
+        positionFen = positionFen.setDrawHalfMovesCount(drawHalfMovesCount)
+        handlePositionChanged(positionFen)
+    }
+
+    fun updateMoveNumber(value: Int) {
+        moveNumber = value
+        positionFen = positionFen.setMoveNumber(moveNumber)
         handlePositionChanged(positionFen)
     }
 
@@ -194,6 +267,8 @@ fun PositionEditor(
         enPassantSquare = positionFen.getEnPassantSquare()
         enPassantSquareValues = getEnPassantValues(whiteTurn = whiteTurn)
         enPassantSquareValueIndex = enPassantSquare.getEnPassantSquareValueIndex()
+        drawHalfMovesCount = positionFen.getDrawHalfMovesCount()
+        moveNumber = positionFen.getMoveNumber()
 
         ////////////////////////////////////
         println(positionFen)
@@ -203,23 +278,33 @@ fun PositionEditor(
     @Composable
     fun positionButtonsZone() {
         Column {
-            ChessPieceSelector(
-                modifier = Modifier.size(30.dp),
-                handleValueUpdate = ::handlePieceValueUpdate,
-                firstPieceValue = currentPiece,
-            )
+            Row {
+                RadioButton(selected = whiteTurn, onClick = ::setWhiteTurn)
+                Text(context.getString(R.string.white_turn))
+                Spacer(modifier = Modifier.size(5.dp))
+                RadioButton(selected = !whiteTurn, onClick = ::setBlackTurn)
+                Text(context.getString(R.string.black_turn))
+                Spacer(modifier = Modifier.size(5.dp))
+                ChessPieceSelector(
+                    modifier = Modifier.size(30.dp),
+                    handleValueUpdate = ::handlePieceValueUpdate,
+                    firstPieceValue = currentPiece,
+                )
+            }
             Spacer(modifier = Modifier.size(5.dp))
 
             Button(onClick = ::loadOldPosition) {
                 Text(context.getString(R.string.load_old_position))
             }
             Spacer(modifier = Modifier.size(5.dp))
-            Button(onClick = ::loadDefaultPosition) {
-                Text(context.getString(R.string.load_default_position))
-            }
-            Spacer(modifier = Modifier.size(5.dp))
-            Button(onClick = ::clearPosition) {
-                Text(context.getString(R.string.clear_posiiton))
+            Row {
+                Button(onClick = ::loadDefaultPosition) {
+                    Text(context.getString(R.string.load_default_position))
+                }
+                Spacer(modifier = Modifier.size(5.dp))
+                Button(onClick = ::clearPosition) {
+                    Text(context.getString(R.string.clear_posiiton))
+                }
             }
         }
     }
@@ -228,22 +313,11 @@ fun PositionEditor(
     fun fieldsZone() {
         Column {
             Row {
-                RadioButton(selected = whiteTurn, onClick = ::setWhiteTurn)
-                Text(context.getString(R.string.white_turn))
-                Spacer(modifier = Modifier.size(5.dp))
-                RadioButton(selected = !whiteTurn, onClick = ::setBlackTurn)
-                Text(context.getString(R.string.black_turn))
-            }
-            Spacer(modifier = Modifier.size(5.dp))
-            Row {
                 Text(context.getString(R.string.white00))
                 Checkbox(checked = white00, onCheckedChange = { toggleWhite00() })
                 Spacer(modifier = Modifier.size(2.dp))
                 Text(context.getString(R.string.white000))
                 Checkbox(checked = white000, onCheckedChange = { toggleWhite000() })
-            }
-            Spacer(modifier = Modifier.size(5.dp))
-            Row {
                 Text(context.getString(R.string.black00))
                 Checkbox(checked = black00, onCheckedChange = { toggleBlack00() })
                 Spacer(modifier = Modifier.size(2.dp))
@@ -261,7 +335,7 @@ fun PositionEditor(
                 DropdownMenu(expanded = enPassantSquareMenuExpanded,
                     onDismissRequest = { enPassantSquareMenuExpanded = false }) {
                     enPassantSquareValues.forEachIndexed { index, item ->
-                        DropdownMenuItem(onClick = { handleEnPassantSquareSelected(index) }) {
+                        DropdownMenuItem(onClick = { updateEnPassantSquare(index) }) {
                             Text(item)
                         }
                     }
@@ -271,30 +345,93 @@ fun PositionEditor(
                     enPassantSquareValues[enPassantSquareValueIndex],
                 )
             }
+            Spacer(modifier = Modifier.size(5.dp))
+            Row(modifier = Modifier.clickable {
+                halfMovesCountEditorActive = true
+            }) {
+                Text(context.getString(R.string.draw_half_moves_count))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text("$drawHalfMovesCount")
+            }
+
+            Spacer(modifier = Modifier.size(5.dp))
+            Row(modifier = Modifier.clickable {
+                moveNumberEditorActive = true
+            }) {
+                Text(context.getString(R.string.move_number))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text("$moveNumber")
+            }
+
+            if (halfMovesCountEditorActive) {
+                NumericValueEditor(initialValue = drawHalfMovesCount, handleValueChanged = ::updateDrawHalfMovesCount,
+                caption = context.getString(R.string.draw_half_moves_count),
+                handleDismissRequest = {
+                    halfMovesCountEditorActive = false
+                })
+            }
+
+            if (moveNumberEditorActive) {
+                NumericValueEditor(initialValue = moveNumber, handleValueChanged = ::updateMoveNumber,
+                caption = context.getString(R.string.move_number),
+                handleDismissRequest = {
+                    moveNumberEditorActive = false
+                })
+            }
         }
     }
 
     @Composable
     fun validationButtonsZone() {
-        Button(
-            onClick = ::validate,
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = Color.Green,
-                contentColor = Color.White
-            )
-        ) {
-            Text(context.getString(R.string.validate_position))
-        }
-        Spacer(modifier = Modifier.size(5.dp))
+        Row {
+            Button(
+                onClick = ::validate,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Green,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.validate_position))
+            }
+            Spacer(modifier = Modifier.size(5.dp))
 
-        Button(
-            onClick = ::cancel,
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = Color.Red,
-                contentColor = Color.White
-            )
+            Button(
+                onClick = ::cancel,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Red,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.cancel_position))
+            }
+        }
+    }
+
+    val standardItem = PositionEditorFieldsTabItem(
+        titleRef = R.string.standard_parameters,
+        screen = { positionButtonsZone() })
+    val advancedItem = PositionEditorFieldsTabItem(
+        titleRef = R.string.advanced_parameters,
+        screen = { fieldsZone() })
+    val fieldsTabItems = listOf(standardItem, advancedItem)
+
+    @Composable
+    fun editionZone() {
+        TabRow(
+            selectedTabIndex = fieldsPagerState.currentPage,
+            backgroundColor = Color(0xFFFF5722),
+            contentColor = Color.Blue,
         ) {
-            Text(context.getString(R.string.cancel_position))
+            fieldsTabItems.forEachIndexed { index, item ->
+                Tab(selected = fieldsPagerState.currentPage == index, onClick = {
+                    coroutineScope.launch {
+                        fieldsPagerState.animateScrollToPage(index)
+                    }
+                }, text = { Text(context.getString(item.titleRef)) })
+            }
+        }
+        HorizontalPager(count = fieldsTabItems.size, state = fieldsPagerState) { page ->
+            fieldsTabItems[page].screen()
         }
     }
 
@@ -309,14 +446,8 @@ fun PositionEditor(
             Spacer(modifier = Modifier.size(5.dp))
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Row {
-                    positionButtonsZone()
-
-                    fieldsZone()
-                }
-
+                editionZone()
                 Spacer(modifier = Modifier.size(5.dp))
-
                 validationButtonsZone()
             }
         }
@@ -330,11 +461,7 @@ fun PositionEditor(
 
             Spacer(modifier = Modifier.size(5.dp))
 
-            Row {
-                positionButtonsZone()
-
-                fieldsZone()
-            }
+            editionZone()
 
             Spacer(modifier = Modifier.size(5.dp))
 
@@ -343,6 +470,8 @@ fun PositionEditor(
     }
 }
 
+@ExperimentalPagerApi
+@ExperimentalMaterialApi
 @Composable
 fun GameEditorPage(navController: NavHostController, index: Int) {
     val scaffoldState = rememberScaffoldState()

@@ -109,9 +109,13 @@
     <string name="white_turn">Vez Blancos</string>
     <string name="black_turn">Vez Negros</string>
     <string name="illegal_position">¡Posición ilegal!</string>
-    <string name="white00">0-0 Blanco</string>
-    <string name="white000">0-0-0 Blanco</string>
-    <string name="black00">0-0 Negro</string>
-    <string name="black000">0-0-0 Negro</string>
-    <string name="en_passant_square">capturo al paso</string>
+    <string name="white00">0–0 Blanco</string>
+    <string name="white000">0–0–0 Blanco</string>
+    <string name="black00">0–0 Negro</string>
+    <string name="black000">0–0–0 Negro</string>
+    <string name="en_passant_square">Capturo al paso</string>
+    <string name="draw_half_moves_count">Medios movimientos para un empate</string>
+    <string name="move_number">Nombre del golpe</string>
+    <string name="standard_parameters">La norme</string>
+    <string name="advanced_parameters">Avanzados</string>
 </resources>

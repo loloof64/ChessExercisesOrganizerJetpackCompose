@@ -111,9 +111,13 @@
     <string name="white_turn">Trait blanc</string>
     <string name="black_turn">Trait noir</string>
     <string name="illegal_position">Position illégale !</string>
-    <string name="white00">0-0 Blanc</string>
-    <string name="white000">0-0-0 Blanc</string>
-    <string name="black00">0-0 Noir</string>
-    <string name="black000">0-0-0 Noir</string>
-    <string name="en_passant_square">prise en passant</string>
+    <string name="white00">0–0 Blanc</string>
+    <string name="white000">0–0–0 Blanc</string>
+    <string name="black00">0–0 Noir</string>
+    <string name="black000">0–0–0 Noir</string>
+    <string name="en_passant_square">Prise en passant</string>
+    <string name="draw_half_moves_count">Demi-coups pour partie nulle</string>
+    <string name="move_number">Numéro coup</string>
+    <string name="standard_parameters">Standards</string>
+    <string name="advanced_parameters">Avancés</string>
 </resources>
