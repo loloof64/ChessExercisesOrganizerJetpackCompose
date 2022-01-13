@@ -269,10 +269,6 @@ fun PositionEditor(
         enPassantSquareValueIndex = enPassantSquare.getEnPassantSquareValueIndex()
         drawHalfMovesCount = positionFen.getDrawHalfMovesCount()
         moveNumber = positionFen.getMoveNumber()
-
-        ////////////////////////////////////
-        println(positionFen)
-        ////////////////////////////////////
     }
 
     @Composable
@@ -438,7 +434,7 @@ fun PositionEditor(
     if (isLandscape) {
         Row(modifier = modifier) {
             EditableChessBoard(
-                modifier = Modifier.size(screenHeight * 0.8f),
+                modifier = Modifier.size(screenHeight * 0.7f),
                 positionFen = positionFen,
                 handleValueUpdate = ::updatePosition
             )
@@ -468,6 +464,82 @@ fun PositionEditor(
             validationButtonsZone()
         }
     }
+}
+
+@ExperimentalPagerApi
+@ExperimentalMaterialApi
+@Composable
+fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
+
+    val context = LocalContext.current
+
+    val isLandscape = when (configuration.orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> true
+        else -> false
+    }
+
+    fun validate() {
+
+    }
+
+    fun cancel() {
+
+    }
+
+    @ExperimentalPagerApi
+    @ExperimentalMaterialApi
+    @Composable
+    fun editionZone() {
+        Text("placeholder")
+    }
+
+    @Composable
+    fun validationButtonsZone() {
+        Row {
+            Button(
+                onClick = ::validate,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Green,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.validate_position))
+            }
+            Spacer(modifier = Modifier.size(5.dp))
+
+            Button(
+                onClick = ::cancel,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Red,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.cancel_position))
+            }
+        }
+    }
+
+    if (isLandscape) {
+        Row(modifier = modifier) {
+            DynamicChessBoard(position = startPosition, modifier = Modifier.size(screenHeight * 0.7f))
+            Spacer(modifier = Modifier.size(5.dp))
+            Column {
+                editionZone()
+                validationButtonsZone()
+            }
+        }
+    }
+    else {
+        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            DynamicChessBoard(position = startPosition, modifier = Modifier.size(screenWidth * 0.7f))
+            editionZone()
+            validationButtonsZone()
+        }
+    }
+
 }
 
 @ExperimentalPagerApi
@@ -505,6 +577,7 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                     })
             },
         ) {
+            /*
             PositionEditor(
                 modifier = Modifier.fillMaxSize(),
                 oldPosition = oldPosition,
@@ -517,6 +590,12 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                         scaffoldState.snackbarHostState.showSnackbar(context.getString(R.string.illegal_position))
                     }
                 }
+            )
+             */
+
+            SolutionEditor(
+                modifier = Modifier.fillMaxSize(),
+                startPosition = oldPosition
             )
         }
     }
