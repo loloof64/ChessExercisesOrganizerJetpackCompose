@@ -40,6 +40,7 @@ private fun getEnPassantValues(whiteTurn: Boolean): List<String> {
 private typealias EditorTabScreen = @Composable () -> Unit
 
 private data class PositionEditorFieldsTabItem(val titleRef: Int, val screen: EditorTabScreen)
+private data class SolutionEditorFieldsTabItem(val titleRef: Int, val screen: EditorTabScreen)
 
 @Composable
 fun NumericValueEditor(
@@ -537,11 +538,45 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
         //todo : confirmation + cancel
     }
 
+    @Composable
+    fun headerZone() {
+        //todo define header zone
+        Text("placeholder #1")
+    }
+
+    @Composable
+    fun solutionZone() {
+        //todo set moves navigator
+        Text("placeholder #2")
+    }
+
     @ExperimentalPagerApi
     @ExperimentalMaterialApi
     @Composable
     fun editionZone() {
-        Text("placeholder")
+        val headerItem = SolutionEditorFieldsTabItem(titleRef = R.string.header, screen = {headerZone()})
+        val solutionItem = SolutionEditorFieldsTabItem(titleRef = R.string.solution, screen = {solutionZone()})
+        val fieldsTabItems = listOf(headerItem, solutionItem)
+
+        val fieldsPagerState = rememberPagerState()
+        val coroutineScope = rememberCoroutineScope()
+
+        TabRow(
+            selectedTabIndex = fieldsPagerState.currentPage,
+            backgroundColor = Color(0xFFFF5722),
+            contentColor = Color.Blue,
+        ) {
+            fieldsTabItems.forEachIndexed { index, item ->
+                Tab(selected = fieldsPagerState.currentPage == index, onClick = {
+                    coroutineScope.launch {
+                        fieldsPagerState.animateScrollToPage(index)
+                    }
+                }, text = { Text(context.getString(item.titleRef)) })
+            }
+        }
+        HorizontalPager(count = fieldsTabItems.size, state = fieldsPagerState) { page ->
+            fieldsTabItems[page].screen()
+        }
     }
 
     @Composable

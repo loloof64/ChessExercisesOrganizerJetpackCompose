@@ -106,4 +106,6 @@
     <string name="edit_position">Editar posición</string>
     <string name="confirm_validate_position_title">¿Validar la posición?</string>
     <string name="confirm_validate_position_message">¿Le gustaría validar esta posición y eliminar la solución actual?</string>
+    <string name="header">Encabezamiento</string>
+    <string name="solution">Solución</string>
 </resources>

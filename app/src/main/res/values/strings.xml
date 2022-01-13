@@ -105,4 +105,6 @@
     <string name="edit_position">Editer position</string>
     <string name="confirm_validate_position_title">Validate position ?</string>
     <string name="confirm_validate_position_message">Do you want to validate this position and erase current solution ?</string>
+    <string name="header">Header</string>
+    <string name="solution">Solution</string>
 </resources>
