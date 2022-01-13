@@ -332,7 +332,7 @@ fun String.setMoveNumber(value: Int): String {
     val parts = this.split(" ").toMutableList()
     if (parts.size < 6) return this
 
-    parts[5] = "${if (value < 0) 0 else value}"
+    parts[5] = "${if (value < 1) 1 else value}"
     return parts.joinToString(" ")
 }
 
