@@ -1,6 +1,7 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,14 +42,16 @@ private typealias EditorTabScreen = @Composable () -> Unit
 private data class PositionEditorFieldsTabItem(val titleRef: Int, val screen: EditorTabScreen)
 
 @Composable
-fun NumericValueEditor(initialValue: Int, caption: String,
-                       handleValueChanged: (Int) -> Unit, handleDismissRequest: () -> Unit) {
+fun NumericValueEditor(
+    initialValue: Int, caption: String,
+    handleValueChanged: (Int) -> Unit, handleDismissRequest: () -> Unit
+) {
     var fieldValue by rememberSaveable {
         mutableStateOf("$initialValue")
     }
     val context = LocalContext.current
 
-    AlertDialog(onDismissRequest = {handleDismissRequest()}, buttons = {
+    AlertDialog(onDismissRequest = { handleDismissRequest() }, confirmButton = {
         Button(onClick = {
             val valueToNotify = try {
                 Integer.parseInt(fieldValue)
@@ -59,6 +62,10 @@ fun NumericValueEditor(initialValue: Int, caption: String,
             handleValueChanged(valueToNotify)
         }) {
             Text(context.getString(R.string.update_button))
+        }
+    }, dismissButton = {
+        Button(onClick = { handleDismissRequest() }) {
+            Text(context.getString(R.string.cancel))
         }
     }, text = {
         Row(horizontalArrangement = Arrangement.Center) {
@@ -78,6 +85,7 @@ fun PositionEditor(
     oldPosition: String,
     handlePositionChanged: (String) -> Unit,
     handleIllegalPosition: () -> Unit,
+    handleExitPositionEditionModeRequest: () -> Unit,
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -154,6 +162,10 @@ fun PositionEditor(
         mutableStateOf(false)
     }
 
+    var confirmChangePositionDialogOpen by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     fun updatePosition(file: Int, rank: Int) {
         val positionParts = positionFen.split(" ").toMutableList()
         val boardPart = positionParts[0]
@@ -189,13 +201,11 @@ fun PositionEditor(
         Update castle flags correctly,
         as creating a board from FEN automatically adjusts castle flags
          */
-        positionFen = board.fen
-        handlePositionChanged(positionFen)
-        //todo change mode callback
+        confirmChangePositionDialogOpen = true
     }
 
     fun cancel() {
-        //todo change mode callback
+        handleExitPositionEditionModeRequest()
     }
 
     fun handlePieceValueUpdate(newValue: Char) {
@@ -306,6 +316,39 @@ fun PositionEditor(
     }
 
     @Composable
+    fun confirmChangePositionDialog() {
+        AlertDialog(onDismissRequest = { confirmChangePositionDialogOpen = false }, title = {
+            Text(context.getString(R.string.confirm_validate_position_title))
+        }, text = {
+            Text(context.getString((R.string.confirm_validate_position_message)))
+        }, confirmButton = {
+            Button(
+                onClick = {
+                    handlePositionChanged(positionFen)
+                    handleExitPositionEditionModeRequest()
+                    confirmChangePositionDialogOpen = false
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Green,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.ok))
+            }
+        }, dismissButton = {
+            Button(
+                onClick = { confirmChangePositionDialogOpen = false },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Red,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.cancel))
+            }
+        })
+    }
+
+    @Composable
     fun fieldsZone() {
         Column {
             Row {
@@ -360,19 +403,21 @@ fun PositionEditor(
             }
 
             if (halfMovesCountEditorActive) {
-                NumericValueEditor(initialValue = drawHalfMovesCount, handleValueChanged = ::updateDrawHalfMovesCount,
-                caption = context.getString(R.string.draw_half_moves_count),
-                handleDismissRequest = {
-                    halfMovesCountEditorActive = false
-                })
+                NumericValueEditor(initialValue = drawHalfMovesCount,
+                    handleValueChanged = ::updateDrawHalfMovesCount,
+                    caption = context.getString(R.string.draw_half_moves_count),
+                    handleDismissRequest = {
+                        halfMovesCountEditorActive = false
+                    })
             }
 
             if (moveNumberEditorActive) {
-                NumericValueEditor(initialValue = moveNumber, handleValueChanged = ::updateMoveNumber,
-                caption = context.getString(R.string.move_number),
-                handleDismissRequest = {
-                    moveNumberEditorActive = false
-                })
+                NumericValueEditor(initialValue = moveNumber,
+                    handleValueChanged = ::updateMoveNumber,
+                    caption = context.getString(R.string.move_number),
+                    handleDismissRequest = {
+                        moveNumberEditorActive = false
+                    })
             }
         }
     }
@@ -445,6 +490,9 @@ fun PositionEditor(
                 editionZone()
                 Spacer(modifier = Modifier.size(5.dp))
                 validationButtonsZone()
+                if (confirmChangePositionDialogOpen) {
+                    confirmChangePositionDialog()
+                }
             }
         }
     } else {
@@ -456,12 +504,12 @@ fun PositionEditor(
             )
 
             Spacer(modifier = Modifier.size(5.dp))
-
             editionZone()
-
             Spacer(modifier = Modifier.size(5.dp))
-
             validationButtonsZone()
+            if (confirmChangePositionDialogOpen) {
+                confirmChangePositionDialog()
+            }
         }
     }
 }
@@ -482,11 +530,11 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
     }
 
     fun validate() {
-
+        //todo : confirmation + validate
     }
 
     fun cancel() {
-
+        //todo : confirmation + cancel
     }
 
     @ExperimentalPagerApi
@@ -506,7 +554,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                     contentColor = Color.White
                 )
             ) {
-                Text(context.getString(R.string.validate_position))
+                Text(context.getString(R.string.add_game))
             }
             Spacer(modifier = Modifier.size(5.dp))
 
@@ -517,24 +565,29 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                     contentColor = Color.White
                 )
             ) {
-                Text(context.getString(R.string.cancel_position))
+                Text(context.getString(R.string.cancel))
             }
         }
     }
 
     if (isLandscape) {
         Row(modifier = modifier) {
-            DynamicChessBoard(position = startPosition, modifier = Modifier.size(screenHeight * 0.7f))
+            DynamicChessBoard(
+                position = startPosition,
+                modifier = Modifier.size(screenHeight * 0.7f)
+            )
             Spacer(modifier = Modifier.size(5.dp))
             Column {
                 editionZone()
                 validationButtonsZone()
             }
         }
-    }
-    else {
+    } else {
         Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-            DynamicChessBoard(position = startPosition, modifier = Modifier.size(screenWidth * 0.7f))
+            DynamicChessBoard(
+                position = startPosition,
+                modifier = Modifier.size(screenWidth * 0.7f)
+            )
             editionZone()
             validationButtonsZone()
         }
@@ -546,6 +599,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
 @ExperimentalMaterialApi
 @Composable
 fun GameEditorPage(navController: NavHostController, index: Int) {
+    //todo handle back button and confirmation dialog
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
 
@@ -553,10 +607,18 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
         mutableStateOf(STANDARD_FEN)
     }
 
+    var isInPositionEditionMode by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     val coroutineScope = rememberCoroutineScope()
 
     fun goBack() {
         navController.popBackStack()
+    }
+
+    fun handlePositionEditionModeRequest() {
+        isInPositionEditionMode = true
     }
 
     ChessExercisesOrganizerJetpackComposeTheme()
@@ -577,26 +639,51 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                     })
             },
         ) {
-            /*
-            PositionEditor(
-                modifier = Modifier.fillMaxSize(),
-                oldPosition = oldPosition,
-                handlePositionChanged = {
-                    val correctedNewPosition = it.correctEnPassantSquare()
-                    oldPosition = correctedNewPosition
-                },
-                handleIllegalPosition = {
-                    coroutineScope.launch {
-                        scaffoldState.snackbarHostState.showSnackbar(context.getString(R.string.illegal_position))
+            val modeText = context.getString(
+                if (isInPositionEditionMode) R.string.position_edition_mode
+                else R.string.solution_edition_mode
+            )
+            Column {
+                Row(
+                    modifier = Modifier
+                        .background(Color(0xFFEEE382))
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(modeText)
+                    if (!isInPositionEditionMode) {
+                        Spacer(modifier = Modifier.size(5.dp))
+                        Button(onClick = ::handlePositionEditionModeRequest) {
+                            Text(context.getString(R.string.edit_position))
+                        }
                     }
                 }
-            )
-             */
-
-            SolutionEditor(
-                modifier = Modifier.fillMaxSize(),
-                startPosition = oldPosition
-            )
+                if (isInPositionEditionMode) {
+                    PositionEditor(
+                        modifier = Modifier.fillMaxSize(),
+                        oldPosition = oldPosition,
+                        handlePositionChanged = {
+                            val correctedNewPosition = it.correctEnPassantSquare()
+                            oldPosition = correctedNewPosition
+                            // TODO erase current solution
+                        },
+                        handleIllegalPosition = {
+                            coroutineScope.launch {
+                                scaffoldState.snackbarHostState.showSnackbar(context.getString(R.string.illegal_position))
+                            }
+                        },
+                        handleExitPositionEditionModeRequest = {
+                            isInPositionEditionMode = false
+                        }
+                    )
+                } else {
+                    SolutionEditor(
+                        modifier = Modifier.fillMaxSize(),
+                        startPosition = oldPosition
+                    )
+                }
+            }
         }
     }
 }
