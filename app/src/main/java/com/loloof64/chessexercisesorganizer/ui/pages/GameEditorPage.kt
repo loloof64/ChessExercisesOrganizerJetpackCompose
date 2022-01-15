@@ -1,6 +1,7 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
 import android.content.res.Configuration
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -22,18 +24,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.chessexercisesorganizer.utils.*
 import kotlinx.coroutines.launch
-import java.lang.NumberFormatException
+import java.text.SimpleDateFormat
+import java.util.*
 
 private fun getEnPassantValues(whiteTurn: Boolean): List<String> {
     return if (whiteTurn) {
@@ -456,9 +459,12 @@ fun PositionEditor(
                 Text(
                     enPassantSquareValues[enPassantSquareValueIndex],
                     textAlign = TextAlign.End,
-                    modifier = Modifier.width(50.dp).underline(Color.Blue).clickable {
-                        enPassantSquareMenuExpanded = !enPassantSquareMenuExpanded
-                    }
+                    modifier = Modifier
+                        .width(50.dp)
+                        .underline(Color.Blue)
+                        .clickable {
+                            enPassantSquareMenuExpanded = !enPassantSquareMenuExpanded
+                        }
                 )
             }
             Spacer(modifier = Modifier.size(5.dp))
@@ -467,9 +473,12 @@ fun PositionEditor(
                 Spacer(modifier = Modifier.size(5.dp))
                 Text("$drawHalfMovesCount",
                     textAlign = TextAlign.End,
-                    modifier = Modifier.width(50.dp).underline(Color.Blue).clickable {
-                        halfMovesCountEditorActive = true
-                    })
+                    modifier = Modifier
+                        .width(50.dp)
+                        .underline(Color.Blue)
+                        .clickable {
+                            halfMovesCountEditorActive = true
+                        })
             }
 
             Spacer(modifier = Modifier.size(5.dp))
@@ -478,9 +487,12 @@ fun PositionEditor(
                 Spacer(modifier = Modifier.size(5.dp))
                 Text("$moveNumber",
                     textAlign = TextAlign.End,
-                    modifier = Modifier.width(50.dp).underline(Color.Blue).clickable {
-                        moveNumberEditorActive = true
-                    })
+                    modifier = Modifier
+                        .width(50.dp)
+                        .underline(Color.Blue)
+                        .clickable {
+                            moveNumberEditorActive = true
+                        })
             }
 
             if (halfMovesCountEditorActive) {
@@ -612,6 +624,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
     val screenHeight = configuration.screenHeightDp.dp
 
     val context = LocalContext.current
+    val activity = context as AppCompatActivity
 
     val isLandscape = when (configuration.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
@@ -664,6 +677,27 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
 
     fun cancel() {
         //todo : confirmation + cancel
+    }
+
+    fun showDatePicker() {
+        val picker = MaterialDatePicker.Builder.datePicker().build()
+        picker.show(activity.supportFragmentManager, picker.toString())
+        picker.addOnPositiveButtonClickListener {
+            val newDate = try {
+                val sdf = SimpleDateFormat("MM.dd.yyyy")
+                val netDate = Date(it)
+                sdf.format(netDate)
+            } catch (e: Exception) {
+                return@addOnPositiveButtonClickListener
+            }
+            date = newDate
+        }
+        picker.addOnCancelListener {
+            picker.dismiss()
+        }
+        picker.addOnDismissListener {
+            picker.dismiss()
+        }
     }
 
     @Composable
@@ -736,7 +770,16 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
             Row {
                 Text(context.getString(R.string.date))
                 Spacer(modifier = Modifier.size(5.dp))
-                Text(date)
+                Text(date.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (date.isEmpty()) Color.LightGray else Color.Black,
+                    modifier = Modifier
+                        .width(250.dp)
+                        .underline(Color.Blue)
+                        .clickable { showDatePicker() }
+                )
+                IconButton(onClick = {date = ""}) {
+                    Icon(Icons.Filled.Delete, context.getString(R.string.erase), tint = Color.Red)
+                }
             }
             Spacer(modifier = Modifier.size(3.dp))
             Row {

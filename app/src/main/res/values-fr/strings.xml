@@ -119,4 +119,5 @@
     <string name="white_checkmate_fragment">"Les Blancs peuvent faire échec et mat en "</string>
     <string name="black_checkmate_fragment">"Les Noirs peuvent faire échec et mat en "</string>
     <string name="unknown">Inconnu</string>
+    <string name="erase">Effacer</string>
 </resources>

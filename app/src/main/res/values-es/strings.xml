@@ -117,4 +117,5 @@
     <string name="white_checkmate_fragment">"Los Blancos pueden hacer jaque mate en "</string>
     <string name="black_checkmate_fragment">"Los Negros pueden hacer jaque mate en "</string>
     <string name="unknown">Desconocido</string>
+    <string name="erase">Borrar</string>
 </resources>

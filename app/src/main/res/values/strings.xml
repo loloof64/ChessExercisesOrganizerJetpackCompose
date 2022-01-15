@@ -116,4 +116,5 @@
     <string name="white_checkmate_fragment">"White can checkmate in "</string>
     <string name="black_checkmate_fragment">"Black can checkmate in "</string>
     <string name="unknown">Unknown</string>
+    <string name="erase">Erase</string>
 </resources>
