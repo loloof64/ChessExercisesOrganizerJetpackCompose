@@ -661,7 +661,7 @@ enum class GoalTagValue {
     BlackCheckmate,
 }
 
-private val separator = "@#--#@"
+private const val separator = "@#-^^-#@"
 
 data class GameHeaderData(
     var whitePlayer: String = "",
@@ -674,6 +674,26 @@ data class GameHeaderData(
 ) {
     override fun toString(): String {
         return "$whitePlayer$separator$blackPlayer$separator$event$separator$site$separator$date$separator$goal$separator$checkmateCount"
+    }
+
+    fun toPgnHeaderString(): String {
+        val goalValue = when(goal) {
+            GoalTagValue.WhiteWin -> "1-0"
+            GoalTagValue.BlackWin -> "0-1"
+            GoalTagValue.Draw -> "1/2-1/2"
+            GoalTagValue.WhiteCheckmate -> "#$checkmateCount-0"
+            GoalTagValue.BlackCheckmate -> "0-#$checkmateCount"
+        }
+        return """
+            [Event "$event"]
+            [Site "$site"]
+            [Date "$date"]
+            [Round ""]
+            [White "$whitePlayer"]
+            [Black "$blackPlayer"]
+            [Result ""]
+            [Goal "$goalValue"]
+        """.trimIndent()
     }
 
     companion object {
@@ -702,7 +722,12 @@ private val GameHeaderDataStateSaver = Saver<GameHeaderData, String>(
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
 @Composable
-fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
+fun SolutionEditor(
+    startPosition: String,
+    headerData: GameHeaderData,
+    handleHeaderDataUpdate: (GameHeaderData) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
@@ -713,10 +738,6 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
     val isLandscape = when (configuration.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> true
         else -> false
-    }
-
-    val headerData by rememberSaveable(stateSaver = GameHeaderDataStateSaver) {
-        mutableStateOf(GameHeaderData())
     }
 
     var whitePlayerEditorActive by rememberSaveable {
@@ -764,6 +785,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 return@addOnPositiveButtonClickListener
             }
             headerData.date = newDate
+            handleHeaderDataUpdate(headerData)
         }
         picker.addOnCancelListener {
             picker.dismiss()
@@ -850,7 +872,10 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                         .underline(Color.Blue)
                         .clickable { showDatePicker() }
                 )
-                IconButton(onClick = { headerData.date = "" }) {
+                IconButton(onClick = {
+                    headerData.date = ""
+                    handleHeaderDataUpdate(headerData)
+                }) {
                     Icon(
                         Icons.Filled.Delete,
                         context.getString(R.string.erase),
@@ -906,6 +931,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                     caption = context.getString(R.string.white_player),
                     handleValueChanged = {
                         headerData.whitePlayer = it
+                        handleHeaderDataUpdate(headerData)
                         whitePlayerEditorActive = false
                     }, handleDismissRequest = { whitePlayerEditorActive = false })
             }
@@ -916,6 +942,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                     caption = context.getString(R.string.black_player),
                     handleValueChanged = {
                         headerData.blackPlayer = it
+                        handleHeaderDataUpdate(headerData)
                         blackPlayerEditorActive = false
                     }, handleDismissRequest = { blackPlayerEditorActive = false })
             }
@@ -926,6 +953,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                     caption = context.getString(R.string.event),
                     handleValueChanged = {
                         headerData.event = it
+                        handleHeaderDataUpdate(headerData)
                         eventEditorActive = false
                     }, handleDismissRequest = { eventEditorActive = false })
             }
@@ -936,6 +964,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                     caption = context.getString(R.string.site),
                     handleValueChanged = {
                         headerData.site = it
+                        handleHeaderDataUpdate(headerData)
                         siteEditorActive = false
                     }, handleDismissRequest = { siteEditorActive = false })
             }
@@ -944,7 +973,10 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 NumericValueEditor(
                     initialValue = headerData.checkmateCount,
                     caption = context.getString(R.string.checkmate_count),
-                    handleValueChanged = { headerData.checkmateCount = it },
+                    handleValueChanged = {
+                        headerData.checkmateCount = it
+                        handleHeaderDataUpdate(headerData)
+                    },
                     handleDismissRequest = { checkmateCountEditorActive = false }
                 )
             }
@@ -955,6 +987,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 GoalTagValue.values().forEach {
                     DropdownMenuItem(onClick = {
                         headerData.goal = it
+                        handleHeaderDataUpdate(headerData)
                         goalDropdownVisible = false
                     }) {
                         Text(text = getGoalText(it))
@@ -1074,6 +1107,10 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
         mutableStateOf(false)
     }
 
+    var headerData by rememberSaveable(stateSaver = GameHeaderDataStateSaver) {
+        mutableStateOf(GameHeaderData())
+    }
+
     val coroutineScope = rememberCoroutineScope()
 
     fun goBack() {
@@ -1151,7 +1188,12 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                 } else {
                     SolutionEditor(
                         modifier = Modifier.fillMaxSize(),
-                        startPosition = oldPosition
+                        startPosition = oldPosition,
+                        headerData = headerData,
+                        handleHeaderDataUpdate = {
+                            headerData = it
+                            println(headerData.toPgnHeaderString())
+                        }
                     )
                 }
             }
