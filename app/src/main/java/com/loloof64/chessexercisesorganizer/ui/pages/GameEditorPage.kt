@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -610,13 +611,51 @@ fun PositionEditor(
     }
 }
 
-private enum class GoalTagValue {
+enum class GoalTagValue {
     WhiteWin,
     BlackWin,
     Draw,
     WhiteCheckmate,
     BlackCheckmate,
 }
+
+private val separator = "@#--#@"
+
+data class GameHeaderData(
+    var whitePlayer: String = "",
+    var blackPlayer: String = "",
+    var event: String = "",
+    var site: String = "",
+    var date: String = "",
+    var goal: GoalTagValue = GoalTagValue.WhiteWin,
+    var checkmateCount: Int = 1,
+) {
+    override fun toString(): String {
+        return "$whitePlayer$separator$blackPlayer$separator$event$separator$site$separator$date$separator$goal$separator$checkmateCount"
+    }
+
+    companion object {
+        fun parse(value: String): GameHeaderData {
+            val parts = value.split(separator)
+            return GameHeaderData(
+                whitePlayer = parts[0],
+                blackPlayer = parts[1],
+                event = parts[2],
+                site = parts[3],
+                date = parts[4],
+                goal = GoalTagValue.valueOf(parts[5]),
+                checkmateCount = Integer.parseInt(parts[6]),
+            )
+        }
+    }
+}
+
+private val GameHeaderDataStateSaver = Saver<GameHeaderData, String>(
+    save = { state -> state.toString() },
+    restore = { value ->
+        GameHeaderData.parse(value)
+    }
+)
 
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
@@ -634,28 +673,8 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
         else -> false
     }
 
-    var whitePlayer by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var blackPlayer by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var event by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var site by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var date by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var goal by rememberSaveable {
-        mutableStateOf(GoalTagValue.WhiteWin)
+    val headerData by rememberSaveable(stateSaver = GameHeaderDataStateSaver) {
+        mutableStateOf(GameHeaderData())
     }
 
     var whitePlayerEditorActive by rememberSaveable {
@@ -676,10 +695,6 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
 
     var goalDropdownVisible by rememberSaveable {
         mutableStateOf(false)
-    }
-
-    var checkmateCount by rememberSaveable {
-        mutableStateOf(1)
     }
 
     var checkmateCountEditorActive by rememberSaveable {
@@ -706,7 +721,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
             } catch (e: Exception) {
                 return@addOnPositiveButtonClickListener
             }
-            date = newDate
+            headerData.date = newDate
         }
         picker.addOnCancelListener {
             picker.dismiss()
@@ -738,8 +753,8 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 Text(context.getString(R.string.white_player))
                 Spacer(modifier = Modifier.size(5.dp))
                 Text(
-                    whitePlayer.ifEmpty { context.getString(R.string.unknown) },
-                    color = if (whitePlayer.isEmpty()) Color.LightGray else Color.Black,
+                    headerData.whitePlayer.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (headerData.whitePlayer.isEmpty()) Color.LightGray else Color.Black,
                     modifier = Modifier
                         .width(250.dp)
                         .underline(Color.Blue)
@@ -751,8 +766,8 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 Text(context.getString(R.string.black_player))
                 Spacer(modifier = Modifier.size(5.dp))
                 Text(
-                    blackPlayer.ifEmpty { context.getString(R.string.unknown) },
-                    color = if (blackPlayer.isEmpty()) Color.LightGray else Color.Black,
+                    headerData.blackPlayer.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (headerData.blackPlayer.isEmpty()) Color.LightGray else Color.Black,
                     modifier = Modifier
                         .width(250.dp)
                         .underline(Color.Blue)
@@ -763,8 +778,8 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 Text(context.getString(R.string.event))
                 Spacer(modifier = Modifier.size(5.dp))
                 Text(
-                    event.ifEmpty { context.getString(R.string.unknown) },
-                    color = if (event.isEmpty()) Color.LightGray else Color.Black,
+                    headerData.event.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (headerData.event.isEmpty()) Color.LightGray else Color.Black,
                     modifier = Modifier
                         .width(250.dp)
                         .underline(Color.Blue)
@@ -775,8 +790,8 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 Text(context.getString(R.string.site))
                 Spacer(modifier = Modifier.size(5.dp))
                 Text(
-                    site.ifEmpty { context.getString(R.string.unknown) },
-                    color = if (site.isEmpty()) Color.LightGray else Color.Black,
+                    headerData.site.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (headerData.site.isEmpty()) Color.LightGray else Color.Black,
                     modifier = Modifier
                         .width(250.dp)
                         .underline(Color.Blue)
@@ -786,14 +801,14 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(context.getString(R.string.date))
                 Spacer(modifier = Modifier.size(5.dp))
-                Text(date.ifEmpty { context.getString(R.string.unknown) },
-                    color = if (date.isEmpty()) Color.LightGray else Color.Black,
+                Text(headerData.date.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (headerData.date.isEmpty()) Color.LightGray else Color.Black,
                     modifier = Modifier
                         .width(250.dp)
                         .underline(Color.Blue)
                         .clickable { showDatePicker() }
                 )
-                IconButton(onClick = { date = "" }) {
+                IconButton(onClick = { headerData.date = "" }) {
                     Icon(
                         Icons.Filled.Delete,
                         context.getString(R.string.erase),
@@ -809,13 +824,14 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .size(5.dp)
                 )
-                Text(getGoalText(goal),
+                Text(getGoalText(headerData.goal),
                     modifier = Modifier
                         .width(215.dp)
                         .underline(Color.Blue)
                         .clickable { goalDropdownVisible = true }
                 )
-                if (goal == GoalTagValue.WhiteCheckmate || goal == GoalTagValue.BlackCheckmate) {
+                if (headerData.goal == GoalTagValue.WhiteCheckmate
+                    || headerData.goal == GoalTagValue.BlackCheckmate) {
                     Spacer(
                         modifier = Modifier
                             .size(1.5.dp)
@@ -825,7 +841,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .size(1.5.dp)
                     )
-                    Text("$checkmateCount",
+                    Text("${headerData.checkmateCount}",
                         textAlign = TextAlign.End,
                         modifier = Modifier
                             .width(40.dp)
@@ -838,55 +854,55 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .size(2.dp)
                     )
-                    Text(context.resources.getQuantityString(R.plurals.moves, checkmateCount))
+                    Text(context.resources.getQuantityString(R.plurals.moves, headerData.checkmateCount))
                 }
             }
 
             if (whitePlayerEditorActive) {
                 TextValueEditor(
-                    initialValue = whitePlayer,
+                    initialValue = headerData.whitePlayer,
                     caption = context.getString(R.string.white_player),
                     handleValueChanged = {
-                        whitePlayer = it
+                        headerData.whitePlayer = it
                         whitePlayerEditorActive = false
                     }, handleDismissRequest = { whitePlayerEditorActive = false })
             }
 
             if (blackPlayerEditorActive) {
                 TextValueEditor(
-                    initialValue = blackPlayer,
+                    initialValue = headerData.blackPlayer,
                     caption = context.getString(R.string.black_player),
                     handleValueChanged = {
-                        blackPlayer = it
+                        headerData.blackPlayer = it
                         blackPlayerEditorActive = false
                     }, handleDismissRequest = { blackPlayerEditorActive = false })
             }
 
             if (eventEditorActive) {
                 TextValueEditor(
-                    initialValue = event,
+                    initialValue = headerData.event,
                     caption = context.getString(R.string.event),
                     handleValueChanged = {
-                        event = it
+                        headerData.event = it
                         eventEditorActive = false
                     }, handleDismissRequest = { eventEditorActive = false })
             }
 
             if (siteEditorActive) {
                 TextValueEditor(
-                    initialValue = site,
+                    initialValue = headerData.site,
                     caption = context.getString(R.string.site),
                     handleValueChanged = {
-                        site = it
+                        headerData.site = it
                         siteEditorActive = false
                     }, handleDismissRequest = { siteEditorActive = false })
             }
 
             if (checkmateCountEditorActive) {
                 NumericValueEditor(
-                    initialValue = checkmateCount,
+                    initialValue = headerData.checkmateCount,
                     caption = context.getString(R.string.checkmate_count),
-                    handleValueChanged = { checkmateCount = it },
+                    handleValueChanged = { headerData.checkmateCount = it },
                     handleDismissRequest = { checkmateCountEditorActive = false }
                 )
             }
@@ -896,7 +912,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                 onDismissRequest = { goalDropdownVisible = false }) {
                 GoalTagValue.values().forEach {
                     DropdownMenuItem(onClick = {
-                        goal = it
+                        headerData.goal = it
                         goalDropdownVisible = false
                     }) {
                         Text(text = getGoalText(it))
