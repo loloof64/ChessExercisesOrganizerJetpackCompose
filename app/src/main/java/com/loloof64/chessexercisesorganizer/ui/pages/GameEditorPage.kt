@@ -12,11 +12,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -42,6 +48,24 @@ private typealias EditorTabScreen = @Composable () -> Unit
 private data class PositionEditorFieldsTabItem(val titleRef: Int, val screen: EditorTabScreen)
 private data class SolutionEditorFieldsTabItem(val titleRef: Int, val screen: EditorTabScreen)
 
+@Suppress("UnnecessaryComposedModifier")
+fun Modifier.underline(color: Color = Color.Black): Modifier = composed(
+    factory = {
+        this.then(
+            Modifier.drawWithCache {
+                onDrawWithContent {
+                    drawContent()
+                    drawLine(
+                        SolidColor(color),
+                        Offset(0f, size.height),
+                        Offset(size.width, size.height)
+                    )
+                }
+            }
+        )
+    }
+)
+
 @Composable
 fun NumericValueEditor(
     initialValue: Int, caption: String,
@@ -53,19 +77,29 @@ fun NumericValueEditor(
     val context = LocalContext.current
 
     AlertDialog(onDismissRequest = { handleDismissRequest() }, confirmButton = {
-        Button(onClick = {
-            val valueToNotify = try {
-                Integer.parseInt(fieldValue)
-            } catch (ex: NumberFormatException) {
-                return@Button
-            }
-            handleDismissRequest()
-            handleValueChanged(valueToNotify)
-        }) {
+        Button(
+            onClick = {
+                val valueToNotify = try {
+                    Integer.parseInt(fieldValue)
+                } catch (ex: NumberFormatException) {
+                    return@Button
+                }
+                handleDismissRequest()
+                handleValueChanged(valueToNotify)
+            }, colors = ButtonDefaults.buttonColors(
+                backgroundColor = Color.Green,
+                contentColor = Color.White
+            )
+        ) {
             Text(context.getString(R.string.update_button))
         }
     }, dismissButton = {
-        Button(onClick = { handleDismissRequest() }) {
+        Button(
+            onClick = { handleDismissRequest() }, colors = ButtonDefaults.buttonColors(
+                backgroundColor = Color.Red,
+                contentColor = Color.White
+            )
+        ) {
             Text(context.getString(R.string.cancel))
         }
     }, text = {
@@ -74,6 +108,47 @@ fun NumericValueEditor(
             TextField(fieldValue, onValueChange = {
                 fieldValue = it
             }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        }
+    })
+}
+
+@Composable
+fun TextValueEditor(
+    initialValue: String, caption: String,
+    handleValueChanged: (String) -> Unit, handleDismissRequest: () -> Unit
+) {
+    var fieldValue by rememberSaveable {
+        mutableStateOf(initialValue)
+    }
+    val context = LocalContext.current
+
+    AlertDialog(onDismissRequest = { handleDismissRequest() }, confirmButton = {
+        Button(
+            onClick = {
+                handleDismissRequest()
+                handleValueChanged(fieldValue)
+            }, colors = ButtonDefaults.buttonColors(
+                backgroundColor = Color.Green,
+                contentColor = Color.White
+            )
+        ) {
+            Text(context.getString(R.string.update_button))
+        }
+    }, dismissButton = {
+        Button(
+            onClick = { handleDismissRequest() }, colors = ButtonDefaults.buttonColors(
+                backgroundColor = Color.Red,
+                contentColor = Color.White
+            )
+        ) {
+            Text(context.getString(R.string.cancel))
+        }
+    }, text = {
+        Row(horizontalArrangement = Arrangement.Center) {
+            Text(caption)
+            TextField(fieldValue, onValueChange = {
+                fieldValue = it
+            })
         }
     })
 }
@@ -368,9 +443,6 @@ fun PositionEditor(
             Row {
                 Text(
                     context.getString(R.string.en_passant_square),
-                    modifier = Modifier.clickable {
-                        enPassantSquareMenuExpanded = !enPassantSquareMenuExpanded
-                    }
                 )
                 DropdownMenu(expanded = enPassantSquareMenuExpanded,
                     onDismissRequest = { enPassantSquareMenuExpanded = false }) {
@@ -383,24 +455,32 @@ fun PositionEditor(
                 Spacer(modifier = Modifier.size(5.dp))
                 Text(
                     enPassantSquareValues[enPassantSquareValueIndex],
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.width(50.dp).underline(Color.Blue).clickable {
+                        enPassantSquareMenuExpanded = !enPassantSquareMenuExpanded
+                    }
                 )
             }
             Spacer(modifier = Modifier.size(5.dp))
-            Row(modifier = Modifier.clickable {
-                halfMovesCountEditorActive = true
-            }) {
+            Row {
                 Text(context.getString(R.string.draw_half_moves_count))
                 Spacer(modifier = Modifier.size(5.dp))
-                Text("$drawHalfMovesCount")
+                Text("$drawHalfMovesCount",
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.width(50.dp).underline(Color.Blue).clickable {
+                        halfMovesCountEditorActive = true
+                    })
             }
 
             Spacer(modifier = Modifier.size(5.dp))
-            Row(modifier = Modifier.clickable {
-                moveNumberEditorActive = true
-            }) {
+            Row {
                 Text(context.getString(R.string.move_number))
                 Spacer(modifier = Modifier.size(5.dp))
-                Text("$moveNumber")
+                Text("$moveNumber",
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.width(50.dp).underline(Color.Blue).clickable {
+                        moveNumberEditorActive = true
+                    })
             }
 
             if (halfMovesCountEditorActive) {
@@ -515,6 +595,14 @@ fun PositionEditor(
     }
 }
 
+private enum class GoalTagValue {
+    WhiteWin,
+    BlackWin,
+    Draw,
+    WhiteCheckmate,
+    BlackCheckmate,
+}
+
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
 @Composable
@@ -530,6 +618,46 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
         else -> false
     }
 
+    var whitePlayer by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    var blackPlayer by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    var event by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    var site by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    var date by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    var goal by rememberSaveable {
+        mutableStateOf(GoalTagValue.WhiteWin)
+    }
+
+    var whitePlayerEditorActive by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var blackPlayerEditorActive by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var eventEditorActive by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var siteEditorActive by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     fun validate() {
         //todo : confirmation + validate
     }
@@ -540,8 +668,123 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
 
     @Composable
     fun headerZone() {
-        //todo define header zone
-        Text("placeholder #1")
+        fun getGoalText(goal: GoalTagValue): String {
+            return context.getString(
+                when (goal) {
+                    GoalTagValue.WhiteWin -> R.string.white_should_win
+                    GoalTagValue.BlackWin -> R.string.black_should_win
+                    GoalTagValue.Draw -> R.string.it_should_be_draw
+                    GoalTagValue.WhiteCheckmate -> R.string.white_checkmate_fragment
+                    GoalTagValue.BlackCheckmate -> R.string.black_checkmate_fragment
+                }
+            )
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row {
+                Text(context.getString(R.string.white_player))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text(
+                    whitePlayer.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (whitePlayer.isEmpty()) Color.LightGray else Color.Black,
+                    modifier = Modifier
+                        .width(250.dp)
+                        .underline(Color.Blue)
+                        .clickable { whitePlayerEditorActive = true }
+                )
+            }
+            Spacer(modifier = Modifier.size(3.dp))
+            Row {
+                Text(context.getString(R.string.black_player))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text(
+                    blackPlayer.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (blackPlayer.isEmpty()) Color.LightGray else Color.Black,
+                    modifier = Modifier
+                        .width(250.dp)
+                        .underline(Color.Blue)
+                        .clickable { blackPlayerEditorActive = true })
+            }
+            Spacer(modifier = Modifier.size(3.dp))
+            Row {
+                Text(context.getString(R.string.event))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text(
+                    event.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (event.isEmpty()) Color.LightGray else Color.Black,
+                    modifier = Modifier
+                        .width(250.dp)
+                        .underline(Color.Blue)
+                        .clickable { eventEditorActive = true })
+            }
+            Spacer(modifier = Modifier.size(3.dp))
+            Row {
+                Text(context.getString(R.string.site))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text(
+                    site.ifEmpty { context.getString(R.string.unknown) },
+                    color = if (site.isEmpty()) Color.LightGray else Color.Black,
+                    modifier = Modifier
+                        .width(250.dp)
+                        .underline(Color.Blue)
+                        .clickable { siteEditorActive = true })
+            }
+            Spacer(modifier = Modifier.size(3.dp))
+            Row {
+                Text(context.getString(R.string.date))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text(date)
+            }
+            Spacer(modifier = Modifier.size(3.dp))
+            Row {
+                Text(context.getString(R.string.goal))
+                Spacer(modifier = Modifier.size(5.dp))
+                Text(getGoalText(goal))
+            }
+
+            if (whitePlayerEditorActive) {
+                TextValueEditor(
+                    initialValue = whitePlayer,
+                    caption = context.getString(R.string.white_player),
+                    handleValueChanged = {
+                        whitePlayer = it
+                        whitePlayerEditorActive = false
+                    }, handleDismissRequest = { whitePlayerEditorActive = false })
+            }
+
+            if (blackPlayerEditorActive) {
+                TextValueEditor(
+                    initialValue = blackPlayer,
+                    caption = context.getString(R.string.black_player),
+                    handleValueChanged = {
+                        blackPlayer = it
+                        blackPlayerEditorActive = false
+                    }, handleDismissRequest = { blackPlayerEditorActive = false })
+            }
+
+            if (eventEditorActive) {
+                TextValueEditor(
+                    initialValue = event,
+                    caption = context.getString(R.string.event),
+                    handleValueChanged = {
+                        event = it
+                        eventEditorActive = false
+                    }, handleDismissRequest = { eventEditorActive = false })
+            }
+
+            if (siteEditorActive) {
+                TextValueEditor(
+                    initialValue = site,
+                    caption = context.getString(R.string.site),
+                    handleValueChanged = {
+                        site = it
+                        siteEditorActive = false
+                    }, handleDismissRequest = { siteEditorActive = false })
+            }
+        }
     }
 
     @Composable
@@ -554,8 +797,10 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
     @ExperimentalMaterialApi
     @Composable
     fun editionZone() {
-        val headerItem = SolutionEditorFieldsTabItem(titleRef = R.string.header, screen = {headerZone()})
-        val solutionItem = SolutionEditorFieldsTabItem(titleRef = R.string.solution, screen = {solutionZone()})
+        val headerItem =
+            SolutionEditorFieldsTabItem(titleRef = R.string.header, screen = { headerZone() })
+        val solutionItem =
+            SolutionEditorFieldsTabItem(titleRef = R.string.solution, screen = { solutionZone() })
         val fieldsTabItems = listOf(headerItem, solutionItem)
 
         val fieldsPagerState = rememberPagerState()
@@ -607,23 +852,27 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
 
     if (isLandscape) {
         Row(modifier = modifier) {
+            Spacer(modifier = Modifier.size(5.dp))
             DynamicChessBoard(
                 position = startPosition,
                 modifier = Modifier.size(screenHeight * 0.7f)
             )
             Spacer(modifier = Modifier.size(5.dp))
-            Column {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 editionZone()
                 validationButtonsZone()
             }
         }
     } else {
         Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(modifier = Modifier.size(5.dp))
             DynamicChessBoard(
                 position = startPosition,
                 modifier = Modifier.size(screenWidth * 0.7f)
             )
+            Spacer(modifier = Modifier.size(5.dp))
             editionZone()
+            Spacer(modifier = Modifier.size(5.dp))
             validationButtonsZone()
         }
     }

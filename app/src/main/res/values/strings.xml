@@ -58,12 +58,12 @@
     <string name="black_should_win">Black should win</string>
     <string name="it_should_be_draw">It should be draw</string>
     <plurals name="white_should_checkmate">
-        <item quantity="one">White should checkmate in %1$d move</item>
-        <item quantity="other">White should checkmate in %1$d moves</item>
+        <item quantity="one">White can checkmate in %1$d move</item>
+        <item quantity="other">White can checkmate in %1$d moves</item>
     </plurals>
     <plurals name="black_should_checkmate">
-        <item quantity="one">Black should checkmate in %1$d move</item>
-        <item quantity="other">Black should checkmate in %1$d moves</item>
+        <item quantity="one">Black can checkmate in %1$d move</item>
+        <item quantity="other">Black can checkmate in %1$d moves</item>
     </plurals>
     <string name="KP_K">King+Pawn / King</string>
     <string name="K2R_K">King+2Rooks / King</string>
@@ -107,4 +107,13 @@
     <string name="confirm_validate_position_message">Do you want to validate this position and erase current solution ?</string>
     <string name="header">Header</string>
     <string name="solution">Solution</string>
+    <string name="white_player">White</string>
+    <string name="black_player">Black</string>
+    <string name="event">Event</string>
+    <string name="site" >Site</string>
+    <string name="date" >Date</string>
+    <string name="goal">Goal</string>
+    <string name="white_checkmate_fragment">"White can checkmate in "</string>
+    <string name="black_checkmate_fragment">"Black can checkmate in "</string>
+    <string name="unknown">Unknown</string>
 </resources>

@@ -108,4 +108,13 @@
     <string name="confirm_validate_position_message">¿Le gustaría validar esta posición y eliminar la solución actual?</string>
     <string name="header">Encabezamiento</string>
     <string name="solution">Solución</string>
+    <string name="white_player">Blancos</string>
+    <string name="black_player">Negros</string>s
+    <string name="event">Evento</string>
+    <string name="site">Lugar</string>
+    <string name="date">Fecha</string>
+    <string name="goal">Meta</string>
+    <string name="white_checkmate_fragment">"Los Blancos pueden hacer jaque mate en "</string>
+    <string name="black_checkmate_fragment">"Los Negros pueden hacer jaque mate en "</string>
+    <string name="unknown">Desconocido</string>
 </resources>

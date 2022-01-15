@@ -110,4 +110,13 @@
     <string name="confirm_validate_position_message">Souhaitez-vous valider cette position et effacer la solution actuelle ?</string>
     <string name="header">En-tête</string>
     <string name="solution">Solution</string>
+    <string name="white_player">Blancs</string>
+    <string name="black_player">Noirs</string>
+    <string name="event">Evènement</string>
+    <string name="site">Lieu</string>
+    <string name="date">Date</string>
+    <string name="goal">Objectif</string>
+    <string name="white_checkmate_fragment">"Les Blancs peuvent faire échec et mat en "</string>
+    <string name="black_checkmate_fragment">"Les Noirs peuvent faire échec et mat en "</string>
+    <string name="unknown">Inconnu</string>
 </resources>
