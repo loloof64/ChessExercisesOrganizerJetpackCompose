@@ -767,10 +767,10 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                         .clickable { siteEditorActive = true })
             }
             Spacer(modifier = Modifier.size(3.dp))
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(context.getString(R.string.date))
                 Spacer(modifier = Modifier.size(5.dp))
-                Text(date.ifEmpty { context.getString(R.string.unknown) },
+                Text(date.ifEmpty { context.getString(R.string.unknown)},
                     color = if (date.isEmpty()) Color.LightGray else Color.Black,
                     modifier = Modifier
                         .width(250.dp)
@@ -778,7 +778,12 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                         .clickable { showDatePicker() }
                 )
                 IconButton(onClick = {date = ""}) {
-                    Icon(Icons.Filled.Delete, context.getString(R.string.erase), tint = Color.Red)
+                    Icon(
+                        Icons.Filled.Delete,
+                        context.getString(R.string.erase),
+                        tint = Color.Red,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
             Spacer(modifier = Modifier.size(3.dp))
