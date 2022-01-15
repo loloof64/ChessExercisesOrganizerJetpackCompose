@@ -22,9 +22,11 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -770,14 +772,14 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(context.getString(R.string.date))
                 Spacer(modifier = Modifier.size(5.dp))
-                Text(date.ifEmpty { context.getString(R.string.unknown)},
+                Text(date.ifEmpty { context.getString(R.string.unknown) },
                     color = if (date.isEmpty()) Color.LightGray else Color.Black,
                     modifier = Modifier
                         .width(250.dp)
                         .underline(Color.Blue)
                         .clickable { showDatePicker() }
                 )
-                IconButton(onClick = {date = ""}) {
+                IconButton(onClick = { date = "" }) {
                     Icon(
                         Icons.Filled.Delete,
                         context.getString(R.string.erase),
@@ -979,6 +981,7 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                 Row(
                     modifier = Modifier
                         .background(Color(0xFFEEE382))
+                        .height(15.dp)
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
@@ -986,8 +989,15 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                     Text(modeText)
                     if (!isInPositionEditionMode) {
                         Spacer(modifier = Modifier.size(5.dp))
-                        Button(onClick = ::handlePositionEditionModeRequest) {
-                            Text(context.getString(R.string.edit_position))
+                        Surface(
+                            onClick = ::handlePositionEditionModeRequest,
+                            shape = MaterialTheme.shapes.medium,
+                            color = Color(0xFF2196F3),
+                            contentColor = Color.Black,
+                            border = ButtonDefaults.outlinedBorder,
+                            role = Role.Button,
+                        ) {
+                            Text(context.getString(R.string.edit_position), fontSize = 12.sp)
                         }
                     }
                 }
