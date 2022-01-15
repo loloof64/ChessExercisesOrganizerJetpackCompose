@@ -249,6 +249,10 @@ fun PositionEditor(
         mutableStateOf(false)
     }
 
+    var confirmCancelChangingPositionDialogOpen by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     fun updatePosition(file: Int, rank: Int) {
         val positionParts = positionFen.split(" ").toMutableList()
         val boardPart = positionParts[0]
@@ -288,7 +292,7 @@ fun PositionEditor(
     }
 
     fun cancel() {
-        handleExitPositionEditionModeRequest()
+        confirmCancelChangingPositionDialogOpen = true
     }
 
     fun handlePieceValueUpdate(newValue: Char) {
@@ -421,6 +425,38 @@ fun PositionEditor(
         }, dismissButton = {
             Button(
                 onClick = { confirmChangePositionDialogOpen = false },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Red,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.cancel))
+            }
+        })
+    }
+
+    @Composable
+    fun confirmCancelChangingPositionDialog() {
+        AlertDialog(onDismissRequest = { confirmCancelChangingPositionDialogOpen = false }, title = {
+            Text(context.getString(R.string.confirm_cancel_changing_position_title))
+        }, text = {
+            Text(context.getString((R.string.confirm_cancel_changing_position_message)))
+        }, confirmButton = {
+            Button(
+                onClick = {
+                    handleExitPositionEditionModeRequest()
+                    confirmCancelChangingPositionDialogOpen = false
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Green,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(context.getString(R.string.ok))
+            }
+        }, dismissButton = {
+            Button(
+                onClick = { confirmCancelChangingPositionDialogOpen = false },
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color.Red,
                     contentColor = Color.White
@@ -590,6 +626,9 @@ fun PositionEditor(
                 if (confirmChangePositionDialogOpen) {
                     confirmChangePositionDialog()
                 }
+                if (confirmCancelChangingPositionDialogOpen) {
+                    confirmCancelChangingPositionDialog()
+                }
             }
         }
     } else {
@@ -606,6 +645,9 @@ fun PositionEditor(
             validationButtonsZone()
             if (confirmChangePositionDialogOpen) {
                 confirmChangePositionDialog()
+            }
+            if (confirmCancelChangingPositionDialogOpen) {
+                confirmCancelChangingPositionDialog()
             }
         }
     }

@@ -124,4 +124,6 @@
         <item quantity="one">golpe</item>
         <item quantity="other">golpes</item>
     </plurals>
+    <string name="confirm_cancel_changing_position_title">¿Abandonar la edición de posición?</string>
+    <string name="confirm_cancel_changing_position_message">¿Desea cancelar la edición de posición y volver a la página de edición de solución?</string>
 </resources>

@@ -127,4 +127,6 @@
         <item quantity="many">coups</item>
         <item quantity="other">coups</item>
     </plurals>
+    <string name="confirm_cancel_changing_position_title">Abandonner l\'édition de position ?</string>
+    <string name="confirm_cancel_changing_position_message">Voulez-vous annuler l\'édition de position et revenir à la page édition de la solution ?</string>
 </resources>

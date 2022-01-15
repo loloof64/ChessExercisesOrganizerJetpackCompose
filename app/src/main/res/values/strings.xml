@@ -119,6 +119,8 @@
     <string name="erase">Erase</string>
     <string name="preposition_in">in</string>
     <string name="checkmate_count">Checkmate in</string>
+    <string name="confirm_cancel_changing_position_title">Cancel position edition ?</string>
+    <string name="confirm_cancel_changing_position_message">Do you want to cancel position edition and come back to the solution editing page ?</string>
     <plurals name="moves">
         <item quantity="one">move</item>
         <item quantity="other">moves</item>
