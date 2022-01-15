@@ -114,8 +114,14 @@
     <string name="site">Lugar</string>
     <string name="date">Fecha</string>
     <string name="goal">Meta</string>
-    <string name="white_checkmate_fragment">"Los Blancos pueden hacer jaque mate en "</string>
-    <string name="black_checkmate_fragment">"Los Negros pueden hacer jaque mate en "</string>
+    <string name="white_checkmate_fragment">Los Blancos pueden hacer jaque mate</string>
+    <string name="black_checkmate_fragment">Los Negros pueden hacer jaque mate</string>
     <string name="unknown">Desconocido</string>
     <string name="erase">Borrar</string>
+    <string name="preposition_in">en</string>
+    <string name="checkmate_count">Mate en</string>
+    <plurals name="moves">
+        <item quantity="one">golpe</item>
+        <item quantity="other">golpes</item>
+    </plurals>
 </resources>

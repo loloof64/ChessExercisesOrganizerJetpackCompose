@@ -113,8 +113,14 @@
     <string name="site" >Site</string>
     <string name="date" >Date</string>
     <string name="goal">Goal</string>
-    <string name="white_checkmate_fragment">"White can checkmate in "</string>
-    <string name="black_checkmate_fragment">"Black can checkmate in "</string>
+    <string name="white_checkmate_fragment">White can checkmate</string>
+    <string name="black_checkmate_fragment">Black can checkmate</string>
     <string name="unknown">Unknown</string>
     <string name="erase">Erase</string>
+    <string name="preposition_in">in</string>
+    <string name="checkmate_count">Checkmate in</string>
+    <plurals name="moves">
+        <item quantity="one">move</item>
+        <item quantity="other">moves</item>
+    </plurals>
 </resources>

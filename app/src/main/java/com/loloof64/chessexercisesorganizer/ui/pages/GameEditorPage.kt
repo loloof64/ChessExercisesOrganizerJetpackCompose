@@ -1,5 +1,6 @@
 package com.loloof64.chessexercisesorganizer.ui.pages
 
+import android.annotation.SuppressLint
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
@@ -673,6 +674,18 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
         mutableStateOf(false)
     }
 
+    var goalDropdownVisible by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var checkmateCount by rememberSaveable {
+        mutableStateOf(1)
+    }
+
+    var checkmateCountEditorActive by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     fun validate() {
         //todo : confirmation + validate
     }
@@ -681,6 +694,7 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
         //todo : confirmation + cancel
     }
 
+    @SuppressLint("SimpleDateFormat")
     fun showDatePicker() {
         val picker = MaterialDatePicker.Builder.datePicker().build()
         picker.show(activity.supportFragmentManager, picker.toString())
@@ -791,8 +805,41 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.size(3.dp))
             Row {
                 Text(context.getString(R.string.goal))
-                Spacer(modifier = Modifier.size(5.dp))
-                Text(getGoalText(goal))
+                Spacer(
+                    modifier = Modifier
+                        .size(5.dp)
+                )
+                Text(getGoalText(goal),
+                    modifier = Modifier
+                        .width(215.dp)
+                        .underline(Color.Blue)
+                        .clickable { goalDropdownVisible = true }
+                )
+                if (goal == GoalTagValue.WhiteCheckmate || goal == GoalTagValue.BlackCheckmate) {
+                    Spacer(
+                        modifier = Modifier
+                            .size(1.5.dp)
+                    )
+                    Text(context.getString(R.string.preposition_in))
+                    Spacer(
+                        modifier = Modifier
+                            .size(1.5.dp)
+                    )
+                    Text("$checkmateCount",
+                        textAlign = TextAlign.End,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .underline(Color.Blue)
+                            .clickable {
+                                checkmateCountEditorActive = true
+                            }
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .size(2.dp)
+                    )
+                    Text(context.resources.getQuantityString(R.plurals.moves, checkmateCount))
+                }
             }
 
             if (whitePlayerEditorActive) {
@@ -833,6 +880,28 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
                         site = it
                         siteEditorActive = false
                     }, handleDismissRequest = { siteEditorActive = false })
+            }
+
+            if (checkmateCountEditorActive) {
+                NumericValueEditor(
+                    initialValue = checkmateCount,
+                    caption = context.getString(R.string.checkmate_count),
+                    handleValueChanged = { checkmateCount = it },
+                    handleDismissRequest = { checkmateCountEditorActive = false }
+                )
+            }
+
+            DropdownMenu(
+                expanded = goalDropdownVisible,
+                onDismissRequest = { goalDropdownVisible = false }) {
+                GoalTagValue.values().forEach {
+                    DropdownMenuItem(onClick = {
+                        goal = it
+                        goalDropdownVisible = false
+                    }) {
+                        Text(text = getGoalText(it))
+                    }
+                }
             }
         }
     }
@@ -909,7 +978,9 @@ fun SolutionEditor(startPosition: String, modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.size(5.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(modifier = Modifier.size(2.dp))
                 editionZone()
+                Spacer(modifier = Modifier.size(2.dp))
                 validationButtonsZone()
             }
         }
