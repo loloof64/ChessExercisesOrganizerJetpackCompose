@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +40,7 @@ import com.loloof64.chessexercisesorganizer.ui.components.*
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MoveNumber
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigator
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigatorElement
+import com.loloof64.chessexercisesorganizer.ui.pages.game_page.SimpleButton
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.chessexercisesorganizer.utils.*
 import kotlinx.coroutines.launch
@@ -51,10 +51,15 @@ class GameEditorPageViewModel : ViewModel() {
     var headerData = GameHeaderData()
     var history = mutableListOf<MovesNavigatorElement>()
     var startPosition = STANDARD_FEN
+    var boardReversed = false
 
     fun resetHistory() {
         history = mutableListOf()
         history.add(MoveNumber("${startPosition.getMoveNumber()}${if (startPosition.isWhiteTurn()) "." else "..."}"))
+    }
+
+    fun toggleBoardReversed() {
+        boardReversed = !boardReversed
     }
 
     init {
@@ -186,6 +191,7 @@ fun TextValueEditor(
 fun PositionEditor(
     modifier: Modifier = Modifier,
     oldPosition: String,
+    boardReversed: Boolean,
     handlePositionChanged: (String) -> Unit,
     handleIllegalPosition: () -> Unit,
     handleExitPositionEditionModeRequest: () -> Unit,
@@ -390,7 +396,7 @@ fun PositionEditor(
                 Text(context.getString(R.string.black_turn))
                 Spacer(modifier = Modifier.size(5.dp))
                 ChessPieceSelector(
-                    modifier = Modifier.size(30.dp),
+                    modifier = Modifier.height(60.dp).width(140.dp),
                     handleValueUpdate = ::handlePieceValueUpdate,
                     firstPieceValue = currentPiece,
                 )
@@ -624,6 +630,7 @@ fun PositionEditor(
         Row(modifier = modifier) {
             EditableChessBoard(
                 modifier = Modifier.size(screenHeight * 0.7f),
+                reversed = boardReversed,
                 positionFen = positionFen,
                 handleValueUpdate = ::updatePosition
             )
@@ -646,6 +653,7 @@ fun PositionEditor(
         Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
             EditableChessBoard(
                 modifier = Modifier.size(screenWidth * 0.7f),
+                reversed = boardReversed,
                 positionFen = positionFen,
                 handleValueUpdate = ::updatePosition
             )
@@ -723,19 +731,13 @@ data class GameHeaderData(
     }
 }
 
-private val GameHeaderDataStateSaver = Saver<GameHeaderData, String>(
-    save = { state -> state.toString() },
-    restore = { value ->
-        GameHeaderData.parse(value)
-    }
-)
-
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
 @Composable
 fun SolutionEditor(
     startPosition: String,
     headerData: GameHeaderData,
+    boardReversed: Boolean,
     history: Array<MovesNavigatorElement>,
     handleHeaderDataUpdate: (GameHeaderData) -> Unit,
     modifier: Modifier = Modifier,
@@ -1081,6 +1083,7 @@ fun SolutionEditor(
                 Spacer(modifier = Modifier.size(5.dp))
                 DynamicChessBoard(
                     position = startPosition,
+                    reversed = boardReversed,
                     modifier = Modifier.size(screenHeight * 0.65f)
                 )
                 Spacer(modifier = Modifier.size(5.dp))
@@ -1097,6 +1100,7 @@ fun SolutionEditor(
             Spacer(modifier = Modifier.size(5.dp))
             DynamicChessBoard(
                 position = startPosition,
+                reversed = boardReversed,
                 modifier = Modifier.size(screenWidth * 0.7f)
             )
             Spacer(modifier = Modifier.size(5.dp))
@@ -1126,6 +1130,10 @@ fun GameEditorPage(
 
     val coroutineScope = rememberCoroutineScope()
 
+    var boardReversed by remember {
+        mutableStateOf(viewModel.boardReversed)
+    }
+
     fun goBack() {
         navController.popBackStack()
     }
@@ -1148,6 +1156,14 @@ fun GameEditorPage(
                                 imageVector = Icons.Filled.ArrowBack,
                                 contentDescription = context.getString(R.string.arrow_back_button),
                             )
+                        }
+                    }, actions = {
+                        SimpleButton(
+                            text = stringResource(R.string.reverse_board),
+                            vectorId = R.drawable.ic_reverse,
+                        ) {
+                            viewModel.toggleBoardReversed()
+                            boardReversed = viewModel.boardReversed
                         }
                     })
             },
@@ -1184,6 +1200,7 @@ fun GameEditorPage(
                     PositionEditor(
                         modifier = Modifier.fillMaxSize(),
                         oldPosition = viewModel.startPosition,
+                        boardReversed = boardReversed,
                         handlePositionChanged = {
                             val correctedNewPosition = it.correctEnPassantSquare()
                             viewModel.startPosition = correctedNewPosition
@@ -1202,6 +1219,7 @@ fun GameEditorPage(
                     SolutionEditor(
                         modifier = Modifier.fillMaxSize(),
                         startPosition = viewModel.startPosition,
+                        boardReversed = boardReversed,
                         headerData = viewModel.headerData,
                         handleHeaderDataUpdate = {
                             viewModel.headerData = it

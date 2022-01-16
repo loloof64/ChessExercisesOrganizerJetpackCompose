@@ -137,7 +137,7 @@ class DynamicBoardDataHandler {
 
     fun getLastMoveFan(): String {
         val forBlackTurn = boardLogic.turn
-        var lastMoveSan = boardLogic.lastMoveSan
+        val lastMoveSan = boardLogic.lastMoveSan
         if (lastMoveSan == null) throw java.lang.RuntimeException("No move played !")
         return lastMoveSan.toFAN(forBlackTurn = forBlackTurn)
     }
@@ -228,7 +228,7 @@ class PromotionBishop : PromotionPiece('b')
 class PromotionKnight : PromotionPiece('n')
 
 @Composable
-fun ChessPiecePreview(
+fun ChessPiecePreviewer(
     modifier: Modifier = Modifier,
     piece: Char
 ) {
@@ -306,38 +306,38 @@ fun ChessPieceSelector(
         handleValueUpdate(piece)
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
+        Row(modifier = modifier.fillMaxHeight(0.6f).fillMaxWidth()) {
             IconButton(onClick = ::gotoPreviousIndex) {
                 Icon(
                     contentDescription = stringResource(id = R.string.previous_value),
                     imageVector = Icons.Filled.ArrowLeft,
                     tint = Color(0xFFCDDC39),
-                    modifier = Modifier.size(50.dp)
+                    modifier = modifier.fillMaxWidth(0.2f)
                 )
             }
-            ChessPiecePreview(piece = piece, modifier = Modifier.size(50.dp))
+            ChessPiecePreviewer(piece = piece, modifier = modifier.fillMaxWidth(0.3f))
             IconButton(onClick = ::gotoNextIndex) {
                 Icon(
                     contentDescription = stringResource(id = R.string.next_value),
                     imageVector = Icons.Filled.ArrowRight,
                     tint = Color(0xFFCDDC39),
-                    modifier = Modifier.size(50.dp)
+                    modifier = modifier.fillMaxWidth(0.2f)
                 )
             }
         }
         Spacer(modifier = Modifier.size(2.dp))
         val isARecognizedPiece = "pnbrqkPNBRQK".contains(piece)
         if (isARecognizedPiece) {
-            Row {
+            Row(modifier = modifier.fillMaxHeight(0.2f)) {
                 Button(
                     onClick = ::setWhitePiece, colors = ButtonDefaults.buttonColors(Color.White),
-                    modifier = Modifier.size(30.dp).border(width = 2.dp, color = Color.Black)
+                    modifier = modifier.fillMaxWidth(0.4f).border(width = 2.dp, color = Color.Black)
                 ){}
-                Spacer(modifier = Modifier.size(2.dp).border(width = 2.dp, color = Color.Black))
+                Spacer(modifier = modifier.fillMaxWidth(0.1f).border(width = 2.dp, color = Color.Black))
                 Button(
                     onClick = ::setBlackPiece, colors = ButtonDefaults.buttonColors(Color.Black),
-                    modifier = Modifier.size(30.dp)
+                    modifier = modifier.fillMaxWidth(0.4f)
                 ){}
             }
         }
@@ -347,17 +347,12 @@ fun ChessPieceSelector(
 @Composable
 fun EditableChessBoard(
     modifier: Modifier = Modifier,
+    reversed: Boolean = false,
     positionFen: String,
     handleValueUpdate: (Int, Int) -> Unit,
 ) {
     val context = LocalContext.current
     val boardLogic = positionFen.toBoard()
-    var selectedFile by rememberSaveable {
-        mutableStateOf(0)
-    }
-    var selectedRank by rememberSaveable {
-        mutableStateOf(0)
-    }
 
     var cellsSize by remember { mutableStateOf(0f) }
 
@@ -373,7 +368,7 @@ fun EditableChessBoard(
     Canvas(
         modifier = modifier
             .background(Color(214, 59, 96))
-            .pointerInput(selectedFile, selectedRank) {
+            .pointerInput(true) {
                 detectTapGestures(
                     onTap = { updateSelectedCell(it) }
                 )
@@ -385,14 +380,14 @@ fun EditableChessBoard(
         drawCells(
             cellsSize, dndData = DndData()
         )
-        drawFilesCoordinates(cellsSize, reversed = false)
-        drawRanksCoordinates(cellsSize, reversed = false)
+        drawFilesCoordinates(cellsSize, reversed = reversed)
+        drawRanksCoordinates(cellsSize, reversed = reversed)
         drawPlayerTurn(cellsSize, boardLogic)
         drawPieces(
             context = context,
             cellsSize = cellsSize,
             position = boardLogic,
-            reversed = false,
+            reversed = reversed,
         )
 
     }
@@ -1415,5 +1410,5 @@ fun DynamicChessBoardPreview() {
 @Preview
 @Composable
 fun ChessPieceSelectorPreview() {
-    ChessPieceSelector(handleValueUpdate = { }, modifier = Modifier.size(300.dp), firstPieceValue = '.')
+    ChessPieceSelector(handleValueUpdate = { }, modifier = Modifier.size(120.dp), firstPieceValue = '.')
 }
