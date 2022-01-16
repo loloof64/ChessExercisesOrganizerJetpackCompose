@@ -322,37 +322,31 @@ fun PositionEditor(
     fun setWhiteTurn() {
         whiteTurn = true
         positionFen = positionFen.setWhiteTurn()
-        handlePositionChanged(positionFen)
     }
 
     fun setBlackTurn() {
         whiteTurn = false
         positionFen = positionFen.setBlackTurn()
-        handlePositionChanged(positionFen)
     }
 
     fun toggleWhite00() {
         white00 = !white00
         positionFen = positionFen.toggleWhite00()
-        handlePositionChanged(positionFen)
     }
 
     fun toggleWhite000() {
         white000 = !white000
         positionFen = positionFen.toggleWhite000()
-        handlePositionChanged(positionFen)
     }
 
     fun toggleBlack00() {
         black00 = !black00
         positionFen = positionFen.toggleBlack00()
-        handlePositionChanged(positionFen)
     }
 
     fun toggleBlack000() {
         black000 = !black000
         positionFen = positionFen.toggleBlack000()
-        handlePositionChanged(positionFen)
     }
 
     fun updateEnPassantSquare(index: Int) {
@@ -360,19 +354,16 @@ fun PositionEditor(
         enPassantSquareMenuExpanded = false
         val tempEnPassantSquare = enPassantSquareValues[enPassantSquareValueIndex]
         positionFen = positionFen.setEnPassantSquare(tempEnPassantSquare)
-        handlePositionChanged(positionFen)
     }
 
     fun updateDrawHalfMovesCount(value: Int) {
         drawHalfMovesCount = value
         positionFen = positionFen.setDrawHalfMovesCount(drawHalfMovesCount)
-        handlePositionChanged(positionFen)
     }
 
     fun updateMoveNumber(value: Int) {
         moveNumber = value
         positionFen = positionFen.setMoveNumber(moveNumber)
-        handlePositionChanged(positionFen)
     }
 
     SideEffect {
