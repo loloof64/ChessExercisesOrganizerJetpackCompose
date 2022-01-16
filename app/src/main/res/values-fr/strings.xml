@@ -105,7 +105,7 @@
     <string name="cancel">Annuler</string>
     <string name="position_edition_mode">Mode édition de la position</string>
     <string name="solution_edition_mode">Mode édition de la solution</string>
-    <string name="edit_position">Editer la position</string>
+    <string name="edit_position">Editer la position de départ</string>
     <string name="confirm_validate_position_title">Valider la position ?</string>
     <string name="confirm_validate_position_message">Souhaitez-vous valider cette position et effacer la solution actuelle ?</string>
     <string name="header">En-tête</string>

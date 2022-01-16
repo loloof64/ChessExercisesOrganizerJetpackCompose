@@ -29,8 +29,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.alonsoruibal.chess.Move
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
@@ -43,27 +45,87 @@ import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesN
 import com.loloof64.chessexercisesorganizer.ui.pages.game_page.SimpleButton
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.chessexercisesorganizer.utils.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class GameEditorPageViewModel : ViewModel() {
-    var headerData = GameHeaderData()
-    var history = mutableListOf<MovesNavigatorElement>()
-    var startPosition = STANDARD_FEN
-    var boardReversed = false
+data class GameEditorPageViewModelState(
+    val headerData: GameHeaderData = GameHeaderData(),
+    val history: List<MovesNavigatorElement> = listOf(),
+    val startPosition: String = STANDARD_FEN,
+    val boardReversed: Boolean = false,
+    val pendingPromotionState: PendingPromotionData = PendingPromotionData(),
+    val currentPosition: String = startPosition
+)
 
-    fun resetHistory() {
-        history = mutableListOf()
-        history.add(MoveNumber("${startPosition.getMoveNumber()}${if (startPosition.isWhiteTurn()) "." else "..."}"))
+class GameEditorPageViewModel : ViewModel() {
+    private val viewModelState = MutableStateFlow(GameEditorPageViewModelState())
+
+    val uiState =
+        viewModelState
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                viewModelState.value
+            )
+
+    fun changeStartPositionTo(newPosition: String) {
+        viewModelState.update {
+            it.copy(
+                startPosition = newPosition
+            )
+        }
+    }
+
+    fun resetSolution() {
+        val history = mutableListOf<MovesNavigatorElement>()
+        history.add(MoveNumber("${viewModelState.value.startPosition.getMoveNumber()}${if (viewModelState.value.startPosition.isWhiteTurn()) "." else "..."}"))
+        viewModelState.update {
+            it.copy(
+                history = history.toList(),
+                currentPosition = startPosition,
+            )
+        }
     }
 
     fun toggleBoardReversed() {
-        boardReversed = !boardReversed
+        viewModelState.update {
+            it.copy(
+                boardReversed = !boardReversed
+            )
+        }
+    }
+
+    fun updateHeaderDataTo(data: GameHeaderData) {
+        viewModelState.update {
+            it.copy(
+                headerData = data
+            )
+        }
+    }
+
+    fun updateCurrentPositionTo(newPosition: String) {
+        viewModelState.update {
+            it.copy(
+                currentPosition = newPosition
+            )
+        }
+    }
+
+    fun updatePendingPromotionStateTo(pendingPromotionState: PendingPromotionData) {
+        viewModelState.update {
+            it.copy(
+                pendingPromotionState = pendingPromotionState
+            )
+        }
     }
 
     init {
-        resetHistory()
+        resetSolution()
     }
 }
 
@@ -396,7 +458,9 @@ fun PositionEditor(
                 Text(context.getString(R.string.black_turn))
                 Spacer(modifier = Modifier.size(5.dp))
                 ChessPieceSelector(
-                    modifier = Modifier.height(60.dp).width(140.dp),
+                    modifier = Modifier
+                        .height(60.dp)
+                        .width(140.dp),
                     handleValueUpdate = ::handlePieceValueUpdate,
                     firstPieceValue = currentPiece,
                 )
@@ -454,34 +518,39 @@ fun PositionEditor(
 
     @Composable
     fun confirmCancelChangingPositionDialog() {
-        AlertDialog(onDismissRequest = { confirmCancelChangingPositionDialogOpen = false }, title = {
-            Text(context.getString(R.string.confirm_cancel_changing_position_title))
-        }, text = {
-            Text(context.getString((R.string.confirm_cancel_changing_position_message)))
-        }, confirmButton = {
-            Button(
-                onClick = {
-                    handleExitPositionEditionModeRequest()
-                    confirmCancelChangingPositionDialogOpen = false
-                },
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = Color.Green,
-                    contentColor = Color.White
-                )
-            ) {
-                Text(context.getString(R.string.ok))
-            }
-        }, dismissButton = {
-            Button(
-                onClick = { confirmCancelChangingPositionDialogOpen = false },
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = Color.Red,
-                    contentColor = Color.White
-                )
-            ) {
-                Text(context.getString(R.string.cancel))
-            }
-        })
+        AlertDialog(
+            onDismissRequest = { confirmCancelChangingPositionDialogOpen = false },
+            title = {
+                Text(context.getString(R.string.confirm_cancel_changing_position_title))
+            },
+            text = {
+                Text(context.getString((R.string.confirm_cancel_changing_position_message)))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        handleExitPositionEditionModeRequest()
+                        confirmCancelChangingPositionDialogOpen = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.Green,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(context.getString(R.string.ok))
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { confirmCancelChangingPositionDialogOpen = false },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.Red,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(context.getString(R.string.cancel))
+                }
+            })
     }
 
     @Composable
@@ -696,7 +765,7 @@ data class GameHeaderData(
     }
 
     fun toPgnHeaderString(): String {
-        val goalValue = when(goal) {
+        val goalValue = when (goal) {
             GoalTagValue.WhiteWin -> "1-0"
             GoalTagValue.BlackWin -> "0-1"
             GoalTagValue.Draw -> "1/2-1/2"
@@ -736,11 +805,17 @@ data class GameHeaderData(
 @Composable
 fun SolutionEditor(
     startPosition: String,
+    currentPosition: String,
     headerData: GameHeaderData,
     boardReversed: Boolean,
     history: Array<MovesNavigatorElement>,
     handleHeaderDataUpdate: (GameHeaderData) -> Unit,
     modifier: Modifier = Modifier,
+    handleDndMoveCallback: (MoveData) -> Unit,
+    handlePromotionMoveCallback: (MoveData) -> Unit,
+    promotionState: PendingPromotionData,
+    setPendingPromotionCallback: (PendingPromotionData) -> Unit,
+    cancelPendingPromotionCallback: () -> Unit,
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -912,7 +987,8 @@ fun SolutionEditor(
                         .clickable { goalDropdownVisible = true }
                 )
                 if (headerData.goal == GoalTagValue.WhiteCheckmate
-                    || headerData.goal == GoalTagValue.BlackCheckmate) {
+                    || headerData.goal == GoalTagValue.BlackCheckmate
+                ) {
                     Spacer(
                         modifier = Modifier
                             .size(1.5.dp)
@@ -935,7 +1011,12 @@ fun SolutionEditor(
                         modifier = Modifier
                             .size(2.dp)
                     )
-                    Text(context.resources.getQuantityString(R.plurals.moves, headerData.checkmateCount))
+                    Text(
+                        context.resources.getQuantityString(
+                            R.plurals.moves,
+                            headerData.checkmateCount
+                        )
+                    )
                 }
             }
 
@@ -1016,7 +1097,9 @@ fun SolutionEditor(
         MovesNavigator(
             elements = history,
             modeSelectionActive = false,
-            modifier = Modifier.fillMaxWidth().height(175.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(175.dp)
         )
     }
 
@@ -1077,20 +1160,31 @@ fun SolutionEditor(
         }
     }
 
+    fun checkMoveValidity(moveAlgebraic: String): Boolean {
+        val moveValidityChecker = currentPosition.toBoard()
+        val move = Move.getFromString(moveValidityChecker, moveAlgebraic, true)
+        return moveValidityChecker.doMove(move)
+    }
+
     if (isLandscape) {
         Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
             Row {
                 Spacer(modifier = Modifier.size(5.dp))
                 DynamicChessBoard(
-                    position = startPosition,
+                    position = currentPosition,
                     reversed = boardReversed,
-                    modifier = Modifier.size(screenHeight * 0.65f)
+                    modifier = Modifier.size(screenHeight * 0.65f),
+                    gameInProgress = true,
+                    isValidMoveCallback = ::checkMoveValidity,
+                    dndMoveCallback = { handleDndMoveCallback(it) },
+                    promotionMoveCallback = { handlePromotionMoveCallback(it) },
+                    promotionState = promotionState,
+                    setPendingPromotionCallback = { setPendingPromotionCallback(it) },
+                    cancelPendingPromotionCallback = { cancelPendingPromotionCallback() },
                 )
                 Spacer(modifier = Modifier.size(5.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(modifier = Modifier.size(2.dp))
                     editionZone()
-                    Spacer(modifier = Modifier.size(2.dp))
                 }
             }
             validationButtonsZone()
@@ -1099,9 +1193,16 @@ fun SolutionEditor(
         Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.size(5.dp))
             DynamicChessBoard(
-                position = startPosition,
+                position = currentPosition,
                 reversed = boardReversed,
-                modifier = Modifier.size(screenWidth * 0.7f)
+                modifier = Modifier.size(screenWidth * 0.7f),
+                gameInProgress = true,
+                isValidMoveCallback = ::checkMoveValidity,
+                dndMoveCallback = { handleDndMoveCallback(it) },
+                promotionMoveCallback = { handlePromotionMoveCallback(it) },
+                promotionState = promotionState,
+                setPendingPromotionCallback = { setPendingPromotionCallback(it) },
+                cancelPendingPromotionCallback = { cancelPendingPromotionCallback() },
             )
             Spacer(modifier = Modifier.size(5.dp))
             editionZone()
@@ -1130,9 +1231,7 @@ fun GameEditorPage(
 
     val coroutineScope = rememberCoroutineScope()
 
-    var boardReversed by remember {
-        mutableStateOf(viewModel.boardReversed)
-    }
+    val uiState = viewModel.uiState.collectAsState(Dispatchers.Main.immediate)
 
     fun goBack() {
         navController.popBackStack()
@@ -1163,7 +1262,6 @@ fun GameEditorPage(
                             vectorId = R.drawable.ic_reverse,
                         ) {
                             viewModel.toggleBoardReversed()
-                            boardReversed = viewModel.boardReversed
                         }
                     })
             },
@@ -1176,7 +1274,7 @@ fun GameEditorPage(
                 Row(
                     modifier = Modifier
                         .background(Color(0xFFEEE382))
-                        .height(15.dp)
+                        .height(20.dp)
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
@@ -1192,19 +1290,19 @@ fun GameEditorPage(
                             border = ButtonDefaults.outlinedBorder,
                             role = Role.Button,
                         ) {
-                            Text(context.getString(R.string.edit_position), fontSize = 12.sp)
+                            Text(context.getString(R.string.edit_position), fontSize = 17.sp)
                         }
                     }
                 }
                 if (isInPositionEditionMode) {
                     PositionEditor(
                         modifier = Modifier.fillMaxSize(),
-                        oldPosition = viewModel.startPosition,
-                        boardReversed = boardReversed,
+                        oldPosition = uiState.value.startPosition,
+                        boardReversed = uiState.value.boardReversed,
                         handlePositionChanged = {
                             val correctedNewPosition = it.correctEnPassantSquare()
-                            viewModel.startPosition = correctedNewPosition
-                            viewModel.resetHistory()
+                            viewModel.changeStartPositionTo(correctedNewPosition)
+                            viewModel.resetSolution()
                         },
                         handleIllegalPosition = {
                             coroutineScope.launch {
@@ -1218,13 +1316,38 @@ fun GameEditorPage(
                 } else {
                     SolutionEditor(
                         modifier = Modifier.fillMaxSize(),
-                        startPosition = viewModel.startPosition,
-                        boardReversed = boardReversed,
-                        headerData = viewModel.headerData,
+                        startPosition = uiState.value.startPosition,
+                        currentPosition = uiState.value.currentPosition,
+                        boardReversed = uiState.value.boardReversed,
+                        headerData = uiState.value.headerData,
                         handleHeaderDataUpdate = {
-                            viewModel.headerData = it
+                            viewModel.updateHeaderDataTo(it)
                         },
-                        history = viewModel.history.toTypedArray(),
+                        history = uiState.value.history.toTypedArray(),
+                        handleDndMoveCallback = {
+                            val board = uiState.value.currentPosition.toBoard()
+                            val move = Move.getFromString(board, it.toString(), true)
+                            board.doMove(move)
+
+                            viewModel.updateCurrentPositionTo(board.fen)
+                        },
+                        handlePromotionMoveCallback = {
+                            val board = uiState.value.currentPosition.toBoard()
+                            val move = Move.getFromString(board, it.toString(), true)
+                            board.doMove(move)
+
+                            // todo addMoveToHistory(positionBeforeMove = viewModel.currentPosition, fenAfterMove = board.fen)
+
+                            viewModel.updateCurrentPositionTo(board.fen)
+                            viewModel.updatePendingPromotionStateTo(PendingPromotionData())
+                        },
+                        setPendingPromotionCallback = {
+                            viewModel.updatePendingPromotionStateTo(it)
+                        },
+                        cancelPendingPromotionCallback = {
+                            viewModel.updatePendingPromotionStateTo(PendingPromotionData())
+                        },
+                        promotionState = uiState.value.pendingPromotionState,
                     )
                 }
             }

@@ -102,7 +102,7 @@
     <string name="cancel">Cancel</string>
     <string name="position_edition_mode">Position edition mode</string>
     <string name="solution_edition_mode">Solution edition mode</string>
-    <string name="edit_position">Editer position</string>
+    <string name="edit_position">Edit start position</string>
     <string name="confirm_validate_position_title">Validate position ?</string>
     <string name="confirm_validate_position_message">Do you want to validate this position and erase current solution ?</string>
     <string name="header">Header</string>

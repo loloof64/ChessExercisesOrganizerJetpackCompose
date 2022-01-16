@@ -103,7 +103,7 @@
     <string name="add_game">Agregar el juego</string>
     <string name="position_edition_mode">Modo de edición de posición</string>
     <string name="solution_edition_mode">Modo de edición de la solución.</string>
-    <string name="edit_position">Editar posición</string>
+    <string name="edit_position">Editar posición de comienzo</string>
     <string name="confirm_validate_position_title">¿Validar la posición?</string>
     <string name="confirm_validate_position_message">¿Le gustaría validar esta posición y eliminar la solución actual?</string>
     <string name="header">Encabezamiento</string>
