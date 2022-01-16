@@ -38,6 +38,7 @@ import com.google.accompanist.pager.rememberPagerState
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
+import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MoveNumber
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigator
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigatorElement
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
@@ -48,7 +49,17 @@ import java.util.*
 
 class GameEditorPageViewModel : ViewModel() {
     var headerData = GameHeaderData()
-    var history = arrayOf<MovesNavigatorElement>()
+    var history = mutableListOf<MovesNavigatorElement>()
+    var startPosition = STANDARD_FEN
+
+    fun resetHistory() {
+        history = mutableListOf()
+        history.add(MoveNumber("${startPosition.getMoveNumber()}${if (startPosition.isWhiteTurn()) "." else "..."}"))
+    }
+
+    init {
+        resetHistory()
+    }
 }
 
 private fun getEnPassantValues(whiteTurn: Boolean): List<String> {
@@ -782,12 +793,12 @@ fun SolutionEditor(
         //todo : confirmation + cancel
     }
 
-    @SuppressLint("SimpleDateFormat")
     fun showDatePicker() {
         val picker = MaterialDatePicker.Builder.datePicker().build()
         picker.show(activity.supportFragmentManager, picker.toString())
         picker.addOnPositiveButtonClickListener {
             val newDate = try {
+                @SuppressLint("SimpleDateFormat")
                 val sdf = SimpleDateFormat("MM.dd.yyyy")
                 val netDate = Date(it)
                 sdf.format(netDate)
@@ -1118,10 +1129,6 @@ fun GameEditorPage(
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
 
-    var oldPosition by rememberSaveable {
-        mutableStateOf(STANDARD_FEN)
-    }
-
     var isInPositionEditionMode by rememberSaveable {
         mutableStateOf(false)
     }
@@ -1185,11 +1192,11 @@ fun GameEditorPage(
                 if (isInPositionEditionMode) {
                     PositionEditor(
                         modifier = Modifier.fillMaxSize(),
-                        oldPosition = oldPosition,
+                        oldPosition = viewModel.startPosition,
                         handlePositionChanged = {
                             val correctedNewPosition = it.correctEnPassantSquare()
-                            oldPosition = correctedNewPosition
-                            // TODO erase current solution
+                            viewModel.startPosition = correctedNewPosition
+                            viewModel.resetHistory()
                         },
                         handleIllegalPosition = {
                             coroutineScope.launch {
@@ -1203,12 +1210,12 @@ fun GameEditorPage(
                 } else {
                     SolutionEditor(
                         modifier = Modifier.fillMaxSize(),
-                        startPosition = oldPosition,
+                        startPosition = viewModel.startPosition,
                         headerData = viewModel.headerData,
                         handleHeaderDataUpdate = {
                             viewModel.headerData = it
                         },
-                        history = viewModel.history,
+                        history = viewModel.history.toTypedArray(),
                     )
                 }
             }
