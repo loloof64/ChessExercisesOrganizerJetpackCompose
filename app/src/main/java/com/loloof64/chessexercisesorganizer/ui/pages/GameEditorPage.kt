@@ -39,6 +39,7 @@ import com.google.accompanist.pager.rememberPagerState
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
+import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.HalfMoveSAN
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MoveNumber
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigator
 import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigatorElement
@@ -59,7 +60,8 @@ data class GameEditorPageViewModelState(
     val startPosition: String = STANDARD_FEN,
     val boardReversed: Boolean = false,
     val pendingPromotionState: PendingPromotionData = PendingPromotionData(),
-    val currentPosition: String = startPosition
+    val currentPosition: String = startPosition,
+    val lastMoveArrow: MoveData? = null,
 )
 
 class GameEditorPageViewModel : ViewModel() {
@@ -120,6 +122,20 @@ class GameEditorPageViewModel : ViewModel() {
         viewModelState.update {
             it.copy(
                 pendingPromotionState = pendingPromotionState
+            )
+        }
+    }
+
+    fun addMoveToHistory(moveFan: String, lastMoveArrowData: MoveData, fenAfterMove: String) {
+        val history = viewModelState.value.history.toMutableList()
+        history.add(HalfMoveSAN(
+            text = moveFan,
+            fen = fenAfterMove,
+            lastMoveArrowData = lastMoveArrowData,
+        ))
+        viewModelState.update {
+            it.copy(
+                history = history.toList()
             )
         }
     }
@@ -804,12 +820,12 @@ data class GameHeaderData(
 @ExperimentalMaterialApi
 @Composable
 fun SolutionEditor(
-    startPosition: String,
     currentPosition: String,
     headerData: GameHeaderData,
     boardReversed: Boolean,
     history: Array<MovesNavigatorElement>,
     handleHeaderDataUpdate: (GameHeaderData) -> Unit,
+    lastMoveArrow: MoveData?,
     modifier: Modifier = Modifier,
     handleDndMoveCallback: (MoveData) -> Unit,
     handlePromotionMoveCallback: (MoveData) -> Unit,
@@ -1181,6 +1197,7 @@ fun SolutionEditor(
                     promotionState = promotionState,
                     setPendingPromotionCallback = { setPendingPromotionCallback(it) },
                     cancelPendingPromotionCallback = { cancelPendingPromotionCallback() },
+                    lastMoveArrow = lastMoveArrow,
                 )
                 Spacer(modifier = Modifier.size(5.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1203,6 +1220,7 @@ fun SolutionEditor(
                 promotionState = promotionState,
                 setPendingPromotionCallback = { setPendingPromotionCallback(it) },
                 cancelPendingPromotionCallback = { cancelPendingPromotionCallback() },
+                lastMoveArrow = lastMoveArrow,
             )
             Spacer(modifier = Modifier.size(5.dp))
             editionZone()
@@ -1239,6 +1257,10 @@ fun GameEditorPage(
 
     fun handlePositionEditionModeRequest() {
         isInPositionEditionMode = true
+    }
+
+    fun addMoveToHistory(moveFan: String, lastMoveArrowData: MoveData, fenAfterMove: String) {
+        viewModel.addMoveToHistory(moveFan = moveFan, lastMoveArrowData = lastMoveArrowData, fenAfterMove = fenAfterMove)
     }
 
     ChessExercisesOrganizerJetpackComposeTheme()
@@ -1316,10 +1338,10 @@ fun GameEditorPage(
                 } else {
                     SolutionEditor(
                         modifier = Modifier.fillMaxSize(),
-                        startPosition = uiState.value.startPosition,
                         currentPosition = uiState.value.currentPosition,
                         boardReversed = uiState.value.boardReversed,
                         headerData = uiState.value.headerData,
+                        lastMoveArrow = uiState.value.lastMoveArrow,
                         handleHeaderDataUpdate = {
                             viewModel.updateHeaderDataTo(it)
                         },
@@ -1329,6 +1351,10 @@ fun GameEditorPage(
                             val move = Move.getFromString(board, it.toString(), true)
                             board.doMove(move)
 
+                            val moveFan = board.lastMoveSan.toFAN(forBlackTurn = board.turn)
+
+                            addMoveToHistory(moveFan = moveFan, fenAfterMove = board.fen, lastMoveArrowData = it.copy(promotion = null))
+
                             viewModel.updateCurrentPositionTo(board.fen)
                         },
                         handlePromotionMoveCallback = {
@@ -1336,7 +1362,9 @@ fun GameEditorPage(
                             val move = Move.getFromString(board, it.toString(), true)
                             board.doMove(move)
 
-                            // todo addMoveToHistory(positionBeforeMove = viewModel.currentPosition, fenAfterMove = board.fen)
+                            val moveFan = board.lastMoveSan.toFAN(forBlackTurn = board.turn)
+
+                            addMoveToHistory(moveFan = moveFan, fenAfterMove = board.fen, lastMoveArrowData = it.copy(promotion = null))
 
                             viewModel.updateCurrentPositionTo(board.fen)
                             viewModel.updatePendingPromotionStateTo(PendingPromotionData())
