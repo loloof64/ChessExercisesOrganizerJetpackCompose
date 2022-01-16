@@ -235,6 +235,10 @@ fun ChessPiecePreviewer(
     val context = LocalContext.current
     Canvas(modifier = modifier.background(Color.Cyan)) {
         val cellSize = this.size.minDimension
+        val inset = (this.size.maxDimension - cellSize) / 2
+
+        val insetInX = this.size.width > cellSize
+        val insetInY = this.size.height > cellSize
 
         val notEmptyPiece = "PNBRQKpnbrqk".contains(piece)
         if (notEmptyPiece) {
@@ -244,8 +248,8 @@ fun ChessPiecePreviewer(
             drawIntoCanvas {
                 if (vectorDrawable != null) it.nativeCanvas.drawVector(
                     vectorDrawable,
-                    0f,
-                    0f,
+                    if (insetInX) inset else 0f,
+                    if (insetInY) inset else 0f,
                     cellSize.toInt(),
                     cellSize.toInt()
                 )
@@ -306,42 +310,42 @@ fun ChessPieceSelector(
         handleValueUpdate(piece)
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
-        Row(modifier = modifier.fillMaxHeight(0.6f).fillMaxWidth()) {
-            IconButton(onClick = ::gotoPreviousIndex) {
+        Row(modifier = modifier.fillMaxSize()) {
+            IconButton(onClick = ::gotoPreviousIndex, modifier = Modifier.fillMaxHeight().weight(0.2f).fillMaxWidth()) {
                 Icon(
                     contentDescription = stringResource(id = R.string.previous_value),
                     imageVector = Icons.Filled.ArrowLeft,
                     tint = Color(0xFFCDDC39),
-                    modifier = modifier.fillMaxWidth(0.2f)
                 )
             }
-            ChessPiecePreviewer(piece = piece, modifier = modifier.fillMaxWidth(0.3f))
-            IconButton(onClick = ::gotoNextIndex) {
+            Column(modifier = modifier.weight(0.5f).fillMaxWidth(),
+                verticalArrangement = Arrangement.Center
+            ) {
+                ChessPiecePreviewer(piece = piece, modifier = Modifier.fillMaxWidth().weight(0.7f).fillMaxHeight())
+                Spacer(modifier = Modifier.size(2.dp))
+                val isARecognizedPiece = "pnbrqkPNBRQK".contains(piece)
+                if (isARecognizedPiece) {
+                    Row(modifier = Modifier.fillMaxWidth().weight(0.2f).fillMaxHeight()) {
+                        Button(
+                            onClick = ::setWhitePiece, colors = ButtonDefaults.buttonColors(Color.White),
+                            modifier = Modifier.weight(0.4f).fillMaxWidth().border(width = 2.dp, color = Color.Black)
+                        ){}
+                        Spacer(modifier = Modifier.weight(0.1f).fillMaxWidth().border(width = 2.dp, color = Color.Black))
+                        Button(
+                            onClick = ::setBlackPiece, colors = ButtonDefaults.buttonColors(Color.Black),
+                            modifier = Modifier.weight(0.4f).fillMaxWidth()
+                        ){}
+                    }
+                }
+            }
+            IconButton(onClick = ::gotoNextIndex, modifier = Modifier.fillMaxHeight().weight(0.2f).fillMaxWidth()) {
                 Icon(
                     contentDescription = stringResource(id = R.string.next_value),
                     imageVector = Icons.Filled.ArrowRight,
                     tint = Color(0xFFCDDC39),
-                    modifier = modifier.fillMaxWidth(0.2f)
                 )
             }
         }
-        Spacer(modifier = Modifier.size(2.dp))
-        val isARecognizedPiece = "pnbrqkPNBRQK".contains(piece)
-        if (isARecognizedPiece) {
-            Row(modifier = modifier.fillMaxHeight(0.2f)) {
-                Button(
-                    onClick = ::setWhitePiece, colors = ButtonDefaults.buttonColors(Color.White),
-                    modifier = modifier.fillMaxWidth(0.4f).border(width = 2.dp, color = Color.Black)
-                ){}
-                Spacer(modifier = modifier.fillMaxWidth(0.1f).border(width = 2.dp, color = Color.Black))
-                Button(
-                    onClick = ::setBlackPiece, colors = ButtonDefaults.buttonColors(Color.Black),
-                    modifier = modifier.fillMaxWidth(0.4f)
-                ){}
-            }
-        }
-    }
 }
 
 @Composable
@@ -1401,13 +1405,13 @@ private fun pointInCircle(
     return distance <= circleRadius
 }
 
-@Preview
+@Preview(group = "board")
 @Composable
 fun DynamicChessBoardPreview() {
     DynamicChessBoard(modifier = Modifier.size(300.dp), position = STANDARD_FEN)
 }
 
-@Preview
+@Preview(group = "piece")
 @Composable
 fun ChessPieceSelectorPreview() {
     ChessPieceSelector(handleValueUpdate = { }, modifier = Modifier.size(120.dp), firstPieceValue = '.')
