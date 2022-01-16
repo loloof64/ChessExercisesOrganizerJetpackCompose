@@ -29,6 +29,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -36,11 +38,18 @@ import com.google.accompanist.pager.rememberPagerState
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.loloof64.chessexercisesorganizer.R
 import com.loloof64.chessexercisesorganizer.ui.components.*
+import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigator
+import com.loloof64.chessexercisesorganizer.ui.components.moves_navigator.MovesNavigatorElement
 import com.loloof64.chessexercisesorganizer.ui.theme.ChessExercisesOrganizerJetpackComposeTheme
 import com.loloof64.chessexercisesorganizer.utils.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+
+class GameEditorPageViewModel : ViewModel() {
+    var headerData = GameHeaderData()
+    var history = arrayOf<MovesNavigatorElement>()
+}
 
 private fun getEnPassantValues(whiteTurn: Boolean): List<String> {
     return if (whiteTurn) {
@@ -725,6 +734,7 @@ private val GameHeaderDataStateSaver = Saver<GameHeaderData, String>(
 fun SolutionEditor(
     startPosition: String,
     headerData: GameHeaderData,
+    history: Array<MovesNavigatorElement>,
     handleHeaderDataUpdate: (GameHeaderData) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -875,7 +885,7 @@ fun SolutionEditor(
                 IconButton(onClick = {
                     headerData.date = ""
                     handleHeaderDataUpdate(headerData)
-                }) {
+                }, modifier = Modifier.size(22.dp)) {
                     Icon(
                         Icons.Filled.Delete,
                         context.getString(R.string.erase),
@@ -999,8 +1009,11 @@ fun SolutionEditor(
 
     @Composable
     fun solutionZone() {
-        //todo set moves navigator
-        Text("placeholder #2")
+        MovesNavigator(
+            elements = history,
+            modeSelectionActive = false,
+            modifier = Modifier.fillMaxWidth().height(175.dp)
+        )
     }
 
     @ExperimentalPagerApi
@@ -1061,19 +1074,21 @@ fun SolutionEditor(
     }
 
     if (isLandscape) {
-        Row(modifier = modifier) {
-            Spacer(modifier = Modifier.size(5.dp))
-            DynamicChessBoard(
-                position = startPosition,
-                modifier = Modifier.size(screenHeight * 0.7f)
-            )
-            Spacer(modifier = Modifier.size(5.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(modifier = Modifier.size(2.dp))
-                editionZone()
-                Spacer(modifier = Modifier.size(2.dp))
-                validationButtonsZone()
+        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            Row {
+                Spacer(modifier = Modifier.size(5.dp))
+                DynamicChessBoard(
+                    position = startPosition,
+                    modifier = Modifier.size(screenHeight * 0.65f)
+                )
+                Spacer(modifier = Modifier.size(5.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(modifier = Modifier.size(2.dp))
+                    editionZone()
+                    Spacer(modifier = Modifier.size(2.dp))
+                }
             }
+            validationButtonsZone()
         }
     } else {
         Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1094,7 +1109,11 @@ fun SolutionEditor(
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
 @Composable
-fun GameEditorPage(navController: NavHostController, index: Int) {
+fun GameEditorPage(
+    navController: NavHostController,
+    index: Int,
+    viewModel: GameEditorPageViewModel = viewModel()
+) {
     //todo handle back button and confirmation dialog
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
@@ -1105,10 +1124,6 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
 
     var isInPositionEditionMode by rememberSaveable {
         mutableStateOf(false)
-    }
-
-    var headerData by rememberSaveable(stateSaver = GameHeaderDataStateSaver) {
-        mutableStateOf(GameHeaderData())
     }
 
     val coroutineScope = rememberCoroutineScope()
@@ -1189,11 +1204,11 @@ fun GameEditorPage(navController: NavHostController, index: Int) {
                     SolutionEditor(
                         modifier = Modifier.fillMaxSize(),
                         startPosition = oldPosition,
-                        headerData = headerData,
+                        headerData = viewModel.headerData,
                         handleHeaderDataUpdate = {
-                            headerData = it
-                            println(headerData.toPgnHeaderString())
-                        }
+                            viewModel.headerData = it
+                        },
+                        history = viewModel.history,
                     )
                 }
             }
